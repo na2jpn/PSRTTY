@@ -1,0 +1,256 @@
+test_adif (tests.test_core.CoreTests.test_adif) ... ok
+test_audio_decoder_roundtrip_clean_signal (tests.test_core.CoreTests.test_audio_decoder_roundtrip_clean_signal) ... ok
+test_band (tests.test_core.CoreTests.test_band) ... ok
+test_bcd_frequency (tests.test_core.CoreTests.test_bcd_frequency) ... ok
+test_ita2_roundtrip_codes (tests.test_core.CoreTests.test_ita2_roundtrip_codes) ... ok
+test_macro (tests.test_core.CoreTests.test_macro) ... ok
+test_parse_exchange (tests.test_core.CoreTests.test_parse_exchange) ... ok
+test_ps_log (tests.test_core.CoreTests.test_ps_log) ... ok
+test_reports_message_without_waiting_and_restores (tests.test_dialog_guard.DialogGuardTests.test_reports_message_without_waiting_and_restores) ... ok
+test_slow_audio_shutdown_finishes_backup_before_cleanup (tests.test_shutdown_support.ShutdownSupportTests.test_slow_audio_shutdown_finishes_backup_before_cleanup) ... ok
+test_autolog_only_after_successful_tu_and_unchanged_qso (tests.test_ui_v02.UITests.test_autolog_only_after_successful_tu_and_unchanged_qso) ... ok
+test_cancel_ignores_late_success (tests.test_ui_v02.UITests.test_cancel_ignores_late_success) ... ok
+test_connect_failure_ui_keeps_ticking (tests.test_ui_v02.UITests.test_connect_failure_ui_keeps_ticking) ... ok
+test_function_key_f9_invokes_macro (tests.test_ui_v02.UITests.test_function_key_f9_invokes_macro) ... ok
+test_gui_watchdog_restores_controls (tests.test_ui_v02.UITests.test_gui_watchdog_restores_controls) ... ok
+test_help_and_settings_nonmodal (tests.test_ui_v02.UITests.test_help_and_settings_nonmodal) ... This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+ok
+test_macro_apply_edit_and_cancel (tests.test_ui_v02.UITests.test_macro_apply_edit_and_cancel) ... ok
+test_nine_buttons_shortcuts_and_unconnected_guards (tests.test_ui_v02.UITests.test_nine_buttons_shortcuts_and_unconnected_guards) ... ok
+test_rig_unselected_manual_address_and_tabs (tests.test_ui_v02.UITests.test_rig_unselected_manual_address_and_tabs) ... ok
+test_settings_connection_test_is_async (tests.test_ui_v02.UITests.test_settings_connection_test_is_async) ... This plugin does not support propagateSizeHints()
+ok
+test_success_and_disconnect (tests.test_ui_v02.UITests.test_success_and_disconnect) ... ok
+test_unselected_settings_can_save_audio (tests.test_ui_v02.UITests.test_unselected_settings_can_save_audio) ... ok
+test_v03_reset_ignores_maximized_and_restores_bounds (tests.test_ui_v02.UITests.test_v03_reset_ignores_maximized_and_restores_bounds) ... ok
+test_v03_six_macro_rows_and_rx_position (tests.test_ui_v02.UITests.test_v03_six_macro_rows_and_rx_position) ... ok
+test_v03_window_save_and_reset_help (tests.test_ui_v02.UITests.test_v03_window_save_and_reset_help) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_ptt_failure_never_plays_audio (tests.test_v02.AudioSafetyTests.test_ptt_failure_never_plays_audio) ... ok
+test_stop_during_leadin (tests.test_v02.AudioSafetyTests.test_stop_during_leadin) ... ok
+test_success_and_double_send_guard (tests.test_v02.AudioSafetyTests.test_success_and_double_send_guard) ... ok
+test_cancelled_connect (tests.test_v02.CIVTests.test_cancelled_connect) ... ok
+test_connect_deadline (tests.test_v02.CIVTests.test_connect_deadline) ... ok
+test_connection_exception_closes_port (tests.test_v02.CIVTests.test_connection_exception_closes_port) ... ok
+test_data_mode_commands (tests.test_v02.CIVTests.test_data_mode_commands) ... ok
+test_data_mode_failure_disconnects (tests.test_v02.CIVTests.test_data_mode_failure_disconnects) ... ok
+test_no_mode_command_when_disabled (tests.test_v02.CIVTests.test_no_mode_command_when_disabled) ... ok
+test_ptt_requires_connected_and_ack (tests.test_v02.CIVTests.test_ptt_requires_connected_and_ack) ... ok
+test_exchange_strings_adif_roundtrip (tests.test_v02.ConfigMacroTests.test_exchange_strings_adif_roundtrip) ... ok
+test_existing_settings_and_eight_macros_preserved (tests.test_v02.ConfigMacroTests.test_existing_settings_and_eight_macros_preserved) ... ok
+test_template_exact_and_independent (tests.test_v02.ConfigMacroTests.test_template_exact_and_independent) ... ok
+test_unselected_default_and_address_validation (tests.test_v02.ConfigMacroTests.test_unselected_default_and_address_validation) ... ok
+test_backup_failure_does_not_touch_executable (tests.test_v02.UpdateTests.test_backup_failure_does_not_touch_executable) ... ok
+test_build_package_filename_and_validation (tests.test_v02.UpdateTests.test_build_package_filename_and_validation) ... ok
+test_changed_install_rejected (tests.test_v02.UpdateTests.test_changed_install_rejected) ... ok
+test_corrupt_hash (tests.test_v02.UpdateTests.test_corrupt_hash) ... ok
+test_failed_second_replace_rolls_back (tests.test_v02.UpdateTests.test_failed_second_replace_rolls_back) ... ok
+test_migration_failure_restores_settings_and_program (tests.test_v02.UpdateTests.test_migration_failure_restores_settings_and_program) ... ok
+test_new_only (tests.test_v02.UpdateTests.test_new_only) ... ok
+test_no_manifest (tests.test_v02.UpdateTests.test_no_manifest) ... ok
+test_snapshot_not_original_is_applied (tests.test_v02.UpdateTests.test_snapshot_not_original_is_applied) ... ok
+test_success_backup_and_user_data_preservation (tests.test_v02.UpdateTests.test_success_backup_and_user_data_preservation) ... ok
+test_traversal_rejected (tests.test_v02.UpdateTests.test_traversal_rejected) ... ok
+test_user_data_in_zip_rejected (tests.test_v02.UpdateTests.test_user_data_in_zip_rejected) ... ok
+test_version_comparison (tests.test_v02.UpdateTests.test_version_comparison) ... ok
+test_wrong_product (tests.test_v02.UpdateTests.test_wrong_product) ... ok
+test_custom_f8_preserved (tests.test_v03.ReleaseV03Tests.test_custom_f8_preserved) ... ok
+test_f8_one_time_migration_and_later_free_edit (tests.test_v03.ReleaseV03Tests.test_f8_one_time_migration_and_later_free_edit) ... ok
+test_failed_build_keeps_previous_zip (tests.test_v03.ReleaseV03Tests.test_failed_build_keeps_previous_zip) ... ok
+test_legacy_json_archived_only_after_verified_manual_upgrade (tests.test_v03.ReleaseV03Tests.test_legacy_json_archived_only_after_verified_manual_upgrade) ... ok
+test_legacy_json_preserved_if_new_exe_mismatch (tests.test_v03.ReleaseV03Tests.test_legacy_json_preserved_if_new_exe_mismatch) ... ok
+test_v03_to_v04_update_preserves_var_and_rolls_back (tests.test_v03.ReleaseV03Tests.test_v03_to_v04_update_preserves_var_and_rolls_back) ... ok
+test_zip_only_and_clean_layout_preserves_existing_folder (tests.test_v03.ReleaseV03Tests.test_zip_only_and_clean_layout_preserves_existing_folder) ... ok
+test_bad_saved_state_uses_defaults (tests.test_v03.WindowPlacementTests.test_bad_saved_state_uses_defaults) ... ok
+test_default_center (tests.test_v03.WindowPlacementTests.test_default_center) ... ok
+test_offscreen_centers_on_primary (tests.test_v03.WindowPlacementTests.test_offscreen_centers_on_primary) ... ok
+test_partial_offscreen_clamped (tests.test_v03.WindowPlacementTests.test_partial_offscreen_clamped) ... ok
+test_reset_ignores_saved_geometry (tests.test_v03.WindowPlacementTests.test_reset_ignores_saved_geometry) ... ok
+test_secondary_negative_coordinates_preserved (tests.test_v03.WindowPlacementTests.test_secondary_negative_coordinates_preserved) ... ok
+test_small_screen_and_decoration (tests.test_v03.WindowPlacementTests.test_small_screen_and_decoration) ... ok
+test_auto_means_active_wasapi_default (tests.test_v04.AudioDevice04Tests.test_auto_means_active_wasapi_default) ... ok
+test_explicit_output_failure_never_keys_ptt (tests.test_v04.AudioDevice04Tests.test_explicit_output_failure_never_keys_ptt) ... ok
+test_missing_device_does_not_fall_back_to_default (tests.test_v04.AudioDevice04Tests.test_missing_device_does_not_fall_back_to_default) ... ok
+test_only_active_wasapi_without_merging_distinct_same_name (tests.test_v04.AudioDevice04Tests.test_only_active_wasapi_without_merging_distinct_same_name) ... ok
+test_stable_id_after_device_renumber (tests.test_v04.AudioDevice04Tests.test_stable_id_after_device_renumber) ... ok
+test_release_failure_reports_failure_after_playback (tests.test_v04.PTTRelease04Tests.test_release_failure_reports_failure_after_playback) ... ok
+test_cat_timeout_and_cancel (tests.test_v04.Radio04Tests.test_cat_timeout_and_cancel) ... ok
+test_com_choices_keep_description (tests.test_v04.Radio04Tests.test_com_choices_keep_description) ... ok
+test_each_identity_mode_and_ptt_readback (tests.test_v04.Radio04Tests.test_each_identity_mode_and_ptt_readback) ... ok
+test_factory_and_only_two_yaesu_choices (tests.test_v04.Radio04Tests.test_factory_and_only_two_yaesu_choices) ... ok
+test_ic905_six_byte_frequency (tests.test_v04.Radio04Tests.test_ic905_six_byte_frequency) ... ok
+test_icom_new_addresses_and_user_override (tests.test_v04.Radio04Tests.test_icom_new_addresses_and_user_override) ... ok
+test_ptt_refuses_other_vfo_wrong_mode_and_no_response (tests.test_v04.Radio04Tests.test_ptt_refuses_other_vfo_wrong_mode_and_no_response) ... ok
+test_wrong_model_not_connected_and_does_not_change_mode (tests.test_v04.Radio04Tests.test_wrong_model_not_connected_and_does_not_change_mode) ... ok
+test_auto_cq_defaults_limits_and_no_unconnected_send (tests.test_v04.UI04Tests.test_auto_cq_defaults_limits_and_no_unconnected_send) ... ok
+test_auto_cq_error_and_disconnect_stop (tests.test_v04.UI04Tests.test_auto_cq_error_and_disconnect_stop) ... ok
+test_auto_cq_stop_and_late_completion_do_not_restart (tests.test_v04.UI04Tests.test_auto_cq_stop_and_late_completion_do_not_restart) ... ok
+test_auto_cq_waits_after_completion_and_stops_at_count (tests.test_v04.UI04Tests.test_auto_cq_waits_after_completion_and_stops_at_count) ... ok
+test_auto_extraction_goes_to_single_call (tests.test_v04.UI04Tests.test_auto_extraction_goes_to_single_call) ... ok
+test_fixed_and_serial_increment_only_after_successful_save (tests.test_v04.UI04Tests.test_fixed_and_serial_increment_only_after_successful_save) ... ok
+test_latest_default_rows_reserved (tests.test_v04.UI04Tests.test_latest_default_rows_reserved) ... ok
+test_missing_audio_and_settings_save_do_not_discard_qso_edits (tests.test_v04.UI04Tests.test_missing_audio_and_settings_save_do_not_discard_qso_edits) ... ok
+test_other_macro_interrupts_cq_then_waits_for_release (tests.test_v04.UI04Tests.test_other_macro_interrupts_cq_then_waits_for_release) ... ok
+test_queued_macro_does_not_run_if_release_failed (tests.test_v04.UI04Tests.test_queued_macro_does_not_run_if_release_failed) ... ok
+test_settings_dynamic_fields_and_addresses (tests.test_v04.UI04Tests.test_settings_dynamic_fields_and_addresses) ... ok
+test_settings_failure_after_adif_does_not_leave_duplicate_qso (tests.test_v04.UI04Tests.test_settings_failure_after_adif_does_not_leave_duplicate_qso) ... ok
+test_single_call_and_immediate_macro_expansion (tests.test_v04.UI04Tests.test_single_call_and_immediate_macro_expansion) ... ok
+test_packaged_v04_update_preserves_all_data_and_refuses_same_old (tests.test_v04.Update04Tests.test_packaged_v04_update_preserves_all_data_and_refuses_same_old) ... ok
+test_fresh_defaults_and_existing_settings_macros_preserved (tests.test_v05.Config05Tests.test_fresh_defaults_and_existing_settings_macros_preserved) ... ok
+test_normal_template_variables_empty_and_no_recursive_expansion (tests.test_v05.Config05Tests.test_normal_template_variables_empty_and_no_recursive_expansion) ... ok
+test_unset_input_never_opens_device (tests.test_v05.Config05Tests.test_unset_input_never_opens_device) ... ok
+test_audio_failure_does_not_change_selection_or_enable_tx (tests.test_v05.UI05Tests.test_audio_failure_does_not_change_selection_or_enable_tx) ... ok
+test_audio_open_is_async_and_latest_selection_wins (tests.test_v05.UI05Tests.test_audio_open_is_async_and_latest_selection_wins) ... ok
+test_audio_start_without_radio_and_disconnect_does_not_stop_input (tests.test_v05.UI05Tests.test_audio_start_without_radio_and_disconnect_does_not_stop_input) ... ok
+test_basic_fields_save_and_preview_and_cancel (tests.test_v05.UI05Tests.test_basic_fields_save_and_preview_and_cancel) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_both_templates_editable_and_cancel_preserves (tests.test_v05.UI05Tests.test_both_templates_editable_and_cancel_preserves) ... ok
+test_connected_ptt_still_used_with_test_checkbox_on (tests.test_v05.UI05Tests.test_connected_ptt_still_used_with_test_checkbox_on) ... ok
+test_cq_start_commits_even_without_focus_change (tests.test_v05.UI05Tests.test_cq_start_commits_even_without_focus_change) ... ok
+test_empty_sent_survives_qso_and_does_not_increment (tests.test_v05.UI05Tests.test_empty_sent_survives_qso_and_does_not_increment) ... ok
+test_guide_order_update_menu_and_dialog (tests.test_v05.UI05Tests.test_guide_order_update_menu_and_dialog) ... This plugin does not support raise()
+ok
+test_main_call_edit_while_settings_open_is_preserved (tests.test_v05.UI05Tests.test_main_call_edit_while_settings_open_is_preserved) ... This plugin does not support propagateSizeHints()
+ok
+test_number_fields_commit_and_clamp_without_spin_buttons (tests.test_v05.UI05Tests.test_number_fields_commit_and_clamp_without_spin_buttons) ... ok
+test_offline_audio_only_and_auto_cq_always_requires_radio (tests.test_v05.UI05Tests.test_offline_audio_only_and_auto_cq_always_requires_radio) ... ok
+test_test_transmission_does_not_auto_log (tests.test_v05.UI05Tests.test_test_transmission_does_not_auto_log) ... ok
+test_helper_unlocks_before_restart_and_failure_never_restarts (tests.test_v05.Update05Tests.test_helper_unlocks_before_restart_and_failure_never_restarts) ... ok
+test_restart_command_and_environment (tests.test_v05.Update05Tests.test_restart_command_and_environment) ... ok
+test_restart_failure_reports_successful_update_without_rollback (tests.test_v05.Update05Tests.test_restart_failure_reports_successful_update_without_rollback) ... ok
+test_same_version_different_content_repairs_preserves_and_identical_rejects (tests.test_v05.Update05Tests.test_same_version_different_content_repairs_preserves_and_identical_rejects) ... ok
+test_same_version_failure_rolls_back (tests.test_v05.Update05Tests.test_same_version_failure_rolls_back) ... ok
+test_cat_frequency_serialization_and_tx_guard (tests.test_v10.Protocol10Tests.test_cat_frequency_serialization_and_tx_guard) ... ok
+test_cat_models_use_distinct_nb_nr_commands_and_restore_level (tests.test_v10.Protocol10Tests.test_cat_models_use_distinct_nb_nr_commands_and_restore_level) ... ok
+test_icom_features_validate_subcommand_and_unknown (tests.test_v10.Protocol10Tests.test_icom_features_validate_subcommand_and_unknown) ... ok
+test_icom_frequency_bcd_and_ack_required (tests.test_v10.Protocol10Tests.test_icom_frequency_bcd_and_ack_required) ... ok
+test_nonce_handshake_ignores_stale_receipt_and_detects_exit (tests.test_v10.Restart10Tests.test_nonce_handshake_ignores_stale_receipt_and_detects_exit) ... ok
+test_autolog_clears_date_once_and_preserves_utc (tests.test_v10.UI10Tests.test_autolog_clears_date_once_and_preserves_utc) ... ok
+test_completion_records_date_only_after_success_auto_off (tests.test_v10.UI10Tests.test_completion_records_date_only_after_success_auto_off) ... ok
+test_control_coalesces_latest_and_unknown_not_off (tests.test_v10.UI10Tests.test_control_coalesces_latest_and_unknown_not_off) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_control_single_instance_recall_and_step (tests.test_v10.UI10Tests.test_control_single_instance_recall_and_step) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+ok
+test_log_validation_and_failed_save_keep_date (tests.test_v10.UI10Tests.test_log_validation_and_failed_save_keep_date) ... ok
+test_stop_failure_offline_and_intervening_edit_never_stamp (tests.test_v10.UI10Tests.test_stop_failure_offline_and_intervening_edit_never_stamp) ... ok
+test_templates_completion_checkbox_and_custom_preservation (tests.test_v10.UI10Tests.test_templates_completion_checkbox_and_custom_preservation) ... ok
+test_test_connection_then_real_connection (tests.test_v10.UI10Tests.test_test_connection_then_real_connection) ... This plugin does not support propagateSizeHints()
+ok
+test_wheel_drag_and_direct_frequency (tests.test_v10.UI10Tests.test_wheel_drag_and_direct_frequency) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_delete_exact_duplicate_only_and_stale_edit_rejected (tests.test_v20.ADIF20Tests.test_delete_exact_duplicate_only_and_stale_edit_rejected) ... ok
+test_edit_one_of_over_200_preserves_unknown_fields_and_backup_bytes (tests.test_v20.ADIF20Tests.test_edit_one_of_over_200_preserves_unknown_fields_and_backup_bytes) ... ok
+test_failed_replace_preserves_original_and_backup (tests.test_v20.ADIF20Tests.test_failed_replace_preserves_original_and_backup) ... ok
+test_foreign_path_and_incomplete_adif_rejected (tests.test_v20.ADIF20Tests.test_foreign_path_and_incomplete_adif_rejected) ... ok
+test_frequency_and_band_display (tests.test_v20.ADIF20Tests.test_frequency_and_band_display) ... ok
+test_multiple_days_and_edit_date_not_moving_or_dropping_records (tests.test_v20.ADIF20Tests.test_multiple_days_and_edit_date_not_moving_or_dropping_records) ... ok
+test_unreadable_old_file_does_not_hide_good_logs_or_get_rewritten (tests.test_v20.ADIF20Tests.test_unreadable_old_file_does_not_hide_good_logs_or_get_rewritten) ... ok
+test_already_buffered_reply_does_not_wait_again (tests.test_v20.ActivationReply20Tests.test_already_buffered_reply_does_not_wait_again) ... ok
+test_connection_failure_always_releases_client (tests.test_v20.ActivationReply20Tests.test_connection_failure_always_releases_client) ... ok
+test_fragmented_reply_is_collected (tests.test_v20.ActivationReply20Tests.test_fragmented_reply_is_collected) ... ok
+test_fixed_fft_scale_tracks_input_amplitude (tests.test_v20.FFT20Tests.test_fixed_fft_scale_tracks_input_amplitude) ... ok
+test_activation_ipc_and_lock_are_per_installation (tests.test_v20.UI20Tests.test_activation_ipc_and_lock_are_per_installation) ... skipped 'この環境ではOSがローカルソケット作成を拒否します。Windows実機確認対象。'
+test_activation_message_restores_window_and_acknowledges (tests.test_v20.UI20Tests.test_activation_message_restores_window_and_acknowledges) ... This plugin does not support raise()
+ok
+test_autotune_uses_current_shift_and_updates_width (tests.test_v20.UI20Tests.test_autotune_uses_current_shift_and_updates_width) ... ok
+test_control_wheel_reverse_and_circular_wrap (tests.test_v20.UI20Tests.test_control_wheel_reverse_and_circular_wrap) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_display_gain_does_not_change_decoder_or_audio_gain (tests.test_v20.UI20Tests.test_display_gain_does_not_change_decoder_or_audio_gain) ... ok
+test_drag_either_line_preserves_spacing_without_initial_jump (tests.test_v20.UI20Tests.test_drag_either_line_preserves_spacing_without_initial_jump) ... ok
+test_edit_validates_date_frequency_and_converts_jst_to_utc (tests.test_v20.UI20Tests.test_edit_validates_date_frequency_and_converts_jst_to_utc) ... ok
+test_guide_tabs_readable_and_reused (tests.test_v20.UI20Tests.test_guide_tabs_readable_and_reused) ... This plugin does not support raise()
+This plugin does not support raise()
+ok
+test_log_dialog_edits_deletes_and_refreshes_main (tests.test_v20.UI20Tests.test_log_dialog_edits_deletes_and_refreshes_main) ... ok
+test_shift_reset_click_persist_and_tx_tones_preserved (tests.test_v20.UI20Tests.test_shift_reset_click_persist_and_tx_tones_preserved) ... ok
+test_audio_pause_skips_decoder_but_keeps_meter_and_fft (tests.test_v30.Protocol30Tests.test_audio_pause_skips_decoder_but_keeps_meter_and_fft) ... ok
+test_cat_distinct_width_formats_readback_and_narrow (tests.test_v30.Protocol30Tests.test_cat_distinct_width_formats_readback_and_narrow) ... ok
+test_cat_width_candidates_follow_model_mode_and_narrow (tests.test_v30.Protocol30Tests.test_cat_width_candidates_follow_model_mode_and_narrow) ... ok
+test_icom_filter_preserves_mode_data_and_reads_actual (tests.test_v30.Protocol30Tests.test_icom_filter_preserves_mode_data_and_reads_actual) ... ok
+test_icom_rejected_ack_and_failed_readback_are_not_success (tests.test_v30.Protocol30Tests.test_icom_rejected_ack_and_failed_readback_are_not_success) ... ok
+test_compact_cards_plain_text_and_menu (tests.test_v30.UI30Tests.test_compact_cards_plain_text_and_menu) ... ok
+test_decode_pause_discards_queued_old_characters_keeps_cards_tx (tests.test_v30.UI30Tests.test_decode_pause_discards_queued_old_characters_keeps_cards_tx) ... ok
+test_filter_ui_tracks_actual_and_switches_manufacturer (tests.test_v30.UI30Tests.test_filter_ui_tracks_actual_and_switches_manufacturer) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_latest_two_columns_order_and_narrow_fallback (tests.test_v30.UI30Tests.test_latest_two_columns_order_and_narrow_fallback) ... ok
+test_separate_date_time_and_partial_rejected (tests.test_v30.UI30Tests.test_separate_date_time_and_partial_rejected) ... ok
+test_stale_poll_does_not_affect_new_connection (tests.test_v30.UI30Tests.test_stale_poll_does_not_affect_new_connection) ... ok
+test_three_consecutive_failures_and_recovery_reset (tests.test_v30.UI30Tests.test_three_consecutive_failures_and_recovery_reset) ... ok
+test_config_migration_once_preserves_macros (tests.test_v40.UI40Tests.test_config_migration_once_preserves_macros) ... ok
+test_connection_toggle_and_connecting_guard (tests.test_v40.UI40Tests.test_connection_toggle_and_connecting_guard) ... ok
+test_latest_counts_gap_and_log_link (tests.test_v40.UI40Tests.test_latest_counts_gap_and_log_link) ... ok
+test_center_tracks_tones_and_shift_in_both_polarities (tests.test_v50.UI50Tests.test_center_tracks_tones_and_shift_in_both_polarities) ... ok
+test_header_control_remains_accessible_after_resize (tests.test_v50.UI50Tests.test_header_control_remains_accessible_after_resize) ... ok
+test_parent_owned_menus_survive_collection (tests.test_v50.UI50Tests.test_parent_owned_menus_survive_collection) ... ok
+test_cancel_owned_stream_and_resend (tests.test_v60.Audio60Tests.test_cancel_owned_stream_and_resend) ... ok
+test_output_errors_always_attempt_ptt_release (tests.test_v60.Audio60Tests.test_output_errors_always_attempt_ptt_release) ... ok
+test_invalid_start_and_stop_never_emit_or_change_shift (tests.test_v60.Decoder60Tests.test_invalid_start_and_stop_never_emit_or_change_shift) ... ok
+test_noise_suppression_and_signal_preservation (tests.test_v60.Decoder60Tests.test_noise_suppression_and_signal_preservation) ... ok
+test_macro_stop_button_offline_and_connected (tests.test_v60.UI60Tests.test_macro_stop_button_offline_and_connected) ... ok
+test_sq_header_persistence_and_center_drag (tests.test_v60.UI60Tests.test_sq_header_persistence_and_center_drag) ... ok
+test_low_sq_passes_decodable_signal_with_out_of_band_energy (tests.test_v70.Decoder70Tests.test_low_sq_passes_decodable_signal_with_out_of_band_energy) ... ok
+test_auto_log_survives_rx_during_tx_and_rejects_queued_rx (tests.test_v70.UI70Tests.test_auto_log_survives_rx_during_tx_and_rejects_queued_rx) ... ok
+test_manual_edit_is_explained_and_legacy_flag_not_required (tests.test_v70.UI70Tests.test_manual_edit_is_explained_and_legacy_flag_not_required) ... ok
+test_record_number_and_total_across_days_reload_delete (tests.test_v70.UI70Tests.test_record_number_and_total_across_days_reload_delete) ... ok
+test_auto_clock_during_tx_and_actual_completion_timestamp (tests.test_v71.UI71Tests.test_auto_clock_during_tx_and_actual_completion_timestamp) ... ok
+test_clock_blink_midnight_manual_and_no_revision (tests.test_v71.UI71Tests.test_clock_blink_midnight_manual_and_no_revision) ... ok
+test_empty_call_stop_failure_offline_and_checkbox (tests.test_v71.UI71Tests.test_empty_call_stop_failure_offline_and_checkbox) ... ok
+test_saved_sq_retained_and_fresh_default_four (tests.test_v71.UI71Tests.test_saved_sq_retained_and_fresh_default_four) ... ok
+test_text_trigger_macro_manual_boundary_and_once (tests.test_v71.UI71Tests.test_text_trigger_macro_manual_boundary_and_once) ... ok
+test_offline_real_audio_worker_and_adif_macro_manual_stop (tests.test_v72.UI72Tests.test_offline_real_audio_worker_and_adif_macro_manual_stop) ... ok
+test_exchange_and_adif (tests.test_v73.Macro73Tests.test_exchange_and_adif) ... ok
+test_templates (tests.test_v73.Macro73Tests.test_templates) ... ok
+test_receive_auto_and_card (tests.test_v73.UI73Tests.test_receive_auto_and_card) ... ok
+test_selection_apply_save_cancel (tests.test_v73.UI73Tests.test_selection_apply_save_cancel) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_backup_contents_unique_and_failure (tests.test_v74.Storage74Tests.test_backup_contents_unique_and_failure) ... ok
+test_month_daily_rollover_and_probe (tests.test_v74.Storage74Tests.test_month_daily_rollover_and_probe) ... ok
+test_count_success_failure_manual_and_exit_once (tests.test_v74.UI74Tests.test_count_success_failure_manual_and_exit_once) ... ok
+test_settings_cancel_failure_and_menu_dates (tests.test_v74.UI74Tests.test_settings_cancel_failure_and_menu_dates) ... ok
+test_startup_failure_never_constructs_mainwindow (tests.test_v74.UI74Tests.test_startup_failure_never_constructs_mainwindow) ... ok
+test_atomic_save_failure_and_source_protection (tests.test_v75.Cabrillo75Tests.test_atomic_save_failure_and_source_protection) ... ok
+test_cqww_golden_crlf_and_optional_headers (tests.test_v75.Cabrillo75Tests.test_cqww_golden_crlf_and_optional_headers) ... ok
+test_cqww_qth_tx_and_xqso (tests.test_v75.Cabrillo75Tests.test_cqww_qth_tx_and_xqso) ... ok
+test_generic_custom_layout_and_invalid_fields (tests.test_v75.Cabrillo75Tests.test_generic_custom_layout_and_invalid_fields) ... ok
+test_jarl_age_and_multi_validation (tests.test_v75.Cabrillo75Tests.test_jarl_age_and_multi_validation) ... ok
+test_period_dates_full_weekend (tests.test_v75.Cabrillo75Tests.test_period_dates_full_weekend) ... ok
+test_all_profiles_save_and_back_preserves_edits (tests.test_v75.UI75Tests.test_all_profiles_save_and_back_preserves_edits) ... ok
+test_backup_default_and_existing_value (tests.test_v75.UI75Tests.test_backup_default_and_existing_value) ... ok
+test_read_error_blocks_partial_output_and_original_adif_unchanged (tests.test_v75.UI75Tests.test_read_error_blocks_partial_output_and_original_adif_unchanged) ... ok
+test_save_cancel_failure_retry_and_config_failure (tests.test_v75.UI75Tests.test_save_cancel_failure_retry_and_config_failure) ... ok
+test_timezone_filter_boundaries_selection_and_validation (tests.test_v75.UI75Tests.test_timezone_filter_boundaries_selection_and_validation) ... ok
+test_diagnostic_failure_does_not_block_validation (tests.test_v76.UI76Tests.test_diagnostic_failure_does_not_block_validation) ... ok
+test_friendly_independent_errors_highlight_and_correction (tests.test_v76.UI76Tests.test_friendly_independent_errors_highlight_and_correction) ... ok
+test_future_year_notice_and_manual_period (tests.test_v76.UI76Tests.test_future_year_notice_and_manual_period) ... ok
+test_last_second_included_and_original_seconds_preserved (tests.test_v76.UI76Tests.test_last_second_included_and_original_seconds_preserved) ... ok
+test_month_start_uses_jst_month_including_year_boundary (tests.test_v76.UI76Tests.test_month_start_uses_jst_month_including_year_boundary) ... ok
+test_model_commands_with_custom_address_and_no_ack (tests.test_v77.Radio77Tests.test_model_commands_with_custom_address_and_no_ack) ... ok
+test_period_labels_stay_adjacent_when_window_widens (tests.test_v77.UI77Tests.test_period_labels_stay_adjacent_when_window_widens) ... This plugin does not support propagateSizeHints()
+ok
+test_edit_moves_month_preserves_unknown_fields_and_rolls_back (tests.test_v78.Storage78Tests.test_edit_moves_month_preserves_unknown_fields_and_rolls_back) ... ok
+test_utc_month_matches_content_jst_day_matches_raw (tests.test_v78.Storage78Tests.test_utc_month_matches_content_jst_day_matches_raw) ... ok
+test_manual_jst_and_latest_are_independent_of_host_zone (tests.test_v78.UI78Tests.test_manual_jst_and_latest_are_independent_of_host_zone) ... ok
+test_menu_opens_live_utc_month_and_jst_day (tests.test_v78.UI78Tests.test_menu_opens_live_utc_month_and_jst_day) ... ok
+test_yaesu_labels_switch_without_changing_command_keys (tests.test_v78.UI78Tests.test_yaesu_labels_switch_without_changing_command_keys) ... ok
+
+----------------------------------------------------------------------
+Ran 217 tests in 22.717s
+
+OK (skipped=1)

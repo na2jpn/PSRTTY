@@ -1,0 +1,5 @@
+PySide6>=6.7,<7
+numpy>=1.26,<3
+sounddevice>=0.5.6,<1
+pyserial>=3.5,<4
+PyInstaller>=6.10,<7

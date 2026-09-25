@@ -1,0 +1,44 @@
+test_axis_retention_replacement_expiry_and_duplicate (tests.test_scope_fix3.Fix3Tests.test_axis_retention_replacement_expiry_and_duplicate) ... ok
+test_traffic_both_axes_more_often_with_afterglow (tests.test_scope_fix3.Fix3Tests.test_traffic_both_axes_more_often_with_afterglow) ... ok
+test_ui_clears_on_tune_hide_and_no_input (tests.test_scope_fix3.Fix3Tests.test_ui_clears_on_tune_hide_and_no_input) ... This plugin does not support propagateSizeHints()
+ok
+test_detuning_survives_gating_and_silence_is_empty (tests.test_scope_fix2.Fix2Tests.test_detuning_survives_gating_and_silence_is_empty) ... ok
+test_refresh_rate_and_hidden_cleanup (tests.test_scope_fix2.Fix2Tests.test_refresh_rate_and_hidden_cleanup) ... This plugin does not support propagateSizeHints()
+ok
+test_text_traffic_keeps_short_separate_traces (tests.test_scope_fix2.Fix2Tests.test_text_traffic_keeps_short_separate_traces) ... ok
+test_axes_silence (tests.test_v81.ScopeDSPTests.test_axes_silence) ... ok
+test_decode_unchanged (tests.test_v81.ScopeDSPTests.test_decode_unchanged) ... ok
+test_ellipse_phase_and_detuning (tests.test_v81.ScopeDSPTests.test_ellipse_phase_and_detuning) ... ok
+test_autolog_only_after_successful_tu_and_unchanged_qso (tests.test_v81.ScopeUITests.test_autolog_only_after_successful_tu_and_unchanged_qso) ... ok
+test_cancel_ignores_late_success (tests.test_v81.ScopeUITests.test_cancel_ignores_late_success) ... ok
+test_connect_failure_ui_keeps_ticking (tests.test_v81.ScopeUITests.test_connect_failure_ui_keeps_ticking) ... ok
+test_function_key_f9_invokes_macro (tests.test_v81.ScopeUITests.test_function_key_f9_invokes_macro) ... ok
+test_gui_watchdog_restores_controls (tests.test_v81.ScopeUITests.test_gui_watchdog_restores_controls) ... ok
+test_help_and_settings_nonmodal (tests.test_v81.ScopeUITests.test_help_and_settings_nonmodal) ... This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+ok
+test_macro_apply_edit_and_cancel (tests.test_v81.ScopeUITests.test_macro_apply_edit_and_cancel) ... ok
+test_nine_buttons_shortcuts_and_unconnected_guards (tests.test_v81.ScopeUITests.test_nine_buttons_shortcuts_and_unconnected_guards) ... ok
+test_rig_unselected_manual_address_and_tabs (tests.test_v81.ScopeUITests.test_rig_unselected_manual_address_and_tabs) ... ok
+test_settings_connection_test_is_async (tests.test_v81.ScopeUITests.test_settings_connection_test_is_async) ... This plugin does not support propagateSizeHints()
+ok
+test_success_and_disconnect (tests.test_v81.ScopeUITests.test_success_and_disconnect) ... ok
+test_toggle (tests.test_v81.ScopeUITests.test_toggle) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+ok
+test_unselected_settings_can_save_audio (tests.test_v81.ScopeUITests.test_unselected_settings_can_save_audio) ... ok
+test_v03_reset_ignores_maximized_and_restores_bounds (tests.test_v81.ScopeUITests.test_v03_reset_ignores_maximized_and_restores_bounds) ... ok
+test_v03_six_macro_rows_and_rx_position (tests.test_v81.ScopeUITests.test_v03_six_macro_rows_and_rx_position) ... ok
+test_v03_window_save_and_reset_help (tests.test_v81.ScopeUITests.test_v03_window_save_and_reset_help) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+
+----------------------------------------------------------------------
+Ran 25 tests in 3.533s
+
+OK
