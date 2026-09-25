@@ -97,7 +97,7 @@ class ADIFLog:
             header = (
                 _field("ADIF_VER", "3.1.7") + " "
                 + _field("PROGRAMID", "PSRTTY") + " "
-                + _field("PROGRAMVERSION", "0.83") + " <EOH>\r\n"
+                + _field("PROGRAMVERSION", "0.84") + " <EOH>\r\n"
             )
             path.write_text(header, encoding="utf-8")
         return path

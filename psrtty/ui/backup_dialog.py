@@ -24,6 +24,8 @@ class BackupDialog(QDialog):
         note.setWordWrap(True); root.addWidget(note)
         now = QPushButton('いますぐバックアップ'); now.clicked.connect(lambda: backup_now()); root.addWidget(now)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText("保存")
+        buttons.button(QDialogButtonBox.Cancel).setText("キャンセル")
         buttons.accepted.connect(self._save); buttons.rejected.connect(self.reject); root.addWidget(buttons)
 
     def _save(self):

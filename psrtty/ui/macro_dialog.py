@@ -5,10 +5,10 @@ from copy import deepcopy
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog, QDialogButtonBox, QHeaderView, QLabel, QTableWidget,
-    QTableWidgetItem, QVBoxLayout, QComboBox, QPushButton, QHBoxLayout,
+    QTableWidgetItem, QVBoxLayout, QComboBox, QPushButton, QHBoxLayout, QLineEdit, QCheckBox,
 )
 
-from ..macros import TEMPLATES, TEMPLATE_HELP, NORMAL_TEMPLATE_NAME
+from ..macros import TEMPLATES, TEMPLATE_HELP, NORMAL_TEMPLATE_NAME, TEMPLATE_NAME, CQWW_TEMPLATE_NAME
 
 class MacroDialog(QDialog):
     def __init__(self, store, parent=None):
@@ -18,7 +18,7 @@ class MacroDialog(QDialog):
         self.setWindowTitle("マクロ編集")
         self.resize(820, 590)
         root = QVBoxLayout(self)
-        instruction = QLabel("テンプレートを選択し、［反映］を押してから［Save］してください。")
+        instruction = QLabel("テンプレートを選択し、［反映］を押してから［保存］してください。")
         instruction.setWordWrap(True)
         root.addWidget(instruction)
         row = QHBoxLayout()
@@ -58,8 +58,20 @@ class MacroDialog(QDialog):
         root.addWidget(self.template_help)
         self.template.currentTextChanged.connect(self._update_template_help)
         self._update_template_help()
-        root.addStretch(1)
+        sent_row = QHBoxLayout()
+        sent_row.addStretch(1)
+        sent_row.addWidget(QLabel("SENT"))
+        self.sent = QLineEdit(str(store.data['qso']['sent']))
+        self.sent.setFixedWidth(140)
+        self.sent_fixed = QCheckBox("固定")
+        self.sent_fixed.setChecked(store.data['qso']['sent_fixed'])
+        self.sent_fixed.setToolTip("ON: SENTを保持。OFF: ログ追加成功時に数値を+1。")
+        sent_row.addWidget(self.sent)
+        sent_row.addWidget(self.sent_fixed)
+        root.addLayout(sent_row)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText("保存")
+        buttons.button(QDialogButtonBox.Cancel).setText("キャンセル")
         buttons.accepted.connect(self._save); buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
@@ -73,6 +85,9 @@ class MacroDialog(QDialog):
     def _apply_template(self):
         self.applied_template = self.template.currentText()
         self.macros = TEMPLATES[self.template.currentText()]()
+        self.sent.setText({CQWW_TEMPLATE_NAME: "25", TEMPLATE_NAME: "01",
+                           NORMAL_TEMPLATE_NAME: ""}[self.applied_template])
+        self.sent_fixed.setChecked(True)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         for r, m in enumerate(self.macros):
             self.table.item(r, 1).setText(m["name"])
@@ -85,6 +100,7 @@ class MacroDialog(QDialog):
             self.macros[r]["text"] = self.table.item(r, 2).text()
             self.macros[r]["completes_qso"] = self.table.item(r, 3).checkState() == Qt.Checked
         self.store.data["macro_template"] = self.applied_template
+        self.store.data['qso'].update(sent=self.sent.text(), sent_fixed=self.sent_fixed.isChecked())
         self.store.macros = self.macros
         self.store.save()
         self.accept()

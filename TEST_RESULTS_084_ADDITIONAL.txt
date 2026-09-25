@@ -1,0 +1,10 @@
+test_japanese_buttons_and_layout (tests.test_v84.UI84Tests.test_japanese_buttons_and_layout) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_main_window_receives_saved_sent (tests.test_v84.UI84Tests.test_main_window_receives_saved_sent) ... ok
+test_template_defaults_cancel_and_save (tests.test_v84.UI84Tests.test_template_defaults_cancel_and_save) ... ok
+
+----------------------------------------------------------------------
+Ran 3 tests in 0.428s
+
+OK

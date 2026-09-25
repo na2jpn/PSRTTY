@@ -7,7 +7,7 @@ from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QWidget
 from ..paths import resource_path
 
 
-ABOUT_TEXT = """<h2>PSRTTY 0.83</h2>
+ABOUT_TEXT = """<h2>PSRTTY 0.84</h2>
 <p>Python / PySide6によるRTTYコンテスト向け通信ソフト。</p>
 <p>ICOM無線機とのCI-V接続およびUSB Audioを利用し、RTTYの送受信、マクロ送信、QSO記録を行います。</p>
 <p>Yaesu FT-991 / FT-991A、FTX-1シリーズのCAT接続は試験用です。実機での動作確認は未実施です。</p>

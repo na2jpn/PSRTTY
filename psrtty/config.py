@@ -29,7 +29,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "0.83",
+    "version": "0.84",
     "schema_version": 1,
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",

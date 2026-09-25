@@ -44,6 +44,8 @@ class SettingsDialog(QDialog):
         self._build_advanced_tab()
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText("保存")
+        buttons.button(QDialogButtonBox.Cancel).setText("キャンセル")
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)

@@ -122,7 +122,7 @@ class MainWindow(QMainWindow):
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
 
-        self.setWindowTitle("PSRTTY 0.83")
+        self.setWindowTitle("PSRTTY 0.84")
         self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
@@ -1029,7 +1029,18 @@ class MainWindow(QMainWindow):
     def _edit_macros(self):
         self._stop_tx()
         dlg=MacroDialog(self.store,self)
-        if dlg.exec(): self._refresh_macros()
+        if dlg.exec():
+            self._refresh_macros()
+            qso = dict(self.store.data['qso'])
+            # Avoid saving an intermediate combination through the main controls.
+            self.sent.blockSignals(True)
+            self.sent_fixed.blockSignals(True)
+            try:
+                self.sent.setText(qso['sent'])
+                self.sent_fixed.setChecked(qso['sent_fixed'])
+            finally:
+                self.sent.blockSignals(False)
+                self.sent_fixed.blockSignals(False)
     def _show_qso_log(self):
         dlg=QSOLogDialog(self.adif,self)
         dlg.changed.connect(self._reload_qsos)
