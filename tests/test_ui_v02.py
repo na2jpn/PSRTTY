@@ -63,7 +63,7 @@ class UITests(unittest.TestCase):
     def test_rig_unselected_manual_address_and_tabs(self):
         dlg=SettingsDialog(self.store)
         self.assertEqual(dlg.rig.currentText(),'選択してください'); self.assertEqual(dlg.civ_addr.currentText(),'')
-        self.assertEqual([dlg.tabs.tabText(i) for i in range(5)],['基本設定','無線機','Audio IN','Audio OUT','高度な設定'])
+        self.assertEqual([dlg.tabs.tabText(i) for i in range(6)],['基本設定','無線機','Audio IN','Audio OUT','外部接続','高度な設定'])
         dlg.rig.setCurrentText('IC-705'); self.assertEqual(dlg.civ_addr.currentText(),'A4')
         dlg.civ_addr.setCurrentText('90'); dlg._save(); self.assertEqual(self.store.data['radio']['civ_address'],'90')
     def test_unselected_settings_can_save_audio(self):
@@ -128,6 +128,46 @@ class UITests(unittest.TestCase):
             start=time.monotonic(); dlg._test_radio(); self.assertLess(time.monotonic()-start,.1)
             self.assertFalse(dlg.test_button.isEnabled()); self.pump(.2)
             self.assertTrue(dlg.test_button.isEnabled()); warning.assert_called_once()
+        dlg.close()
+    def test_settings_success_does_not_later_report_timeout(self):
+        dlg=SettingsDialog(self.store); dlg.rig.setCurrentText('IC-705'); dlg.show()
+        deadline=[]
+        def capture_timer(ms, parent, callback):
+            if ms==10000: deadline.append(callback)
+        status=CIVStatus(True,'COM1',19200,14085000)
+        with patch('psrtty.ui.settings_dialog.QTimer.singleShot',side_effect=capture_timer), \
+             patch('psrtty.ui.settings_dialog.connect_configured',return_value=status), \
+             patch.object(QMessageBox,'information') as info, patch.object(QMessageBox,'warning') as warning:
+            dlg._test_radio(); self.pump(.15)
+            self.assertEqual(len(deadline),2)
+            self.assertTrue(dlg.test_pending is False)
+            self.assertTrue(dlg.test_button.isEnabled())
+            info.assert_called_once()
+            deadline[0]()
+            warning.assert_not_called()
+            self.assertIn('成功',dlg.test_note.text())
+            deadline[1]()
+            self.assertIsNone(dlg.test_controller)
+            self.assertIn('［接続］',dlg.test_note.text())
+        dlg.close()
+    def test_settings_timeout_ignores_late_success(self):
+        dlg=SettingsDialog(self.store); dlg.rig.setCurrentText('IC-705'); dlg.show()
+        deadline=[]
+        def capture_timer(ms, parent, callback):
+            if ms==10000: deadline.append(callback)
+        def delayed_success(ctl,*args):
+            time.sleep(.12)
+            return CIVStatus(True,'COM1',19200,14085000)
+        with patch('psrtty.ui.settings_dialog.QTimer.singleShot',side_effect=capture_timer), \
+             patch('psrtty.ui.settings_dialog.connect_configured',side_effect=delayed_success), \
+             patch.object(QMessageBox,'information') as info, patch.object(QMessageBox,'warning') as warning:
+            dlg._test_radio(); deadline[0]()
+            self.assertFalse(dlg.test_button.isEnabled())
+            self.pump(.2)
+            self.assertTrue(dlg.test_button.isEnabled())
+            self.assertIsNone(dlg.verified_values)
+            info.assert_not_called()
+            warning.assert_called_once()
         dlg.close()
     def test_v03_six_macro_rows_and_rx_position(self):
         w=self.window; w.show(); self.pump(.05)

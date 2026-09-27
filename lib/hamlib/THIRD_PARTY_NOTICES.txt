@@ -1,0 +1,6 @@
+Hamlib 4.7.2 - https://github.com/Hamlib/Hamlib/releases/tag/4.7.2
+libhamlib-4.dll: LGPL-2.1-or-later. LICENSE.txt / COPYING.LIB.txt を参照。
+対応するHamlibソース: hamlib-4.7.2.tar.gz（このフォルダー内）。
+libusb-1.0.dll: LGPL-2.1-or-later. COPYING.LIB.txt を参照。ソース: https://github.com/libusb/libusb
+libwinpthread-1.dll: MinGW-w64 winpthreads。MIT方式とLockless Inc.のBSD方式の通知は WINPTHREADS_NOTICE.txt を参照。ソース: https://www.mingw-w64.org/source/
+DLLは同じフォルダー内の互換版と交換できます。

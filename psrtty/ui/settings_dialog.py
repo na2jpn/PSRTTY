@@ -13,7 +13,9 @@ from PySide6.QtWidgets import (
 from ..audio_engine import AudioEngine
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller, validate_radio
+from ..external_ptt import ExternalPTT, validate_external
 from ..yaesu import YAESU_MODELS
+from ..hamlib_radio import HAMLIB_MODELS
 from .background import BackgroundJob
 from ..config import DEFAULT_CONFIG, RIG_MODELS
 
@@ -25,12 +27,15 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.test_controller = None
         self.test_uses_main = False
+        self.test_pending = False
+        self.test_timed_out = False
         self.verified_values = None
         self.tx_testing = False
         self.alc_busy = False
         self.alc_onset = None
         self.alc_value = None
         self.test_deadline = 0.0
+        self.test_connection_generation = 0
         self.connect_requested = False
         self.store = config_store
         self.working = deepcopy(config_store.data)
@@ -39,8 +44,8 @@ class SettingsDialog(QDialog):
 
         root = QVBoxLayout(self)
         intro = QLabel(
-            "FT8で使っているCOMポート・音声デバイスを選択してください。\n"
-            "ICOMに加え、Yaesuの2系統に試験対応しています（実機未確認）。"
+            "使用するCOMポート・音声デバイスを選択してください。\n"
+            "ICOMはCI-V、Yaesu・Kenwood機種はHamlibで制御します。"
         )
         intro.setWordWrap(True)
         intro.setObjectName("helpText")
@@ -52,6 +57,7 @@ class SettingsDialog(QDialog):
         self._build_radio_tab()
         self._build_audio_in_tab()
         self._build_audio_out_tab()
+        self._build_external_tab()
         self._build_advanced_tab()
         for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
             combo.currentIndexChanged.connect(self._test_controls_changed)
@@ -96,7 +102,7 @@ class SettingsDialog(QDialog):
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.rig = QComboBox(); self.rig.addItem('選択してください', '')
         for model in RIG_MODELS: self.rig.addItem(model, model)
-        for model, label in YAESU_MODELS.items(): self.rig.addItem(label, model)
+        for model, (_,label) in HAMLIB_MODELS.items(): self.rig.addItem(label, model)
         self._select_data(self.rig, self.working['radio']['model'])
         form.addRow('無線機', self.rig)
         self.com = QComboBox(); self.com.addItem('自動', 'AUTO')
@@ -123,7 +129,8 @@ class SettingsDialog(QDialog):
         self.stopbits_label = QLabel('ストップビット'); f.addRow(self.stopbits_label, self.stopbits)
         self.auto_mode = QCheckBox(); self.auto_mode.setChecked(self.working['radio'].get('auto_data_mode', True))
         f.addRow(self.auto_mode)
-        self.cat_note = QLabel('試験用・実機未確認。DATA入力はUSBに設定してください。\nFT-991/AはVFO A、FTX-1はMAIN側で運用します。')
+        self.cat_note = QLabel('Hamlibを使用します。COMポートとCAT速度を指定して接続テストしてください。'
+                               '無線機のDATA入力はUSBに設定します。ALCを取得できない場合は無線機本体で確認してください。')
         self.cat_note.setWordWrap(True); self.cat_note.setObjectName('helpText'); f.addRow(self.cat_note)
         form.addRow(self.specific)
         self.test_button = QPushButton('接続テスト'); self.test_button.clicked.connect(self._test_radio)
@@ -136,13 +143,59 @@ class SettingsDialog(QDialog):
         self._rig_changed(initial=True)
         self.tabs.addTab(tab, '無線機')
 
+    def _build_external_tab(self):
+        tab = QWidget(); form = QFormLayout(tab)
+        values = self.working['external']
+        self.external_enabled = QCheckBox('外部機器の先行切替を有効にする')
+        self.external_enabled.setChecked(bool(values['enabled']))
+        form.addRow(self.external_enabled)
+        self.external_port = QComboBox()
+        self.external_port.addItem('選択してください', '')
+        for port, label in CIVController.port_choices():
+            self.external_port.addItem(label, port)
+        selected = values.get('com_port', '')
+        if selected and self.external_port.findData(selected) < 0:
+            self.external_port.addItem(f'{selected}（未接続）', selected)
+        self._select_data(self.external_port, selected)
+        form.addRow('外部機器のCOMポート', self.external_port)
+        self.external_line = QComboBox()
+        self.external_line.addItems(['RTS', 'DTR'])
+        self.external_line.setCurrentText(values.get('line', 'RTS'))
+        form.addRow('制御線', self.external_line)
+        self.external_delay = QDoubleSpinBox()
+        self.external_delay.setRange(.1, 9.9)
+        self.external_delay.setSingleStep(.1)
+        self.external_delay.setDecimals(1)
+        self.external_delay.setSuffix(' 秒')
+        self.external_delay.setValue(float(values.get('delay_seconds', .1)))
+        form.addRow('PTTより先に切り替える時間', self.external_delay)
+        note = QLabel('送信時、指定COMのRTSまたはDTRを切り替えてから設定秒数後に無線機のPTTをONにします。'
+                      '終了時は先にPTTをOFFにしてから外部制御線を戻します。'
+                      '無線機のCATとは別のCOMポートが必要です。接続した機器の極性と配線を確認してください。')
+        note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
+        spacer = QWidget(); spacer.setFixedHeight(9); form.addRow(spacer)
+        self.external_reverse = QCheckBox('動作を反転する')
+        self.external_reverse.setChecked(bool(values.get('reversed', False)))
+        form.addRow(self.external_reverse)
+        reverse_note = QLabel('送信開始前に外部機器を切り替え、送信終了後に元へ戻します。'
+                              '接続先が逆に動く場合だけ「動作を反転する」を選んでください。')
+        reverse_note.setWordWrap(True); reverse_note.setObjectName('helpText'); form.addRow(reverse_note)
+        self.tabs.addTab(tab, '外部接続')
+
+    def _external_values(self):
+        return dict(enabled=self.external_enabled.isChecked(),
+                    com_port=self.external_port.currentData() or '',
+                    line=self.external_line.currentText(), reversed=self.external_reverse.isChecked(),
+                    delay_seconds=self.external_delay.value())
+
     def _rig_changed(self, *_, initial=False):
         model = self.rig.currentData() or ''
-        yaesu = model in YAESU_MODELS
+        yaesu = model in HAMLIB_MODELS
         self.specific.setEnabled(bool(model)); self.test_button.setEnabled(bool(model))
         self.connect_button.setEnabled(bool(model))
         for widget in (self.address_label, self.civ_addr, self.address_note): widget.setVisible(not yaesu)
-        for widget in (self.stopbits_label, self.stopbits, self.cat_note): widget.setVisible(yaesu)
+        for widget in (self.stopbits_label, self.stopbits): widget.setVisible(False)
+        self.cat_note.setVisible(yaesu)
         if not initial and not yaesu:
             addr = RIG_MODELS.get(model, 0)
             self.civ_addr.setCurrentText(f'{addr:02X}' if addr else '')
@@ -156,13 +209,16 @@ class SettingsDialog(QDialog):
         self.baud_label.setText('CAT速度' if yaesu else 'CI-V速度')
         bits = saved.get('cat_stopbits') if initial else None
         self._select_data(self.stopbits, bits or (1 if model == 'FTX-1' else 2))
-        self.port_note.setText('YaesuはEnhanced COMを選択してください。「自動」ではCAT応答を確認して探します。' if yaesu else '通常は「自動」でCI-V応答を確認して接続します。')
+        self.port_note.setText('Hamlib制御はCOMポートとCAT速度を指定してください。YaesuのUSB接続ではEnhanced COMが一般的です。' if yaesu else '通常は「自動」でCI-V応答を確認して接続します。複数の無線機を使用する場合は、接続先のCOMポートを指定してください。')
         self._mode_caption()
 
     def _mode_caption(self, *_):
         mode = self.data_mode.currentText() if hasattr(self, 'data_mode') else self.working['advanced'].get('data_mode', 'LSB-D')
-        if self.rig.currentData() in YAESU_MODELS:
-            mode = ('DATA-L' if mode == 'LSB-D' else 'DATA-U') if self.rig.currentData() == 'FTX-1' else ('DATA-LSB' if mode == 'LSB-D' else 'DATA-USB')
+        model=self.rig.currentData()
+        if model=='TS-990S':mode=('LSB-D1' if mode=='LSB-D' else 'USB-D1')
+        elif model.startswith('TS-'):mode=('LSB-DATA' if mode=='LSB-D' else 'USB-DATA')
+        elif model in HAMLIB_MODELS:
+            mode = ('DATA-L' if mode == 'LSB-D' else 'DATA-U') if model == 'FTX-1' else ('DATA-LSB' if mode == 'LSB-D' else 'DATA-USB')
         self.auto_mode.setText(f'接続時に {mode} へ自動切替')
 
     def _audio_choices(self, combo, kind, selected):
@@ -219,6 +275,20 @@ class SettingsDialog(QDialog):
         self.audio_out = QComboBox()
         self._audio_choices(self.audio_out, 'output', self.working['audio']['output_device'])
         form.addRow("Audio OUT", self.audio_out)
+        self.audio_out_status = QLabel()
+        self.audio_out_status.setWordWrap(True)
+        self.audio_out_status.setStyleSheet('color: #725d49; background: transparent; border: none; padding: 0;')
+        self.rebind_audio_out = QPushButton('同名の有効な機器を選び直す')
+        self.rebind_audio_out.clicked.connect(self._rebind_audio_out)
+        refresh = QPushButton('音声デバイスを再検出')
+        refresh.clicked.connect(self._refresh_audio_out_choices)
+        row_device = QHBoxLayout()
+        row_device.addWidget(self.rebind_audio_out)
+        row_device.addWidget(refresh)
+        row_device.addWidget(self.audio_out_status, 1)
+        form.addRow('', row_device)
+        self.audio_out.currentIndexChanged.connect(self._update_audio_out_availability)
+        self._update_audio_out_availability()
         n3 = QLabel("送信用：パソコン → 無線機\n送信音を送る再生デバイス（USB Audio／LINE OUT／スピーカー出力など）を選んでください。")
         n3.setWordWrap(True); n3.setObjectName("helpText"); form.addRow("", n3)
 
@@ -314,7 +384,7 @@ class SettingsDialog(QDialog):
 
     def _radio_values(self):
         values = dict(self.working['radio'])
-        yaesu = self.rig.currentData() in YAESU_MODELS
+        yaesu = self.rig.currentData() in HAMLIB_MODELS
         values.update(model=self.rig.currentData() or '', civ_address=self.civ_addr.currentText().strip().upper(),
                       com_port=self.com.currentData() or 'AUTO', ptt=self.ptt.currentText(),
                       auto_data_mode=self.auto_mode.isChecked())
@@ -378,6 +448,43 @@ class SettingsDialog(QDialog):
         self.store.save()
         self.tx_test_note.setText('Audio OUTの設定を保存しました。')
 
+    def _refresh_audio_out_choices(self):
+        selected = self.audio_out.currentData()
+        self.audio_out.blockSignals(True)
+        self.audio_out.clear()
+        self._audio_choices(self.audio_out, 'output', selected)
+        self.audio_out.blockSignals(False)
+        self._update_audio_out_availability()
+
+    def _matching_audio_out(self):
+        selected = self.audio_out.currentData()
+        if not isinstance(selected, dict) or '未接続／無効' not in self.audio_out.currentText():
+            return []
+        return [index for index in range(self.audio_out.count())
+                if isinstance(self.audio_out.itemData(index), dict)
+                and self.audio_out.itemData(index).get('name') == selected.get('name')
+                and self.audio_out.itemData(index).get('kind') == 'output'
+                and self.audio_out.itemData(index).get('backend') == selected.get('backend')
+                and self.audio_out.itemData(index).get('id') != selected.get('id')]
+
+    def _update_audio_out_availability(self, *_):
+        stale = '未接続／無効' in self.audio_out.currentText()
+        matches = self._matching_audio_out() if stale else []
+        self.rebind_audio_out.setVisible(len(matches) == 1)
+        self.audio_out_status.setVisible(stale)
+        if stale:
+            self.audio_out_status.setText('保存済みの音声デバイスIDが現在は使えません。'
+                + ('同名の有効な機器が見つかりました。ボタンで選び直してからテスト送信してください。' if len(matches) == 1 else
+                   '音声デバイスを再検出し、一覧から送信先の機器を選び直してください。'))
+        else:
+            self.audio_out_status.setText('')
+
+    def _rebind_audio_out(self):
+        matches = self._matching_audio_out()
+        if len(matches) == 1:
+            self.audio_out.setCurrentIndex(matches[0])
+            self.tx_test_note.setText('有効なAudio OUTを選び直しました。テスト送信で確認し、停止後に音量設定を保存してください。')
+
     def _show_alc(self, value):
         self.alc_value=value
         if value is None:
@@ -418,10 +525,18 @@ class SettingsDialog(QDialog):
         adv=self.working['advanced']
         # RY alternation exercises both mark and space. The worker is cut off at 10 s.
         text='RY ' * 70
+        try:
+            sequencer=ExternalPTT(self._external_values(), ctl.status.port, parent.audio._tx_cancel)
+        except ValueError as exc:
+            self.tx_test_note.setText(str(exc)); return
+        def on():
+            return bool(self.test_controller is ctl and ctl.status.connected and sequencer.before_ptt() and ptt(True))
+        def off():
+            try: return ptt(False)
+            finally: sequencer.after_ptt()
         ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
             adv['mark_hz'],adv['space_hz'],adv['invert'],self.tx_gain.value()/100,
-            lambda: bool(self.test_controller is ctl and ctl.status.connected and ptt(True)),
-            lambda: ptt(False), lambda success,note:self.tx_test_finished.emit(success,note))
+            on, off, lambda success,note:self.tx_test_finished.emit(success,note))
         if not ok:
             self.tx_test_note.setText(msg); return
         self.tx_testing=True; self.test_deadline=time.monotonic()+10
@@ -465,6 +580,8 @@ class SettingsDialog(QDialog):
         if not self.isVisible(): self._release_test_controller()
 
     def _release_test_controller(self):
+        self.test_connection_generation += 1
+        self.test_pending = False
         ctl,self.test_controller=self.test_controller,None
         borrowed=self.test_uses_main
         self.test_uses_main=False
@@ -491,6 +608,8 @@ class SettingsDialog(QDialog):
             QMessageBox.warning(self, "接続テスト", str(exc)); return
         self.test_controller = ctl
         self.test_uses_main = False
+        self.test_pending = True
+        self.test_timed_out = False
         self.verified_values = None
         self.alc_onset = None
         self._show_alc(None)
@@ -503,28 +622,47 @@ class SettingsDialog(QDialog):
             return connect_configured(ctl, values, advanced)
         self.test_job = BackgroundJob(self, work, lambda st, err: self._test_done(st, err, values) if self.test_controller is ctl else None)
         def deadline():
-            if self.test_controller is ctl:
+            if self.test_controller is ctl and self.test_pending:
+                self.test_timed_out = True
                 ctl.cancel.set()
                 self.test_note.setText("中止処理中です。完了後に再試行してください。")
-                self.test_button.setEnabled(True); self.test_button.setText("接続テスト")
-                QMessageBox.warning(self, "接続テスト", "接続がタイムアウトしました")
+                if self.isVisible():
+                    QMessageBox.warning(self, "接続テスト", "接続がタイムアウトしました")
         QTimer.singleShot(10000, self, deadline)
 
     def _test_done(self, status, error, values):
-        if error or not status or not status.connected:
+        timed_out = self.test_timed_out
+        self.test_pending = False
+        failed = timed_out or error or not status or not status.connected
+        if failed:
             self._release_test_controller()
         else:
             self.verified_values=values
             self.test_tx_button.setEnabled(True)
         self.connect_button.setEnabled(bool(self.rig.currentData()))
-        self.test_note.setText("接続テスト失敗" if error or not status or not status.connected else "接続テストに成功しました。Audio OUTを調整できます。運用を開始するには［接続］を押してください。")
+        self.test_note.setText("接続テスト失敗" if failed else "接続テストに成功しました。Audio OUTを調整できます。運用を開始するには［接続］を押してください。")
         self.test_button.setEnabled(True); self.test_button.setText("接続テスト")
         if not self.isVisible():
             return
-        if error or not status or not status.connected:
+        if timed_out:
+            return
+        if failed:
             QMessageBox.warning(self, "接続テスト", str(error) if error else status.message if status else '応答なし')
         else:
             QMessageBox.information(self, "接続テスト", f"接続テストに成功しました。Audio OUTで送信レベルを調整できます。\n{status.port} / {status.baud} bps\n周波数: {status.frequency_hz:,} Hz")
+            if self.test_controller and not self.test_uses_main:
+                self.test_connection_generation += 1
+                generation=self.test_connection_generation
+                QTimer.singleShot(10000, self, lambda: self._expire_test_connection(generation))
+
+    def _expire_test_connection(self, generation):
+        if generation != self.test_connection_generation or not self.test_controller or self.test_uses_main:return
+        if self.tx_testing:
+            QTimer.singleShot(200, self, lambda: self._expire_test_connection(generation))
+            return
+        self._release_test_controller()
+        self.test_tx_button.setEnabled(False)
+        self.test_note.setText('接続テストを終了しました。継続して運用するには［接続］を押してください。')
 
     def done(self, result):
         self.level_timer.stop()
@@ -559,7 +697,12 @@ class SettingsDialog(QDialog):
                 validate_radio(values)
         except ValueError as exc:
             QMessageBox.warning(self, "設定", str(exc)); return
+        try:
+            validate_external(self._external_values(), values['com_port'])
+        except ValueError as exc:
+            QMessageBox.warning(self, "外部接続", str(exc)); return
         self.working["radio"].update(values)
+        self.working['external'].update(self._external_values())
         self.working["audio"].update({
             "input_device": self.audio_in.currentData() or "AUTO",
             "output_device": self.audio_out.currentData() or "AUTO",
@@ -578,7 +721,7 @@ class SettingsDialog(QDialog):
         })
         self.before_save.emit()
         # Main-window QSO fields remain usable while settings are open.
-        for section in ('radio', 'audio', 'advanced'):
+        for section in ('radio', 'audio', 'advanced', 'external'):
             self.store.data[section] = self.working[section]
         from ..parser import normalize_call
         # Preserve a main-window CALL edit when this field was not edited.

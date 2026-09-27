@@ -5,12 +5,23 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QWidget
 
 from ..paths import resource_path
+from ..paths import app_root
 
 
-ABOUT_TEXT = """<h2>PSRTTY 0.88</h2>
+def hamlib_about():
+    version=app_root()/'lib/hamlib/VERSION.txt'
+    if not version.is_file():return 'Hamlib：同梱ファイルを確認できません。'
+    try:
+        value=version.read_text(encoding='ascii').strip()
+        if not value or len(value)>30:return 'Hamlib：版情報を確認できません。'
+    except OSError:return 'Hamlib：版情報を確認できません。'
+    return f'Hamlib：Ver {value}（Yaesu・KenwoodのCAT制御）<br>ライセンス：LGPL 2.1以降。詳細：lib/hamlib/THIRD_PARTY_NOTICES.txt'
+
+
+ABOUT_TEXT = """<h2>PSRTTY 1.03</h2>
 <p>Python / PySide6によるRTTYコンテスト向け通信ソフト。</p>
 <p>ICOM無線機とのCI-V接続およびUSB Audioを利用し、RTTYの送受信、マクロ送信、QSO記録を行います。</p>
-<p>Yaesu FT-991 / FT-991A、FTX-1シリーズのCAT接続は試験用です。実機での動作確認は未実施です。</p>
+<p>Yaesu・Kenwoodの選択機種はHamlibによるCAT接続を利用します。</p>
 <p>通信内容は、生ログとして <b>Pipe Separator形式（PS形式）</b> でTXT保存します。PS形式では、時刻と内容をパイプ記号 <code>|</code> で区切って記録します。</p>
 <p>確定したQSOはADIF形式で保存します。</p>
 <h3>作者からの案内</h3>
@@ -28,6 +39,7 @@ AKIHABARA-GIKEN</p>
 <p>改良版の配布前に、作者へ改良内容、配布先、配布者本人の氏名と連絡先を通知してください。作者の個別承認を条件とするものではありません。</p>
 <p>元作者の表示を保持し、作者の公式版または作者が保証する版であると誤認させないでください。</p>
 <p>Python、PySide6/Qt、PyInstaller、NumPy、sounddevice、pyserialその他の第三者ライブラリには、それぞれの利用条件が適用されます。</p>
+<h3>第三者ライブラリ</h3><p>""" + hamlib_about() + """</p>
 """
 
 

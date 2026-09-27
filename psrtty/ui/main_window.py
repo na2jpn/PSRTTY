@@ -38,7 +38,7 @@ from .qso_log_dialog import QSOLogDialog
 from .settings_dialog import SettingsDialog
 from .spectrum import SpectrumWidget
 from .hint_group import HintGroupBox, HeaderControlGroupBox, FooterHintGroupBox
-from .formatting import frequency_text
+from .formatting import frequency_text, band_mhz
 from .number_edit import NumberEdit
 from .qso_datetime import QSODatetime
 
@@ -87,6 +87,7 @@ class MainWindow(QMainWindow):
         self.qsos = self.adif.load_recent(limit=None, record_order=True)
         self.radio: CIVController | None = None
         self.current_freq_hz: int | None = None
+        self.last_known_freq_hz: int | None = None
         self.connecting = False
         self.antenna_tuning = False
         self.polling = False
@@ -125,7 +126,7 @@ class MainWindow(QMainWindow):
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
 
-        self.setWindowTitle("PSRTTY 0.88")
+        self.setWindowTitle("PSRTTY 1.03")
         self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
@@ -172,6 +173,9 @@ class MainWindow(QMainWindow):
         for size in (10,12,14,16,18): self._act(fontm, f"{size} pt", lambda checked=False, v=size: self._set_card_font(v))
         latest = view.addMenu("最新QSO表示件数")
         for count in (2,4,6,8,10): self._act(latest, str(count), lambda checked=False, v=count: self._set_latest_count(v))
+        view.addSeparator()
+        self._act(view, "コントロール", self._show_control)
+        self._act(view, "クロススコープ", lambda: self.scope_button.setChecked(True))
 
         helpm = mb.addMenu("ヘルプ")
         self._act(helpm, "初期設定ガイド", self._guide_initial)
@@ -316,10 +320,10 @@ class MainWindow(QMainWindow):
         self.latest_panel = QWidget()
         tables_layout = QHBoxLayout(self.latest_panel)
         tables_layout.setContentsMargins(0,0,0,0); tables_layout.setSpacing(14)
-        self.latest_table = QTableWidget(0,7)
-        self.latest_right = QTableWidget(0,7)
+        self.latest_table = QTableWidget(0,8)
+        self.latest_right = QTableWidget(0,8)
         for table in (self.latest_table, self.latest_right):
-            table.setHorizontalHeaderLabels(["No.","日時（JST）","CALL","RST-S","SENT","RST-R","RCVD"])
+            table.setHorizontalHeaderLabels(["No.","日時（JST）","BAND","CALL","RST-S","SENT","RST-R","RCVD"])
             table.verticalHeader().setVisible(False)
             table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
             table.verticalHeader().setDefaultSectionSize(24)
@@ -650,14 +654,21 @@ class MainWindow(QMainWindow):
                 return False
         a=self.store.data["advanced"]; au=self.store.data["audio"]
         ctl = self.radio
+        from ..external_ptt import ExternalPTT
         mode = self.store.data["radio"]["ptt"]
         offline = not self._connected()
         ptt = None if offline else {"CI-V": ctl.set_ptt, "CAT": ctl.set_ptt, "RTS": ctl.set_rts, "DTR": ctl.set_dtr}.get(mode)
+        try:
+            sequencer = ExternalPTT(self.store.data['external'], ctl.status.port if not offline else '', self.audio._tx_cancel)
+        except ValueError as exc:
+            self.statusBar().showMessage(str(exc), 4000)
+            return False
         def on():
             if offline: return not self.closing
-            return bool(ptt and self.radio is ctl and self._connected() and ptt(True))
+            return bool(ptt and self.radio is ctl and self._connected() and sequencer.before_ptt() and ptt(True))
         def off():
-            return True if offline else (ptt(False) if ptt else False)
+            try: return True if offline else (ptt(False) if ptt else False)
+            finally: sequencer.after_ptt()
         self.tx_sequence += 1
         token = self.tx_sequence
         self.active_tx_id = token
@@ -801,7 +812,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, "ログに追加", "日時を YYYY-MM-DD HH:MM で入力してください。")
             return
-        q=QSORecord(call=call,rst_sent=self.rst_s.text().strip() or "599",rst_rcvd=self.rst_r.text().strip() or "599",sent=self.sent.text().strip(),rcvd=self.rcvd.text().strip(),station_callsign=normalize_call(self.my_call.text()),freq_hz=self.current_freq_hz,when_utc=when)
+        q=QSORecord(call=call,rst_sent=self.rst_s.text().strip() or "599",rst_rcvd=self.rst_r.text().strip() or "599",sent=self.sent.text().strip(),rcvd=self.rcvd.text().strip(),station_callsign=normalize_call(self.my_call.text()),freq_hz=self.current_freq_hz or (self.last_known_freq_hz if not self._connected() else None),when_utc=when)
         try:
             path=self.adif.append(q)
         except Exception as exc:
@@ -835,9 +846,22 @@ class MainWindow(QMainWindow):
         self.latest_box.set_footer(f"ログ合計 {total}件")
         rows=list(reversed(self.qsos[-count:]))
         fm=self.latest_table.fontMetrics()
-        widths=[max(30, fm.horizontalAdvance(str(total))+8),fm.horizontalAdvance('2026-09-24 23:59')+8,fm.horizontalAdvance('JH1HST/1')+8]
+        widths=[max(30, fm.horizontalAdvance(str(total))+8),fm.horizontalAdvance('2026-09-24 23:59')+8,max(38, fm.horizontalAdvance('BAND')+6),fm.horizontalAdvance('JH1HST/1')+8]
         widths += [max(36,fm.horizontalAdvance(label)+6) for label in ('RST-S','SENT','RST-R','RCVD')]
-        columns=2 if self.latest_panel.width()-14-8>=2*sum(widths) else 1
+        # A table can elide a long value and show it in its tooltip. Using the
+        # full preferred widths as the breakpoint hides the right table even
+        # when two readable tables fit (notably with Windows font metrics).
+        minimums=[30, 112, 38, 66, 38, 36, 38, 36]
+        panel_width=self.latest_panel.width()
+        columns=2 if panel_width >= 2*(sum(minimums)+8)+14 else 1
+        if columns == 2:
+            budget=(panel_width-14)//2-8
+            compact=minimums[:]
+            remaining=max(0, budget-sum(compact))
+            for c in (1, 3, 0, 2, 4, 5, 6, 7):
+                grow=min(remaining,max(0,widths[c]-compact[c]))
+                compact[c]+=grow; remaining-=grow
+            widths=compact
         self.latest_right.setVisible(columns == 2)
         tables=(self.latest_table,self.latest_right)
         for table in tables:
@@ -848,7 +872,7 @@ class MainWindow(QMainWindow):
             table.setFixedHeight(height)
         for i,q in enumerate(rows):
             stamp=q.when_utc.astimezone(JST).strftime("%Y-%m-%d %H:%M") if q.when_utc else ""
-            for c,v in enumerate([total-i,stamp,q.call,q.rst_sent,q.sent,q.rst_rcvd,q.rcvd]):
+            for c,v in enumerate([total-i,stamp,band_mhz(q),q.call,q.rst_sent,q.sent,q.rst_rcvd,q.rcvd]):
                 item=QTableWidgetItem(str(v)); item.setToolTip(str(v))
                 tables[i%columns].setItem(i//columns,c,item)
 
@@ -887,6 +911,7 @@ class MainWindow(QMainWindow):
             else:
                 self.rig_status.setText(f"{values['model']}  {status.port}  接続")
                 self.current_freq_hz = status.frequency_hz
+                if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
                 self.poll_failures=0; self.rig_status.setToolTip(f"{values['model']}  {status.port}\nクリックで切断"); self._update_freq_label(); self.poll_timer.start()
                 self.statusBar().showMessage('無線機に接続しました', 5000)
             self._set_radio_controls()
@@ -915,6 +940,7 @@ class MainWindow(QMainWindow):
                     {"CI-V": ctl.set_ptt, "CAT": ctl.set_ptt, "RTS": ctl.set_rts, "DTR": ctl.set_dtr}.get(mode, ctl.set_ptt)(False)
                 ctl.disconnect()
             self.cleanup_job = BackgroundJob(self, cleanup, lambda *_: None)
+        if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
         self.rig_status.setText("未接続"); self.rig_status.setToolTip("クリックで設定済みの無線機に接続"); self.current_freq_hz=None; self._update_freq_label()
         self._set_radio_controls()
 
@@ -954,7 +980,7 @@ class MainWindow(QMainWindow):
         else:
             if self.poll_failures: self.statusBar().showMessage('無線機の応答が戻りました',4000)
             self.poll_failures=0
-            self.current_freq_hz=freq; self._update_freq_label()
+            self.current_freq_hz=freq; self.last_known_freq_hz=freq; self._update_freq_label()
 
     def _update_freq_label(self):
         if self.current_freq_hz and self.q_call.text().strip():
@@ -962,7 +988,11 @@ class MainWindow(QMainWindow):
             elif self.clear_on_frequency.isChecked() and abs(self.current_freq_hz-self.call_frequency) >= 20:
                 self.q_call.clear(); self.rst_r.setText('599'); self.rcvd.clear()
         self._refresh_worked()
-        self.freq_label.setText(frequency_text(self.current_freq_hz))
+        retained = not self._connected() and self.current_freq_hz is None and self.last_known_freq_hz is not None
+        visible_freq = self.last_known_freq_hz if retained else self.current_freq_hz
+        self.freq_label.setText(frequency_text(visible_freq))
+        self.freq_label.setStyleSheet('color: #888888;' if retained else '')
+        self.freq_label.setToolTip('切断前に取得した周波数。未接続でのログ追加にも使用します。' if retained else '')
         if self.control_window: self.control_window.observe_frequency(self.current_freq_hz)
 
     def _toggle_scope(self, visible):
@@ -1192,7 +1222,7 @@ class MainWindow(QMainWindow):
         win.showNormal(); win.raise_(); win.activateWindow()
 
     def _guide_ft8(self):
-        self._show_help('FT8環境からの設定方法', 'FT8で使用中のCOMとAudioをPSRTTYでも選びます。FT8ソフトは終了し、COM・Audioの競合を避けてください。\n\nAudio IN：無線機 → パソコン（USB Audio／LINE IN／マイク）\nAudio OUT：パソコン → 無線機（USB Audio／LINE OUT／スピーカー）\n\nWindowsでは有効なWASAPIデバイスを表示し、機器IDで保存します。旧版の番号指定は初回に選び直してください。未接続の機器を別の機器へ自動置換しません。INの「未設定」は入力を停止します。設定済みなら起動時から入力し、無線機の接続とは独立しています。「自動」はWindowsの既定デバイスです。USB機器を追加した場合はPSRTTYを再起動してください。\n\n接続時LSB-D自動切替は初期ONです。YaesuではDATA-LSB／DATA-Lに相当します。無線機側のDATA入力をUSBに設定してください。USB-Dは高度な設定で選択でき、YaesuではDATA-USB／DATA-Uに相当します。Mark/Spaceの極性も実機で確認してください。\n\nYaesu FT-991/A・FTX-1は試験用・実機未確認です。Enhanced COM、CAT速度・ストップビットを無線機と合わせ、CAT RTSをDISABLE（OFF）にしてください。')
+        self._show_help('FT8環境からの設定方法', 'FT8で使用中のCOMとAudioをPSRTTYでも選びます。FT8ソフトは終了し、COM・Audioの競合を避けてください。\n\nAudio IN：無線機 → パソコン（USB Audio／LINE IN／マイク）\nAudio OUT：パソコン → 無線機（USB Audio／LINE OUT／スピーカー）\n\nWindowsでは有効なWASAPIデバイスを表示し、機器IDで保存します。旧版の番号指定は初回に選び直してください。未接続の機器を別の機器へ自動置換しません。INの「未設定」は入力を停止します。設定済みなら起動時から入力し、無線機の接続とは独立しています。「自動」はWindowsの既定デバイスです。USB機器を追加した場合はPSRTTYを再起動してください。\n\n接続時LSB-D自動切替は初期ONです。YaesuではDATA-LSB／DATA-Lに相当します。無線機側のDATA入力をUSBに設定してください。USB-Dは高度な設定で選択でき、YaesuではDATA-USB／DATA-Uに相当します。Mark/Spaceの極性も実機で確認してください。\n\nYaesu FT-991/A・FTX-1・FT-710・FTDX10・FTDX101D/MP・FTDX3000、Kenwood TS-590SG・TS-890S・TS-990SはHamlibで接続します。CATのCOMポートと速度を明示し、接続テストを行ってください。YaesuはEnhanced COM、CAT RTSをDISABLE（OFF）にしてください。')
 
     def _guide_tuning(self): self._show_help("RTTYチューニング","スペクトラムのMARK/SPACEガイドに2本のピークを合わせます。\nAUTO TUNEは設定されたShift（標準170 Hz）付近の2ピークを探します。\n幅RESETと位置RESETの両方で標準のMark 2125 / Space 2295 Hzへ戻せます。\nクリックでMARKを移動。MARK／SPACEの線は間隔を保ってドラッグできます。\nメイン画面のシフト幅で間隔を変更します。幅RESETは170 Hzへ、位置RESETはMARK 2125 Hzへ戻します。\n表示感度は波形の高さだけを調整します。")
 

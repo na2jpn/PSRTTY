@@ -2,11 +2,17 @@
 from .civ import CIVController, radio_address, connect_configured
 from .config import RIG_MODELS
 from .yaesu import YAESU_MODELS, YaesuController
+from .hamlib_radio import HAMLIB_MODELS, HamlibController
 
 
 def validate_radio(values):
     model = values.get('model', '')
-    if model in YAESU_MODELS:
+    if model in HAMLIB_MODELS:
+        if values.get('ptt','CAT')!='CAT':
+            raise ValueError('HamlibではCATによるPTTを選択してください。')
+        if str(values.get('com_port','AUTO')).upper()=='AUTO' or str(values.get('cat_baud','AUTO')).upper()=='AUTO':
+            raise ValueError('HamlibではCOMポートとCAT速度を指定してください。')
+    elif model in YAESU_MODELS:
         if values.get('ptt', 'CAT') != 'CAT':
             raise ValueError('Yaesu試験対応はCATによるPTTを選んでください。')
         if int(values.get('cat_stopbits', 1 if model == 'FTX-1' else 2)) not in (1, 2):
@@ -19,6 +25,6 @@ def validate_radio(values):
 
 def create_controller(values):
     validate_radio(values)
-    if values['model'] in YAESU_MODELS:
-        return YaesuController(values['model'], values.get('cat_stopbits'))
+    if values['model'] in HAMLIB_MODELS:
+        return HamlibController(values['model'])
     return CIVController(radio_address(values), model=values['model'])

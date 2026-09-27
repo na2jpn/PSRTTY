@@ -13,3 +13,9 @@ def band_text(qso):
              "23cm":"1200", "13cm":"2400", "6cm":"5600", "3cm":"10000"}
     band = qso.band
     return f"{band} / {names[band]}MHz" if band in names else band
+
+
+def band_mhz(qso):
+    """Compact MHz band label for the two-column latest-QSO list."""
+    value = band_text(qso)
+    return value.rsplit(' / ', 1)[-1].removesuffix('MHz') if ' / ' in value else ''

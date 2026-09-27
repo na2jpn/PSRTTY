@@ -8,7 +8,7 @@ from unittest.mock import patch
 from PySide6.QtCore import QRect
 from psrtty.config import ConfigStore, DEFAULT_MACROS
 from psrtty.ui.window_state import fitted_rect
-from psrtty.updater import MANIFEST, LEGACY_MANIFEST, create_manifest, retire_legacy_manifest, inspect_zip
+from psrtty.updater import MANIFEST, LEGACY_MANIFEST, create_manifest, retire_legacy_manifest, inspect_zip, release_files
 from package_release import build_distribution
 
 class WindowPlacementTests(unittest.TestCase):
@@ -43,7 +43,8 @@ class ReleaseV03Tests(unittest.TestCase):
             z=build_distribution(exe,out)
             self.assertEqual([x.name for x in out.iterdir()],[f'PSRTTY_{__import__("psrtty").__version__}.zip'])
             with zipfile.ZipFile(z) as archive:
-                self.assertEqual(set(archive.namelist()),{f'PSRTTY_{__import__("psrtty").__version__}/'+s for s in ['psrtty.exe',MANIFEST,'config/','logdata/','var/']})
+                names=set(archive.namelist())
+                self.assertTrue({f'PSRTTY_{__import__("psrtty").__version__}/'+s for s in ['psrtty.exe',MANIFEST,'config/','logdata/','var/','lib/hamlib/libhamlib-4.dll']}<=names)
             self.assertEqual(inspect_zip(z,'0.02')['version'],__import__('psrtty').__version__)
             existing=out/'PSRTTY_0.02'; existing.mkdir(); (existing/'mine').write_bytes(b'keep')
             build_distribution(exe,out); self.assertEqual((existing/'mine').read_bytes(),b'keep')

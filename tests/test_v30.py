@@ -115,9 +115,9 @@ class UI30Tests(unittest.TestCase):
         w.qsos=[QSORecord(call=f'JH{i}HST',when_utc=datetime.now(timezone.utc)) for i in range(6)]
         w.latest_panel.resize(1200,100);w._refresh_latest_qsos()
         self.assertFalse(w.latest_right.isHidden());self.assertEqual(w.latest_table.rowCount(),3)
-        self.assertEqual([t.item(r,2).text() for r in (0,1) for t in (w.latest_table,w.latest_right)],['JH5HST','JH4HST','JH3HST','JH2HST'])
+        self.assertEqual([t.item(r,3).text() for r in (0,1) for t in (w.latest_table,w.latest_right)],['JH5HST','JH4HST','JH3HST','JH2HST'])
         self.assertLessEqual(w.latest_table.horizontalHeader().length(),w.latest_table.width())
-        w.latest_panel.resize(450,100);w._refresh_latest_qsos();self.assertEqual(w.latest_table.columnCount(),7);self.assertEqual(w.latest_table.rowCount(),6)
+        w.latest_panel.resize(450,100);w._refresh_latest_qsos();self.assertEqual(w.latest_table.columnCount(),8);self.assertEqual(w.latest_table.rowCount(),6)
     def test_compact_cards_plain_text_and_menu(self):
         card=ReceiveCard('21:18:24','<b>literal</b>','RX');card.resize(700,35)
         labels=card.findChildren(QLabel)

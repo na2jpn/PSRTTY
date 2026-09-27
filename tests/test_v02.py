@@ -188,7 +188,11 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(ValueError): apply_update(stage,self.root,'0.02')
         self.assertEqual((self.root/'psrtty.exe').read_bytes(),b'MZold')
     def test_build_package_filename_and_validation(self):
-        release=self.base/'PSRTTY_0.02'; release.mkdir(); (release/'psrtty.exe').write_bytes(b'MZbuild'); archive=package_release(release)
+        release=self.base/'PSRTTY_0.02'; release.mkdir(); (release/'psrtty.exe').write_bytes(b'MZbuild')
+        from psrtty.updater import HAMLIB_REQUIRED
+        for name in HAMLIB_REQUIRED:
+            file=release/name;file.parent.mkdir(parents=True,exist_ok=True);file.write_bytes(b'test-file')
+        archive=package_release(release)
         self.assertEqual(archive.name,'PSRTTY_0.02.zip'); self.assertEqual(inspect_zip(archive,'0.01')['version'],__import__('psrtty').__version__)
     def test_migration_failure_restores_settings_and_program(self):
         stage=prepare_update(self.zip,self.root,'0.02')

@@ -1,7 +1,9 @@
-# PSRTTY 0.88 引き継ぎ
+# PSRTTY 1.03 正本からの引き継ぎ
 
-開発基準は0.84正本＋0.85差分＋0.86差分＋0.87差分FIX3＋0.88差分。0.88の変更は `VERSION_088.md` を参照してください。
+次の開発は `PSRTTY_1.03_CANONICAL_SOURCE.zip` だけを基準にしてください。1.02正本、FIX5、1.03差分、FIX1～FIX4を再適用しないでください。
 
-CQ WW RTTYのCabrillo出力は選択されたADIF交信と提出情報をもとに作り、得点・マルチの計算は行いません。混在する自局CALLは警告だけにとどめます。ADIF抽出は別ファイルへ出力し、元ログを変更しません。JARL形式の大会固有ルールの再確認は0.89で行います。
+版は `psrtty/__init__.py` と `psrtty/config.py` が1.03です。表示、更新履歴、Windowsビルドも1.03に揃っています。変更の要約は `VERSION_103.md`、全体試験は `VALIDATION_103.md` を参照してください。
 
-Windows配布EXEのビルドと実機動作は未確認です。次版も `UPDATE_HISTORY.txt` と `psrtty/update_history.py` の先頭に履歴を追記してください。
+配布用ZIPはWindowsで `./build-windows.ps1` により作ります。ソースZIPと配布ZIPは別物です。Hamlib 4.7.2のDLL、対応ソース、ライセンス通知を `lib/hamlib/` に維持してください。1.01 EXEからの更新互換性として、配布ZIPには `DISTRIBUTION_TERMS.txt` の一時的な直下コピーが必要です。起動後は `docs/` の正本と照合して削除します。
+
+`config/` と `logdata/` は利用者データです。更新処理が設定・ログを保持すること、`var/versionup.json` が新しい配布ZIPに含まれることを次版でも確認してください。画像送受信は後のバージョンへ延期しています。

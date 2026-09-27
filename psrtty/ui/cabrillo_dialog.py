@@ -11,6 +11,9 @@ from PySide6.QtWidgets import (QDialog,QWidget,QVBoxLayout,QHBoxLayout,QFormLayo
     QSizePolicy,QRadioButton,QButtonGroup,QStackedWidget,QLineEdit,QComboBox,QSpinBox,QDateTimeEdit,QTableWidget,
     QTableWidgetItem,QHeaderView,QAbstractItemView,QPlainTextEdit,QScrollArea,QMessageBox,QFileDialog,QCheckBox)
 from ..paths import app_root
+from ..paths import resource_path
+from ..jarl_score import calculate, CONTINENTS
+import csv
 from ..adif import band_from_hz
 from ..cabrillo import PROFILES,CONTESTS,HF_BANDS,BANDS,DEFAULT_LAYOUT,JST,period,build_cabrillo,save_cabrillo
 
@@ -27,6 +30,7 @@ class CabrilloDialog(QDialog):
         self.pages=QStackedWidget();root.addWidget(self.pages,1)
         self._format_page();self._qso_page();self._optional_page()
         self._info_page();self._preview_page();self._cq_setup_page()
+        self._jarl_category_page();self._jarl_site_page();self._jarl_score_page()
         self.cq_warning = QLabel();self.cq_warning.setWordWrap(True)
         self.cq_warning.setStyleSheet('color: #b3261e;')
         root.addWidget(self.cq_warning)
@@ -126,7 +130,15 @@ class CabrilloDialog(QDialog):
         field('ADDRESS-POSTALCODE','郵便番号（任意）')
         field('ADDRESS-COUNTRY','国名（CQ WWの米国外郵送先は必要）')
         field('GRID-LOCATOR','グリッド（任意）')
-        field('CLUB','クラブ名（任意・正式名称）')
+        self.club_choices=QComboBox();self.club_choices.addItem('登録クラブを選択しない','')
+        try:
+            with resource_path('psrtty/data/club_db.csv').open(encoding='utf-8-sig',newline='') as stream:
+                for row in csv.DictReader(stream):
+                    self.club_choices.addItem(f'{row["number"]}　{row["name"]}',row['number'])
+        except OSError:pass
+        self.club_choices.currentIndexChanged.connect(lambda *_:self.set_value('CLUB',self.club_choices.currentData() or ''))
+        self.optional_form.addRow('JARL登録クラブ（選択時は登録番号）',self.club_choices)
+        field('CLUB','CLUB 登録番号（必要時）')
         field('CLAIMED-SCORE','申告得点（任意・整数）').setPlaceholderText('自動計算はしません。空欄なら省略。')
         field('CERTIFICATE','紙の賞状希望（任意・主催者の対応による）',['','YES','NO'])
         field('OFFTIME','休止時間（任意・UTC）',multi=True).setPlaceholderText('2026-09-26 1200 2026-09-26 1300')
@@ -147,6 +159,8 @@ class CabrilloDialog(QDialog):
         self.submit_site=QPushButton('CQ WW RTTY公式提出ページを開く')
         self.submit_site.clicked.connect(lambda:QDesktopServices.openUrl(QUrl('https://cqwwrtty.com/logcheck/')))
         self.submit_site.setVisible(False);self.submit_site.setEnabled(False);layout.addWidget(self.submit_site)
+        self.jarl_oath=QCheckBox('JARL World Wide RTTYの規約と提出内容を確認し、提出に伴う宣誓に同意します')
+        self.jarl_oath.setVisible(False);layout.addWidget(self.jarl_oath)
 
     def _optional_page(self):
         layout=self._page()
@@ -171,6 +185,87 @@ class CabrilloDialog(QDialog):
         self.cq_year.valueChanged.connect(self._cq_default_period)
         self._cq_default_period()
         layout.addStretch()
+
+    def _jarl_category_page(self):
+        layout=self._page();form=QFormLayout();layout.addLayout(form)
+        self.jarl_operator=QComboBox();self.jarl_operator.addItems(['SINGLE-OP','MULTI-OP','CHECKLOG'])
+        form.addRow('参加部門',self.jarl_operator)
+        self.jarl_power=QComboBox();self.jarl_power.addItems(['LOW','QRP','HIGH'])
+        form.addRow('出力部門',self.jarl_power)
+        self.jarl_watts=QSpinBox();self.jarl_watts.setRange(1,100000);self.jarl_watts.setValue(100)
+        form.addRow('最大出力（W）',self.jarl_watts)
+        n=QLabel('シングルオペ：運用とログ記録を一人で行い、同時送信は1波まで。'
+                 'マルチオペ：最大5バンドで同時運用でき、各バンド1波まで。\n'
+                 'QRP：5W以下／ローパワー：100W以下／ハイパワー：100Wを超える出力（免許の範囲内）。')
+        n.setWordWrap(True);layout.addWidget(n);layout.addStretch()
+
+    def _jarl_site_page(self):
+        layout=self._page();form=QFormLayout();layout.addLayout(form)
+        self.jarl_location=QComboBox();self.jarl_location.addItems(['日本国内','海外'])
+        form.addRow('運用地',self.jarl_location)
+        self.jarl_continent=QComboBox();self.jarl_continent.addItems(CONTINENTS)
+        self.jarl_continent.setCurrentText('AS');form.addRow('海外運用の大陸',self.jarl_continent)
+        self.jarl_entity=QLineEdit();self.jarl_entity.setPlaceholderText('例：HL、K、VK')
+        form.addRow('海外運用のエンティティ',self.jarl_entity)
+        self.jarl_portable=QCheckBox('常置場所と異なる場所で運用')
+        form.addRow(self.jarl_portable)
+        self.jarl_prefecture=QLineEdit();self.jarl_prefecture.setPlaceholderText('例：SAITAMA')
+        form.addRow('移動運用地の都道府県（ローマ字）',self.jarl_prefecture)
+        n=QLabel('日本国内運用はアジア州として計算します。小笠原・南鳥島のJD1は交信相手の実際の運用地を確認して指定します。')
+        n.setWordWrap(True);layout.addWidget(n);layout.addStretch()
+        self.jarl_location.currentIndexChanged.connect(lambda *_:self._jarl_site_changed())
+        self._jarl_site_changed()
+
+    def _jarl_site_changed(self):
+        overseas=self.jarl_location.currentIndex()==1
+        self.jarl_continent.setEnabled(overseas);self.jarl_entity.setEnabled(overseas)
+        self.jarl_portable.setEnabled(not overseas);self.jarl_prefecture.setEnabled(not overseas)
+
+    def _jarl_score_page(self):
+        layout=self._page()
+        note=QLabel('大陸・エンティティを特定できない交信は、実際の運用地を確認して手動指定してください。'
+                    'マルチは通常エンティティ名、JA/W/VE/VKの本土ならコールエリア（例：JA3、VK0）を入力します。'
+                    'JD1は小笠原 JD/o・AS、南鳥島 JD/m・OCです。/MMは2点でマルチなしです。')
+        note.setWordWrap(True);layout.addWidget(note)
+        self.jarl_unknown=QTableWidget(0,4)
+        self.jarl_unknown.setHorizontalHeaderLabels(['相手CALL','エンティティ','大陸','マルチ'])
+        self.jarl_unknown.horizontalHeader().setStretchLastSection(True)
+        layout.addWidget(self.jarl_unknown,1)
+        row=QHBoxLayout();calculate_button=QPushButton('得点を計算');calculate_button.clicked.connect(self._jarl_recalculate)
+        row.addWidget(calculate_button);self.jarl_result=QLabel();row.addWidget(self.jarl_result);row.addStretch();layout.addLayout(row)
+        self.jarl_details=QPlainTextEdit();self.jarl_details.setReadOnly(True);layout.addWidget(self.jarl_details,1)
+
+    def _jarl_overrides(self):
+        overrides={}
+        for row in range(self.jarl_unknown.rowCount()):
+            call=self.jarl_unknown.item(row,0).text()
+            entity=self.jarl_unknown.item(row,1).text().strip()
+            continent=self.jarl_unknown.cellWidget(row,2).currentText()
+            multiplier=self.jarl_unknown.item(row,3).text().strip().upper()
+            if entity:overrides[call]={'entity':entity,'continent':continent,'multiplier':multiplier}
+        return overrides
+
+    def _jarl_recalculate(self):
+        entries,errors=self.selected_entries()
+        if errors:self.error.setText('\n'.join(errors[:8]));return None
+        try:result=calculate(entries,'AS' if self.jarl_location.currentIndex()==0 else self.jarl_continent.currentText(),self._jarl_overrides())
+        except ValueError as exc:self.error.setText(str(exc));return None
+        previous=self._jarl_overrides()
+        candidates=sorted(set(result['unknown'])|set(previous))
+        self.jarl_unknown.setRowCount(len(candidates))
+        for row,call in enumerate(candidates):
+            self.jarl_unknown.setItem(row,0,QTableWidgetItem(call))
+            self.jarl_unknown.item(row,0).setFlags(Qt.ItemIsEnabled)
+            self.jarl_unknown.setItem(row,1,QTableWidgetItem(previous.get(call,{}).get('entity','')))
+            continent=QComboBox();continent.addItems(CONTINENTS)
+            continent.setCurrentText(previous.get(call,{}).get('continent','AS'))
+            self.jarl_unknown.setCellWidget(row,2,continent)
+            self.jarl_unknown.setItem(row,3,QTableWidgetItem(previous.get(call,{}).get('multiplier','')))
+        self.jarl_result.setText(f"得点 {result['points']} × マルチ {result['multipliers']} ＝ {result['total']} 点")
+        self.jarl_details.setPlainText('\n'.join(f'{call} {band}：{point if point is not None else "未判定"}点 / {mult}'
+                         for call,band,point,mult in result['details']))
+        self.error.setText('未判定局の運用地を入力して再計算してください。' if result['unknown'] else '')
+        return result
 
     def _cq_default_period(self,*args):
         start,end=period('cqww',self.cq_year.value())
@@ -305,6 +400,7 @@ class CabrilloDialog(QDialog):
 
     def info(self):
         values={k:self.value(k).strip() for k in self.fields};values['JARL-PORTABLE']='YES' if self.portable.isChecked() else 'NO'
+        if self.profile=='jarl':values['JARL-MAX-POWER']=str(self.jarl_watts.value())
         if self.profile=='cqww':values['CQ-REGION']='USVE' if self.cq_region.currentIndex()==1 else 'JA' if self.cq_region.currentIndex()==0 else 'OTHER'
         return values
 
@@ -419,15 +515,20 @@ class CabrilloDialog(QDialog):
         return entries,errors
 
     def _set_page(self,index):
-        titles={0:'① 出力形式',5:'② CQ WW運用地・期間',1:'③ 対象QSOの選択・出力用編集',3:'④ 必須項目',2:'⑤ 任意項目',4:'⑥ 確認・保存'}
+        titles={0:'① 出力形式',5:'② CQ WW運用地・期間',1:'対象QSOの選択・出力用編集',
+                6:'JARL 参加部門・最大出力',7:'JARL 運用地',8:'JARL 得点確認',
+                3:'必須項目',2:'任意項目',4:'確認・保存'}
         self.pages.setCurrentIndex(index);self.heading.setText(titles[index])
         self.back.setEnabled(index!=0);self.next.setText('ファイルに保存' if index==4 else '次へ');self.error.clear()
         self.cq_warning.setVisible(self.profile=='cqww' and bool(self.cq_warning.text()) and index in (3,2,4))
         self.submit_site.setVisible(self.profile=='cqww' and index==4)
+        self.jarl_oath.setVisible(self.profile=='jarl' and index==4)
 
     def go_back(self):
         index=self.pages.currentIndex()
-        if index: self._set_page({5:0,1:5 if self.profile=='cqww' else 0,3:1,2:3,4:2}[index])
+        if index:self._set_page({5:0,1:5 if self.profile=='cqww' else 0,
+                                 6:1,7:6,8:7,3:8 if self.profile=='jarl' else 1,
+                                 2:3,4:2}[index])
 
     def go_next(self):
         index=self.pages.currentIndex();self.error.clear()
@@ -448,17 +549,47 @@ class CabrilloDialog(QDialog):
             if self.read_errors:errors=['読み込みエラーのあるADIFを確認し、再読込してください。']+errors
             if not entries and not errors:errors=['出力するQSOを選択してください。']
             if errors:self.error.setText('\n'.join(errors[:8]));return
+            if self.profile=='jarl':
+                self._set_page(6);return
             if self.profile=='cqww':
                 zones={q.sent.split()[0] for q,_ in entries if q.sent.strip() and q.sent.split()[0].isdigit()}
                 if len(zones)==1:self.set_value('MY-CQ-ZONE',next(iter(zones)))
                 mixed=sorted({q.station_callsign or '空欄' for q,_ in entries if q.station_callsign.upper()!=self.value('CALLSIGN').upper()})
                 self.cq_warning.setText('注意：選択した交信に異なる自局CALLが含まれます：'+', '.join(mixed)+'。提出CALLと対象を確認してください。' if mixed else '')
             self._set_page(3)
+        elif index==6:
+            power=self.jarl_power.currentText();watts=self.jarl_watts.value()
+            if (power=='QRP' and watts>5 or power=='LOW' and watts>100 or
+                power=='HIGH' and watts<=100 or self.jarl_operator.currentText()=='MULTI-OP' and power=='QRP'):
+                self.error.setText('出力部門と最大出力（W）、マルチオペの区分を確認してください。');return
+            self.set_value('CATEGORY-OPERATOR',self.jarl_operator.currentText())
+            self.set_value('CATEGORY-POWER',power)
+            self.set_value('CATEGORY-BAND','ALL')
+            self._set_page(7)
+        elif index==7:
+            if self.jarl_location.currentIndex()==1 and not re.fullmatch('[A-Za-z0-9/]{1,12}',self.jarl_entity.text().strip()):
+                self.error.setText('海外の運用エンティティを入力してください。');return
+            if self.jarl_location.currentIndex()==0 and self.jarl_portable.isChecked() and not self.jarl_prefecture.text().strip():
+                self.error.setText('移動運用地の都道府県をローマ字で入力してください。');return
+            self.portable.setChecked(self.jarl_portable.isChecked() and self.jarl_location.currentIndex()==0)
+            self.set_value('LOCATION',self.jarl_prefecture.text().strip().upper() if self.portable.isChecked() else '')
+            self._jarl_recalculate();self._set_page(8)
+        elif index==8:
+            result=self._jarl_recalculate()
+            if not result or result['unknown']:return
+            self.set_value('CLAIMED-SCORE',str(result['total']))
+            self.jarl_score_result=result
+            self._set_page(3)
         elif index==3:
             entries,errors=self.selected_entries();_,validation,_=build_cabrillo(self.profile,self.info(),entries);errors+=validation
             if errors:self.error.setText('\n'.join(errors[:8]));return
             self._set_page(2)
         elif index==2:
+            if self.profile=='jarl':
+                result=self._jarl_recalculate()
+                if not result or result['unknown'] or result['total']!=getattr(self,'jarl_score_result',{}).get('total'):
+                    self.error.setText('JARLの得点確認に戻って計算結果を確定してください。');return
+                self.set_value('CLAIMED-SCORE',str(result['total']))
             entries,errors=self.selected_entries();body,validation,warnings=build_cabrillo(self.profile,self.info(),entries);errors+=validation
             if errors:
                 self.error.setText('\n'.join(errors[:8])+ (f'\nほか{len(errors)-8}件' if len(errors)>8 else ''));return
@@ -469,6 +600,8 @@ class CabrilloDialog(QDialog):
 
     def save_file(self):
         self.error.clear()
+        if self.profile=='jarl' and not self.jarl_oath.isChecked():
+            self.error.setText('JARLの規約と提出内容を確認し、宣誓に同意してください。');return
         name=self.value('CALLSIGN').replace('/','_')+'_'+self.value('CONTEST')+'.log'
         path,_=QFileDialog.getSaveFileName(self,'Cabrilloを保存',name,'Cabrillo (*.log);;テキスト (*.txt)')
         if not path:return

@@ -13,10 +13,11 @@ from psrtty import __version__
 from psrtty.config import DEFAULT_CONFIG, DEFAULT_MACROS, ConfigStore, RIG_MODELS
 from psrtty.civ import CIVController, CIVStatus, connect_configured
 from psrtty.yaesu import YaesuController, YAESU_MODELS
+from psrtty.hamlib_radio import HamlibController, HAMLIB_MODELS
 from psrtty.radio import create_controller
 from psrtty.audio_devices import enumerate_devices, resolve_device
 from psrtty.audio_engine import AudioEngine
-from psrtty.updater import inspect_zip, create_manifest, prepare_update, apply_update, MANIFEST
+from psrtty.updater import inspect_zip, create_manifest, prepare_update, apply_update, retire_compatibility_terms, MANIFEST
 from package_release import build_distribution
 
 
@@ -60,10 +61,11 @@ class Radio04Tests(unittest.TestCase):
         with patch.object(ctl, '_read_response', return_value=frame):
             self.assertEqual(ctl.read_frequency(),10_102_400_000)
 
-    def test_factory_and_only_two_yaesu_choices(self):
+    def test_factory_uses_curated_hamlib_models(self):
         self.assertEqual(len(YAESU_MODELS), 2)
         self.assertTrue(all(x.endswith('（試験用）') for x in YAESU_MODELS.values()))
-        self.assertIsInstance(create_controller(dict(model='FTX-1', ptt='CAT')), YaesuController)
+        self.assertEqual(len(HAMLIB_MODELS),10)
+        self.assertIsInstance(create_controller(dict(model='FTX-1', ptt='CAT',com_port='COM7',cat_baud='38400')), HamlibController)
         with self.assertRaises(ValueError): create_controller(dict(model='その他Yaesu', ptt='CAT'))
         with self.assertRaises(ValueError): create_controller(dict(model='FTX-1', ptt='RTS'))
     def test_each_identity_mode_and_ptt_readback(self):
@@ -261,11 +263,13 @@ class UI04Tests(unittest.TestCase):
         dlg.rig.setCurrentText('IC-905'); self.assertEqual(dlg.civ_addr.currentText(),'AC')
         self.assertEqual(dlg.baud.currentText(),'自動'); self.assertEqual(dlg._radio_values()['civ_baud'],'AUTO')
         dlg.rig.setCurrentIndex(dlg.rig.findData('FTX-1'))
-        self.assertTrue(dlg.civ_addr.isHidden()); self.assertFalse(dlg.stopbits.isHidden())
+        self.assertTrue(dlg.civ_addr.isHidden()); self.assertTrue(dlg.stopbits.isHidden())
         self.assertEqual(dlg.ptt.currentText(),'CAT'); self.assertEqual(dlg.stopbits.currentData(),1)
         self.assertIn('DATA-L',dlg.auto_mode.text())
         dlg.rig.setCurrentIndex(dlg.rig.findData('FT-991 / FT-991A')); self.assertEqual(dlg.stopbits.currentData(),2)
-        dlg._save(); self.assertIsInstance(create_controller(self.store.data['radio']),YaesuController)
+        dlg.com.addItem('COM7', 'COM7'); dlg.com.setCurrentIndex(dlg.com.findData('COM7'))
+        dlg.baud.setCurrentText('38400')
+        dlg._save(); self.assertIsInstance(create_controller(self.store.data['radio']),HamlibController)
     def test_missing_audio_and_settings_save_do_not_discard_qso_edits(self):
         self.store.data['audio']['output_device']=dict(backend='wasapi',id='gone',name='Radio',kind='output')
         dlg=SettingsDialog(self.store)
@@ -293,6 +297,7 @@ class Update04Tests(unittest.TestCase):
             self.assertEqual((root/'psrtty.exe').read_bytes(),b'MZ-v04')
             for name,data in saved.items():
                 self.assertEqual((root/name).read_bytes(),data); self.assertEqual((backup/name).read_bytes(),data)
-            self.assertEqual({x.name for x in root.iterdir()},{'psrtty.exe','config','logdata','var'})
-            for current in (__version__,'0.99'):
+            retire_compatibility_terms(root)  # The new EXE does this at first launch.
+            self.assertEqual({x.name for x in root.iterdir()},{'psrtty.exe','config','logdata','var','lib','docs'})
+            for current in (__version__,'1.99'):
                 with self.assertRaises(ValueError): inspect_zip(archive,current)

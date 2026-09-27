@@ -103,18 +103,44 @@ class UI75Tests(unittest.TestCase):
                 if profile==0:
                     d._display_datetime(d.start,datetime(2026,9,1,tzinfo=UTC));d._display_datetime(d.end,datetime(2026,10,1,tzinfo=UTC));d.apply_filter()
                 d.table.item(0,7).setText('26' if profile==2 else '01')
-                d.go_next();self.assertEqual(d.pages.currentIndex(),3,d.error.text())
+                d.go_next()
+                if profile==1:
+                    self.assertEqual(d.pages.currentIndex(),6,d.error.text())
+                    d.go_next();self.assertEqual(d.pages.currentIndex(),7,d.error.text())
+                    d.go_next();self.assertEqual(d.pages.currentIndex(),8,d.error.text())
+                    d.go_next()
+                self.assertEqual(d.pages.currentIndex(),3,d.error.text())
                 d.set_value('NAME','Test Operator')
                 if profile==0:d.set_value('CONTEST','TEST-RTTY')
-                d.go_back();self.assertEqual(d.table.item(0,7).text(),'26' if profile==2 else '01')
-                d.go_next();self.assertEqual(d.value('NAME'),'Test Operator')
+                d.go_back()
+                if profile==1:
+                    self.assertEqual(d.pages.currentIndex(),8)
+                    d.go_back();d.go_back();d.go_back()
+                self.assertEqual(d.table.item(0,7).text(),'26' if profile==2 else '01')
+                d.go_next()
+                if profile==1:
+                    d.go_next();d.go_next();d.go_next()
+                self.assertEqual(d.value('NAME'),'Test Operator')
                 d.go_next();self.assertEqual(d.pages.currentIndex(),2,d.error.text())
                 d.go_next();self.assertEqual(d.pages.currentIndex(),4,d.error.text())
+                if profile==1:d.jarl_oath.setChecked(True)
                 target=Path(self.tmp.name)/f'{profile}.log'
                 with patch('psrtty.ui.cabrillo_dialog.QFileDialog.getSaveFileName',return_value=(str(target),'')):d.save_file()
                 self.assertTrue(target.exists());self.assertEqual(target.read_bytes(),d.body.encode('ascii'))
                 self.assertEqual(record.sent,'01' if profile==1 else '25')
                 d.close()
+
+    def test_jarl_jd1_requires_location_before_score_confirmation(self):
+        d=self.dialog([qso(call='JD1AAA',sent='01',rcvd='45',when_utc=datetime(2026,10,17,tzinfo=UTC))],1)
+        d.go_next();self.assertEqual(d.pages.currentIndex(),6)
+        d.go_next();d.go_next();self.assertEqual(d.pages.currentIndex(),8)
+        self.assertEqual(d.jarl_unknown.rowCount(),1)
+        d.go_next();self.assertEqual(d.pages.currentIndex(),8)
+        d.jarl_unknown.item(0,1).setText('JD/o')
+        d.jarl_unknown.item(0,3).setText('JD/o')
+        d._jarl_recalculate()
+        self.assertEqual(d.jarl_result.text(),'得点 2 × マルチ 1 ＝ 2 点')
+        d.go_next();self.assertEqual(d.pages.currentIndex(),3,d.error.text())
 
     def test_timezone_filter_boundaries_selection_and_validation(self):
         records=[qso(when_utc=datetime(2026,9,25,23,59,59,tzinfo=UTC)),qso(),qso(when_utc=datetime(2026,9,27,23,59,59,tzinfo=UTC)),qso(when_utc=datetime(2026,9,28,tzinfo=UTC))]

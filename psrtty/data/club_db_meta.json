@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "count": 887,
+  "source_url": "https://www.jarl.org/Japanese/A_Shiryo/A-B_Club/list.htm",
+  "index_url": "https://www.jarl.org/Japanese/A_Shiryo/A-B_Club/club.htm",
+  "checked_at": "2026-09-11",
+  "valid_from": "2025-05-01",
+  "valid_to": "2027-04-30",
+  "sha256": "de93a27e81010282514be9b26da2888dc7c190f3a63e55abe4a7b959a446d86a",
+  "source_sha256": "e7096c3e409fcf975c80584613c2ed9c0161b42e578bf3a6ba8b4bf92535a0b9"
+}

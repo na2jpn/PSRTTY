@@ -108,6 +108,14 @@ def build_cabrillo(profile, info, entries):
         if op=='MULTI-OP' and power=='QRP':errors.append('JARL：マルチオペQRP部門はありません。')
         if overlay not in ('','YOUTH') or (overlay and op!='SINGLE-OP'):errors.append('JARL：YOUTHはシングルオペのみです。')
         if info.get('JARL-PORTABLE')=='YES' and not clean.get('LOCATION'):errors.append('LOCATION：移動運用地の都道府県を入力してください。')
+        if clean.get('CLUB') and not re.fullmatch(r'[0-9]{2}[A-Z]?(?:-[0-9]+){2}',clean['CLUB']):
+            errors.append('CLUB：JARL登録クラブ番号で入力してください。')
+        if 'JARL-MAX-POWER' in info:
+            try:
+                watts=int(info['JARL-MAX-POWER'])
+                if watts<1 or power=='QRP' and watts>5 or power=='LOW' and watts>100 or power=='HIGH' and watts<=100:
+                    raise ValueError()
+            except ValueError:errors.append('最大出力とCATEGORY-POWERを確認してください。')
     if profile=='cqww':
         if not clean.get('LOCATION'):errors.append('LOCATION：米国・カナダは州/地域、その他はDXを入力してください。')
         region=clean.get('CQ-REGION','')
@@ -156,6 +164,8 @@ def build_cabrillo(profile, info, entries):
             line=ascii_line(line,'SOAPBOX')
             lines.extend('SOAPBOX: '+part for part in textwrap.wrap(line,75))
         except ValueError as exc:errors.append(str(exc))
+    if profile=='jarl' and info.get('JARL-MAX-POWER'):
+        lines.append('SOAPBOX: MAXIMUM POWER '+str(info['JARL-MAX-POWER'])+' W')
     if profile=='cqww' and overlay in ('YOUTH','ROOKIE'):
         key='BIRTHDATE' if overlay=='YOUTH' else 'LICENSE-DATE'
         lines.append(f'SOAPBOX: {key} {clean.get(key, "")}')

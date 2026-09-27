@@ -9,6 +9,7 @@ from PySide6.QtWidgets import QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridL
 from .background import BackgroundJob
 from .formatting import frequency_text
 from ..civ import CIVController
+from ..hamlib_radio import HamlibController, HAMLIB_MODELS
 
 # Recall presets only; not transmit permissions. Use last observed frequency thereafter.
 BANDS = [('1.8',1800000,2000000,1908000),('3.5',3500000,4000000,3520000),
@@ -71,8 +72,9 @@ class JogDial(QWidget):
 class ControlWindow(QDialog):
     def __init__(self,main):
         super().__init__(main,Qt.Window); self.main=main
-        self.setWindowTitle('PSRTTY コントロール'); self.setModal(False); self.resize(480,565)
+        self.setWindowTitle('PSRTTY コントロール'); self.setModal(False); self.resize(480,630)
         self.busy=False; self.pending=None; self.target=None; self.feature_pending=None
+        self.mode_pending=None; self.mode_profile=None; self.mode_observed=None; self.tuner_pending=False
         self.states={}; self.last_poll=0.; self.controller=None; self.band_memory={}; self.band_profile=None
         root=QVBoxLayout(self); self.frequency=QLabel('---.------ MHz'); self.frequency.setObjectName('freqLabel'); root.addWidget(self.frequency)
         row=QHBoxLayout(); self.entry=QLineEdit(); self.entry.setPlaceholderText('周波数 MHz')
@@ -111,6 +113,8 @@ class ControlWindow(QDialog):
         self.narrow=QPushButton('NARROW —'); self.narrow.setCheckable(True)
         self.narrow.clicked.connect(self.request_narrow); filter_row.addWidget(self.narrow)
         root.addWidget(self.filter_box)
+        self.mode_box=QGroupBox('モード'); self.mode_grid=QGridLayout(self.mode_box)
+        self.mode_buttons={}; root.addWidget(self.mode_box)
         self.antenna_tune=QPushButton('アンテナTUNE')
         self.antenna_tune.setToolTip('無線機へTUNE操作を送ります。外部ATUを含め動作可否は無線機側で判定します。')
         self.antenna_tune.clicked.connect(self.request_tuner); root.addWidget(self.antenna_tune)
@@ -125,7 +129,7 @@ class ControlWindow(QDialog):
         return not m.antenna_tuning and m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
     def reveal(self):
         self.showNormal(); area=self.main.screen().availableGeometry()
-        self.resize(min(480,area.width()),min(565,area.height()))
+        self.resize(min(480,area.width()),min(630,area.height()))
         rect=self.frameGeometry(); rect.moveCenter(self.main.frameGeometry().center())
         rect.moveLeft(max(area.left(),min(rect.left(),area.right()-rect.width()+1)))
         rect.moveTop(max(area.top(),min(rect.top(),area.bottom()-rect.height()+1)))
@@ -155,17 +159,32 @@ class ControlWindow(QDialog):
         self.notch.setItemText(1,'NOTCH' if yaesu else '手動')
         ready=self.ready()
         if self.controller is not self.main.radio:
-            self.controller=self.main.radio; self.states={}; self.pending=self.target=self.feature_pending=None; self.last_poll=0
-        if not ready: self.pending=self.target=self.feature_pending=None; self.dial.last=None
+            self.controller=self.main.radio; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
+        if model!=self.mode_profile:
+            self.mode_profile=model; self.mode_observed=self.mode_pending=None
+            modes=(HamlibController(model).operating_modes() if model in HAMLIB_MODELS else
+                   ('LSB-D','USB-D','LSB','USB') if model.startswith('IC-') or model=='その他ICOM' else ())
+            for button in self.mode_buttons.values():
+                self.mode_grid.removeWidget(button);button.deleteLater()
+            self.mode_buttons={}
+            for index,choice in enumerate(modes):
+                button=QPushButton(choice);button.setCheckable(True)
+                button.clicked.connect(lambda checked=False,value=choice:self.request_mode(value))
+                self.mode_grid.addWidget(button,index//4,index%4)
+                self.mode_buttons[choice]=button
+        if not ready: self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.dial.last=None
+        for choice,button in self.mode_buttons.items():
+            button.setEnabled(ready)
+            button.setChecked(choice==(self.mode_pending or self.mode_observed))
         for w in [self.entry,self.apply,self.dial,self.minus,self.plus]+[b for _,b in self.band_buttons]: w.setEnabled(ready)
         for name,b in self.buttons.items():
             key=self.notch.currentData() if name=='NOTCH' else name; value=self.states.get(key) if ready else None
             b.setText((('' if name=='NOTCH' else ('DNR' if yaesu and name=='NR' else name))+' '+('ON' if value is True else 'OFF' if value is False else '—')).strip())
-            b.setChecked(value is True); b.setEnabled(ready and value is not None and not self.busy and self.feature_pending is None)
-            b.setToolTip('状態未取得／この機種・モードでは非対応' if value is None else ('自動ノッチ' if key=='AN' else '手動ノッチ' if key=='MN' else name))
+            b.setChecked(value is True); b.setEnabled(ready and value is not None)
+            b.setToolTip('状態未取得／この機種・モードでは非対応。無線機本体で操作してください。' if value is None else ('自動ノッチ' if key=='AN' else '手動ノッチ' if key=='MN' else name))
         hz=self.main.current_freq_hz
-        icom=isinstance(self.main.radio,CIVController)
-        self.antenna_tune.setEnabled(ready and not self.busy and not self.main.antenna_tuning
+        icom=type(self.main.radio) is CIVController
+        self.antenna_tune.setEnabled(ready and not self.main.antenna_tuning
                                      and (self.states.get('TUNER') != 2 if icom else
                                           self.states.get('TUNER') in (0,1) and bool(hz and 1800000<=hz<=54000000)))
         self.refresh_filter(ready)
@@ -175,7 +194,7 @@ class ControlWindow(QDialog):
         yaesu=self.band_profile in ('FT-991 / FT-991A','FTX-1')
         state=self.states.get('FILTER') if ready else None
         if not isinstance(state,dict): state=None
-        enabled=ready and not self.busy and self.feature_pending is None and bool(state)
+        enabled=ready and bool(state)
         for i,button in enumerate(self.filter_buttons,1):
             button.setVisible(not yaesu); button.setEnabled(enabled)
             button.setChecked(bool(state and state.get('value')==i))
@@ -194,6 +213,8 @@ class ControlWindow(QDialog):
 
     def request_tuner(self):
         if not self.antenna_tune.isEnabled() or not self.ready(): return
+        if self.busy:
+            self.tuner_pending=True;self.note.setText('アンテナチューニング待ち…');return
         ctl=self.main.radio; generation=self.main.connection_generation
         self.tuner_cancel=threading.Event()
         self.main.antenna_tuning=True; self.busy=True
@@ -203,7 +224,7 @@ class ControlWindow(QDialog):
             try:
                 if not ctl.start_tuner(): return False
                 started=time.monotonic(); deadline=started+30; active=False
-                icom=isinstance(ctl,CIVController)
+                icom=type(ctl) is CIVController
                 while not self.tuner_cancel.wait(.25):
                     if ctl.cancel.is_set(): break
                     state=ctl.read_tuner(); tx=ctl.read_transmitting()
@@ -228,13 +249,13 @@ class ControlWindow(QDialog):
 
     def request_filter(self, value):
         state=self.states.get('FILTER')
-        if self.ready() and not self.busy and isinstance(state,dict) and value in dict(state['options']):
+        if self.ready() and isinstance(state,dict) and value in dict(state['options']):
             self.feature_pending=('FILTER',(value,dict(state)))
         self.refresh_enabled()
 
     def request_narrow(self, checked=False):
         state=self.states.get('FILTER')
-        if self.ready() and not self.busy and isinstance(state,dict) and state.get('narrow') is not None:
+        if self.ready() and isinstance(state,dict) and state.get('narrow') is not None:
             self.feature_pending=('NARROW',(not state['narrow'],dict(state)))
         self.refresh_enabled()
 
@@ -257,41 +278,53 @@ class ControlWindow(QDialog):
         if base: self.request_frequency(base+n*self.step.currentData())
     def toggle_feature(self,name):
         key=self.notch.currentData() if name=='NOTCH' else name; value=self.states.get(key)
-        if self.ready() and not self.busy and value is not None: self.feature_pending=(key,not value)
+        if self.ready() and value is not None: self.feature_pending=(key,not value)
+        self.refresh_enabled()
+    def request_mode(self,mode):
+        if mode and self.ready():
+            self.mode_pending=mode
+            self.note.setText(f'モード設定待ち: {mode}')
         self.refresh_enabled()
     def tick(self):
         self.refresh_enabled()
         if not self.isVisible() or not self.ready() or self.busy or self.main.polling: return
         ctl=self.main.radio; generation=self.main.connection_generation
         hz,self.pending=self.pending,None; feature,self.feature_pending=self.feature_pending,None
-        if hz is None and feature is None and time.monotonic()-self.last_poll<1.2: return
+        mode,self.mode_pending=self.mode_pending,None
+        if hz is None and feature is None and mode is None and time.monotonic()-self.last_poll<1.2: return
         self.busy=True; self.last_poll=time.monotonic()
         def work():
             ok=True
             if hz is not None: ok=ctl.set_frequency(hz)
+            if mode is not None: ok=ctl.set_operating_mode(mode) and ok
             if feature is not None:
                 if feature[0]=='FILTER': ok=ctl.set_filter(*feature[1]) and ok
                 elif feature[0]=='NARROW': ok=ctl.set_narrow(*feature[1]) and ok
                 else: ok=ctl.set_feature(*feature) and ok
             freq=ctl.read_frequency(); states={}
+            current_mode=ctl.read_operating_mode() if not ctl.cancel.is_set() else None
             if hz is None:
                 for name in ('NB','NR','AN','MN'):
                     if ctl.cancel.is_set(): break
                     states[name]=ctl.read_feature(name)
                 if not ctl.cancel.is_set(): states['FILTER']=ctl.read_filter()
                 if not ctl.cancel.is_set(): states['TUNER']=ctl.read_tuner()
-            return ok,freq,states
+            return ok,freq,states,current_mode
         def done(result,error):
             self.busy=False
             if generation!=self.main.connection_generation or self.main.radio is not ctl: return
             if error:
                 self.states={}; self.target=None; self.note.setText(f'操作失敗: {error}'); self.main._radio_observed(None,error)
             else:
-                ok,freq,states=result; self.states.update(states)
+                ok,freq,states,current_mode=result; self.states.update(states)
+                self.mode_observed=current_mode
                 if self.pending is None: self.target=None
                 self.main._radio_observed(freq)
                 self.note.setText('無線機の状態を取得しました。' if ok else '設定できませんでした。無線機のモード・送信状態を確認してください。')
             self.refresh_enabled()
+            if self.tuner_pending:
+                self.tuner_pending=False
+                self.request_tuner()
         self.job=BackgroundJob(self,work,done)
     def hideEvent(self,event):
-        self.pending=self.target=self.feature_pending=None; super().hideEvent(event)
+        self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; super().hideEvent(event)

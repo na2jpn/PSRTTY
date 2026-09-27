@@ -1,7 +1,7 @@
 """Versioned one-file Windows releases. Never execute code from an update ZIP.
 
 The running (trusted) executable is copied as the update helper. It validates
-again after exit, backs up user data, and replaces only exe + release manifest.
+    again after exit, backs up user data, and replaces only declared release files.
 SHA256 detects corruption; it is not a publisher signature.
 """
 from __future__ import annotations
@@ -19,8 +19,52 @@ import uuid
 import zipfile
 
 MANIFEST = "var/psrtty-release.json"
+VERSIONUP = "var/versionup.json"
 LEGACY_MANIFEST = "psrtty-release.json"
 MAX_BYTES = 512 * 1024 * 1024
+HAMLIB_REQUIRED = {
+    'lib/hamlib/libhamlib-4.dll', 'lib/hamlib/libusb-1.0.dll',
+    'lib/hamlib/libwinpthread-1.dll', 'lib/hamlib/hamlib-4.7.2.tar.gz',
+    'lib/hamlib/LICENSE.txt', 'lib/hamlib/COPYING.LIB.txt',
+    'lib/hamlib/WINPTHREADS_NOTICE.txt', 'lib/hamlib/THIRD_PARTY_NOTICES.txt',
+    'lib/hamlib/VERSION.txt', 'docs/DISTRIBUTION_TERMS.txt',
+}
+
+
+def retire_compatibility_terms(root: Path) -> None:
+    """Remove only the exact root copy bundled for the 1.01 -> 1.02 update.
+
+    Preserve any unrelated file with the same name. The canonical copy remains
+    under docs/; it is never touched here.
+    """
+    old = root / 'DISTRIBUTION_TERMS.txt'
+    canonical = root / 'docs' / 'DISTRIBUTION_TERMS.txt'
+    if old.is_symlink() or canonical.is_symlink() or not old.is_file() or not canonical.is_file():
+        return
+    if sha256(old) == sha256(canonical):
+        old.unlink()
+
+
+def release_files(root: Path):
+    """Only publisher-owned files; never capture a user's data directories."""
+    result = ['psrtty.exe']
+    for p in sorted(root.rglob('*')):
+        if not p.is_file() or p.is_symlink(): continue
+        name = p.relative_to(root).as_posix()
+        if name == 'psrtty.exe' or name == MANIFEST or name.startswith(('config/','logdata/','var/')):
+            continue
+        _validate_release_name(name)
+        result.append(name)
+    if (root / VERSIONUP).is_file(): result.append(VERSIONUP)
+    return result
+
+
+def _validate_release_name(name):
+    _safe_name(name)
+    if (name.startswith(('config/','logdata/','var/')) or name in ('config','logdata','var')
+        or len(name.split('/')) > 5 or len(name) > 180 or name.startswith('.')):
+        raise ValueError('設定・ログ・動作データは更新対象にできません')
+    return name
 
 
 def version_key(value: str) -> tuple[int, ...]:
@@ -41,8 +85,14 @@ def sha256(path: Path) -> str:
 
 def create_manifest(root: Path, version: str):
     version_key(version)
+    if version_key(version) >= version_key('1.01'):
+        files = [name for name in release_files(root) if name != VERSIONUP]
+        instructions = dict(format=1, version=version, install=files)
+        target = root / VERSIONUP
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(instructions, ensure_ascii=False, indent=2)+'\n', encoding='utf-8')
     data = dict(product="PSRTTY", format=1, platform="windows", version=version,
-                config_schema=1, files={"psrtty.exe": sha256(root / "psrtty.exe")})
+                config_schema=1, files={name: sha256(root / name) for name in release_files(root)})
     (root / MANIFEST).parent.mkdir(parents=True, exist_ok=True)
     (root / MANIFEST).write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
     return data
@@ -93,10 +143,30 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
             if same_version and installed_root is None:
                 raise ValueError("同版の検証には現在のインストール先が必要です")
             files = data.get("files")
-            if not isinstance(files, dict) or set(files) != {"psrtty.exe"}:
+            if (not isinstance(files, dict) or 'psrtty.exe' not in files or len(files)>48
+                or not all(isinstance(k,str) and isinstance(v,str)
+                           and re.fullmatch(r'[0-9a-f]{64}',v) for k,v in files.items())):
                 raise ValueError("更新対象ファイルが不正です")
-            expected = {prefix + MANIFEST, prefix + "psrtty.exe"}
-            permitted_dirs = {prefix, prefix + "config/", prefix + "logdata/", prefix + "var/"}
+            if version_key(data['version']) >= version_key('1.01'):
+                if not HAMLIB_REQUIRED <= files.keys() or VERSIONUP not in files:
+                    raise ValueError('1.01以降の配布にはHamlibとversionupデータが必要です')
+                raw = archive.read(prefix + VERSIONUP)
+                if len(raw) > 16384: raise ValueError('versionupデータが大きすぎます')
+                instructions = json.loads(raw)
+                if (not isinstance(instructions,dict) or set(instructions)!={'format','version','install'}
+                    or instructions['format']!=1 or instructions['version']!=data['version']
+                    or not isinstance(instructions['install'],list)
+                    or not all(isinstance(name,str) for name in instructions['install'])
+                    or len(instructions['install'])!=len(set(instructions['install']))
+                    or set(instructions['install']) != set(files)-{VERSIONUP}):
+                    raise ValueError('versionupデータと配布ファイルが一致しません')
+                for name in instructions['install']:
+                    if name != 'psrtty.exe': _validate_release_name(name)
+            elif set(files) != {'psrtty.exe'}:
+                raise ValueError('旧形式の更新対象ファイルが不正です')
+            expected = {prefix + MANIFEST} | {prefix + name for name in files}
+            permitted_dirs = {prefix, prefix + "config/", prefix + "logdata/", prefix + "var/",
+                              prefix + 'lib/', prefix + 'lib/hamlib/', prefix + 'docs/'}
             for item in items:
                 if item.is_dir() and item.filename in permitted_dirs:
                     continue
@@ -115,10 +185,19 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
                     digest.update(block)
             if digest.hexdigest() != files["psrtty.exe"]:
                 raise ValueError("EXEのハッシュが一致しません")
+            for name, checksum in files.items():
+                if name == 'psrtty.exe': continue
+                digest = hashlib.sha256()
+                with archive.open(prefix + name) as stream:
+                    for block in iter(lambda: stream.read(1024*1024), b''):
+                        digest.update(block)
+                if digest.hexdigest() != checksum:
+                    raise ValueError(f'同梱ファイルのハッシュが一致しません: {name}')
             if same_version:
                 current_exe = installed_root / 'psrtty.exe'
                 if not current_exe.is_file(): raise ValueError('現在のEXEを確認できません')
-                if sha256(current_exe) == digest.hexdigest():
+                if all((installed_root / name).is_file() and sha256(installed_root / name) == checksum
+                       for name, checksum in files.items()):
                     raise ValueError('現在と同じ内容のZIPです。再インストールは不要です')
             return dict(data, prefix=prefix, repair=same_version)
     except (zipfile.BadZipFile, KeyError, json.JSONDecodeError, UnicodeError) as exc:
@@ -143,6 +222,7 @@ def prepare_update(path: Path, root: Path, current_version: str) -> Path:
 
 
 def _atomic_copy(source: Path, target: Path):
+    target.parent.mkdir(parents=True, exist_ok=True)
     temporary = target.with_name(target.name + ".update-tmp")
     try:
         shutil.copy2(source, temporary)
@@ -178,26 +258,38 @@ def apply_update(stage: Path, root: Path, current_version: str) -> Path:
     if old.get("product") != "PSRTTY" or old.get("version") != current_version:
         raise ValueError("更新先のバージョンが変わっています")
     # Reject junctions/symlinks: backup and update must stay within this install.
-    for name in ("config", "logdata", "var", "psrtty.exe", MANIFEST):
-        target = root / name
-        if target.is_symlink() or (hasattr(target, "is_junction") and target.is_junction()):
-            raise ValueError("リンクされた更新先は使用できません")
+    managed = list(info['files']) + [MANIFEST]
+    for name in ("config", "logdata", "var", "lib", "psrtty.exe", MANIFEST, *managed):
+        relative = Path(name)
+        for part in (relative, *relative.parents):
+            if part == Path('.'): continue
+            target = root / part
+            if target.is_symlink() or (hasattr(target, "is_junction") and target.is_junction()):
+                raise ValueError("リンクされた更新先は使用できません")
     payload = stage / "payload"
     payload.mkdir(exist_ok=True)
     (payload / "var").mkdir(exist_ok=True)
     with zipfile.ZipFile(stage / "release.zip") as archive:
-        for name in ("psrtty.exe", MANIFEST):
+        for name in managed:
+            (payload / name).parent.mkdir(parents=True, exist_ok=True)
             with archive.open(info["prefix"] + name) as src, (payload / name).open("wb") as dest:
                 shutil.copyfileobj(src, dest)
     backup = root / "var" / "backups" / (time.strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:8])
     backup.mkdir(parents=True)
     shutil.copy2(root / "psrtty.exe", backup / "psrtty.exe")
+    for name in managed:
+        if name in ('psrtty.exe', MANIFEST) or not (root / name).exists(): continue
+        (backup / name).parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(root / name, backup / name)
     for name in ("config", "logdata", "var"):
         source = root / name
         if source.exists():
             def ignore(directory, names):
                 return [x for x in names if Path(directory) == root / "var" and x in ("updates", "backups", "psrtty.lock")]
-            shutil.copytree(source, backup / name, ignore=ignore, symlinks=True)
+            # The release's versionup.json is itself inside var/ and may have
+            # been copied above as a managed file.
+            shutil.copytree(source, backup / name, ignore=ignore, symlinks=True,
+                            dirs_exist_ok=True)
     journal = stage / "result.json"
     def record(status, error=""):
         journal.write_text(json.dumps(dict(status=status, backup=str(backup), version=info["version"], error=error), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -205,7 +297,7 @@ def apply_update(stage: Path, root: Path, current_version: str) -> Path:
     replaced = []
     migration_started = False
     try:
-        for name in ("psrtty.exe", MANIFEST):
+        for name in managed:
             _atomic_copy(payload / name, root / name)
             replaced.append(name)
         migration_started = True
@@ -231,7 +323,10 @@ def apply_update(stage: Path, root: Path, current_version: str) -> Path:
             rollback_errors.append(str(restore_error))
         for name in reversed(replaced):
             try:
-                _atomic_copy(backup / name, root / name)
+                if (backup / name).is_file():
+                    _atomic_copy(backup / name, root / name)
+                else:
+                    (root / name).unlink(missing_ok=True)
             except Exception as restore_error:
                 rollback_errors.append(str(restore_error))
         record("rollback_failed" if rollback_errors else "rolled_back", str(exc) + "; ".join(rollback_errors))

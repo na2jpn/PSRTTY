@@ -175,7 +175,7 @@ class Update05Tests(unittest.TestCase):
         self.assertEqual((backup/'psrtty.exe').read_bytes(),b'MZ old payload')
         self.assertEqual((self.root/'config/keep.txt').read_text(),'settings'); self.assertEqual((self.root/'logdata/keep.txt').read_text(),'log')
         with self.assertRaisesRegex(ValueError,'同じ内容'): inspect_zip(self.archive,__version__,self.root)
-        with self.assertRaises(ValueError): inspect_zip(self.archive,'0.99',self.root)
+        with self.assertRaises(ValueError): inspect_zip(self.archive,'1.99',self.root)
     def test_same_version_failure_rolls_back(self):
         original=(self.root/MANIFEST).read_bytes(); stage=prepare_update(self.archive,self.root,__version__)
         with patch('psrtty.updater.migrate_settings',side_effect=RuntimeError('failure')):

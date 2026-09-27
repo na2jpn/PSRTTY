@@ -131,7 +131,7 @@ class UI20Tests(unittest.TestCase):
         self.assertEqual(d.table.item(0,2).text(),'15m / 21MHz'); self.assertTrue(d.table.item(0,0).text())
         self.assertFalse(d.delete_button.isEnabled()); d.table.selectRow(0)
         original=d.selected(); self.assertTrue(d.apply_change(original,replace(original,call='JQ7FIU')))
-        self.assertEqual(w.qsos[0].call,'JQ7FIU'); self.assertEqual(w.latest_table.item(0,2).text(),'JQ7FIU')
+        self.assertEqual(w.qsos[0].call,'JQ7FIU'); self.assertEqual(w.latest_table.item(0,3).text(),'JQ7FIU')
         d.table.selectRow(0)
         with patch('psrtty.ui.qso_log_dialog.QMessageBox.question',return_value=QMessageBox.No): d.delete_selected()
         self.assertEqual(len(log.load_recent()),1)

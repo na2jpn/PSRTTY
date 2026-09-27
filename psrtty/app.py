@@ -38,11 +38,15 @@ def run() -> int:
     app.setApplicationVersion(__version__)
     app.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
     if getattr(sys, "frozen", False):
-        from .updater import retire_legacy_manifest
+        from .updater import retire_legacy_manifest, retire_compatibility_terms
         try:
             retire_legacy_manifest(paths["root"], __version__)
         except Exception as exc:
             QMessageBox.warning(None, "旧版情報の整理", f"旧JSONを移動できませんでした。データは残しています。\n{exc}")
+        try:
+            retire_compatibility_terms(paths["root"])
+        except OSError as exc:
+            QMessageBox.warning(None, "旧版ファイルの整理", f"互換用ファイルを削除できませんでした。データは残しています。\n{exc}")
     win = MainWindow(reset_window="--reset-window" in sys.argv)
     activation=ActivationServer(paths["root"],win)
     win.show()

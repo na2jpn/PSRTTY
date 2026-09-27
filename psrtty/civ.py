@@ -350,6 +350,43 @@ class CIVController:
             except Exception:
                 return False
 
+    def operating_modes(self):
+        return ('LSB-D', 'USB-D', 'LSB', 'USB')
+
+    def read_operating_mode(self):
+        with self._lock:
+            if not self.ser or not self.status.connected:return None
+            try:
+                self.ser.reset_input_buffer()
+                self.ser.write(self._frame(0x04))
+                raw=self._read_response(0x04)
+                if len(raw)<7 or raw[5] not in (0x00,0x01):return None
+                side='LSB' if raw[5]==0x00 else 'USB'
+                sub=0x04 if self.model=='IC-7200' else 0x06
+                self.ser.reset_input_buffer()
+                self.ser.write(self._frame(0x1A,sub))
+                data=self._read_response(0x1A)
+                if len(data)<9 or data[5]!=sub:return None
+                return side+'-D' if data[6] else side
+            except Exception:
+                return None
+
+    def set_operating_mode(self, mode):
+        if mode not in self.operating_modes():return False
+        with self._lock:
+            if not self.ser or not self.status.connected or self.cancel.is_set():return False
+            if self.read_transmitting() is not False:return False
+            if mode.endswith('-D'):return self.set_data_mode(mode)
+            try:
+                sub=0x04 if self.model=='IC-7200' else 0x06
+                for payload in ((0x1A,sub,0x00,0x01),(0x06,0x00 if mode=='LSB' else 0x01)):
+                    self.ser.reset_input_buffer();self.ser.write(self._frame(*payload))
+                    raw=self._read_response(timeout=0.5)
+                    if len(raw)<6 or raw[4]!=0xFB:return False
+                return True
+            except Exception:
+                return False
+
 
 def radio_address(settings: dict) -> int:
     if not settings.get("model"):
