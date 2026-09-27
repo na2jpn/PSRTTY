@@ -21,11 +21,15 @@ class CabrilloDialog(QDialog):
         self.adif=adif;self.store=store;self.profile='generic';self.loaded_profile=None
         self.records=[];self.states={};self.visible=[];self.read_errors=[];self.body='';self.saved_path=None
         self.display_zone=JST;self.fields={};self.profile_forms={};self.has_table=False
-        self.setWindowTitle('Cabrillo出力');self.resize(1080,720)
+        self.setWindowTitle('Cabrilloファイル出力');self.resize(1080,720)
         root=QVBoxLayout(self)
         self.heading=QLabel();root.addWidget(self.heading)
         self.pages=QStackedWidget();root.addWidget(self.pages,1)
-        self._format_page();self._qso_page();self._info_page();self._preview_page()
+        self._format_page();self._qso_page();self._optional_page()
+        self._info_page();self._preview_page();self._cq_setup_page()
+        self.cq_warning = QLabel();self.cq_warning.setWordWrap(True)
+        self.cq_warning.setStyleSheet('color: #b3261e;')
+        root.addWidget(self.cq_warning)
         self.error=QLabel();self.error.setWordWrap(True);self.error.setStyleSheet('color: #b3261e;');root.addWidget(self.error)
         row=QHBoxLayout();self.back=QPushButton('戻る');self.back.clicked.connect(self.go_back);row.addWidget(self.back)
         row.addStretch();self.next=QPushButton('次へ');self.next.clicked.connect(self.go_next);row.addWidget(self.next)
@@ -85,6 +89,9 @@ class CabrilloDialog(QDialog):
     def _info_page(self):
         layout=self._page();layout.addWidget(QLabel('赤い＊は必須。条件付き項目は該当時に入力。文字は半角英数字（氏名・住所はローマ字）です。'))
         scroll=QScrollArea();scroll.setWidgetResizable(True);content=QWidget();self.form=QFormLayout(content);scroll.setWidget(content);layout.addWidget(scroll)
+        self.optional_fields = {'NAME','EMAIL','ADDRESS','ADDRESS-CITY','ADDRESS-STATE-PROVINCE',
+                                'ADDRESS-POSTALCODE','ADDRESS-COUNTRY','GRID-LOCATOR','CLUB',
+                                'CLAIMED-SCORE','CERTIFICATE','OFFTIME','SOAPBOX'}
         def field(key,label,options=None,multi=False):
             if options is not None:
                 w=QComboBox();w.addItems(options)
@@ -92,7 +99,8 @@ class CabrilloDialog(QDialog):
                 w=QPlainTextEdit();w.setMaximumHeight(85)
             else:w=QLineEdit()
             self.fields[key]=w
-            lbl=QLabel(label.replace('＊','<span style="color:#b3261e">＊</span>'));self.form.addRow(lbl,w)
+            lbl=QLabel(label.replace('＊','<span style="color:#b3261e">＊</span>'))
+            (self.optional_form if key in self.optional_fields else self.form).addRow(lbl,w)
             return w
         field('CONTEST','大会識別名 CONTEST ＊')
         field('CALLSIGN','提出する自局CALL ＊').setText(store_call(self.store))
@@ -107,6 +115,7 @@ class CabrilloDialog(QDialog):
         field('LICENSE-DATE','ROOKIE：初免許年月日（CQ WW必須）').setPlaceholderText('YYYY-MM-DD')
         field('CATEGORY-TIME','運用時間部門（汎用のみ）',['','6-HOURS','8-HOURS','12-HOURS','24-HOURS'])
         field('LOCATION','運用地 LOCATION（CQ WW必須）').setPlaceholderText('CQ WW：DX または州/地域 ／ JARL移動：都道府県をローマ字')
+        field('MY-CQ-ZONE','自局CQゾーン（CQ WW）').setPlaceholderText('SENTから読み取った値を確認してください。')
         self.portable=QCheckBox('JARL：常置場所と異なる場所で運用（LOCATION必須）');self.form.addRow(self.portable)
         field('OPERATORS','運用者一覧（マルチオペ必須）').setPlaceholderText('JH1HST JQ7FIU ／ JARLは無資格者のローマ字氏名も可')
         field('NAME','氏名 NAME（推奨）')
@@ -135,6 +144,61 @@ class CabrilloDialog(QDialog):
         self.saved=QLabel();self.saved.setWordWrap(True);layout.addWidget(self.saved)
         self.open_folder=QPushButton('保存先フォルダーを開く');self.open_folder.setEnabled(False)
         self.open_folder.clicked.connect(lambda:QDesktopServices.openUrl(QUrl.fromLocalFile(str(self.saved_path.parent))) if self.saved_path else None);layout.addWidget(self.open_folder)
+        self.submit_site=QPushButton('CQ WW RTTY公式提出ページを開く')
+        self.submit_site.clicked.connect(lambda:QDesktopServices.openUrl(QUrl('https://cqwwrtty.com/logcheck/')))
+        self.submit_site.setVisible(False);self.submit_site.setEnabled(False);layout.addWidget(self.submit_site)
+
+    def _optional_page(self):
+        layout=self._page()
+        layout.addWidget(QLabel('任意の提出情報を入力してください。CQ WW用は半角英数字・記号のみ使用できます。'))
+        scroll=QScrollArea();scroll.setWidgetResizable(True)
+        content=QWidget();self.optional_form=QFormLayout(content)
+        scroll.setWidget(content);layout.addWidget(scroll)
+
+    def _cq_setup_page(self):
+        layout=self._page()
+        layout.addWidget(QLabel('CQ WW RTTYの運用地・期間・提出する自局コールを指定してください。'))
+        form=QFormLayout();layout.addLayout(form)
+        self.cq_region=QComboBox();self.cq_region.addItems(['日本','米国・カナダ','その他'])
+        form.addRow('運用地',self.cq_region)
+        self.cq_year=QSpinBox();self.cq_year.setRange(2000,2100);self.cq_year.setValue(datetime.now().year)
+        form.addRow('開催年',self.cq_year)
+        self.cq_start=QDateTimeEdit();self.cq_end=QDateTimeEdit()
+        for edit in (self.cq_start,self.cq_end):
+            edit.setDisplayFormat('yyyy-MM-dd HH:mm');edit.setCalendarPopup(True)
+        form.addRow('開始（UTC）',self.cq_start);form.addRow('終了（UTC、指定分を含む）',self.cq_end)
+        self.cq_call=QLineEdit(store_call(self.store));form.addRow('提出する自局CALL',self.cq_call)
+        self.cq_year.valueChanged.connect(self._cq_default_period)
+        self._cq_default_period()
+        layout.addStretch()
+
+    def _cq_default_period(self,*args):
+        start,end=period('cqww',self.cq_year.value())
+        for edit,when in ((self.cq_start,start),(self.cq_end,end)):
+            edit.setDateTime(QDateTime.fromString(when.strftime('%Y-%m-%d %H:%M'),'yyyy-MM-dd HH:mm'))
+
+    def _cq_prepare_period(self):
+        call=self.cq_call.text().strip().upper()
+        if not call:
+            self.error.setText('提出する自局CALLを入力してください。');return False
+        start=datetime.strptime(self.cq_start.dateTime().toString('yyyy-MM-dd HH:mm'),'%Y-%m-%d %H:%M').replace(tzinfo=timezone.utc)
+        end=datetime.strptime(self.cq_end.dateTime().toString('yyyy-MM-dd HH:mm'),'%Y-%m-%d %H:%M').replace(tzinfo=timezone.utc)
+        if start>end:
+            self.error.setText('開始日時は終了日時以前にしてください。');return False
+        self.year.setValue(self.cq_year.value())
+        self._display_datetime(self.start,start);self._display_datetime(self.end,end)
+        self.call_filter.setText('')  # Include other own calls so they can be warned about, not silently dropped.
+        self.band_filter.setCurrentText('ALL')
+        self.band_filter.setEnabled(False)
+        self.call_filter.setEnabled(False)
+        self.filter_note.setText('CQ WWは指定期間の全バンド・全自局CALLを表示します。異なる自局CALLは次の画面で警告します。')
+        self.set_value('CALLSIGN',call)
+        self.set_value('LOCATION','DX' if self.cq_region.currentText()!='米国・カナダ' else '')
+        if self.cq_region.currentText()=='米国・カナダ':self.fields['LOCATION'].setPlaceholderText('州・地域略号（例：MA、ON）')
+        self.reload() if not self.records else self.apply_filter()
+        if not self.visible:
+            self.error.setText('指定期間に対象交信がありません。期間を確認してください。');return False
+        return True
 
     def _display_datetime(self,edit,utc):
         text=utc.astimezone(self.display_zone).strftime('%Y-%m-%d %H:%M')
@@ -193,6 +257,7 @@ class CabrilloDialog(QDialog):
             vals=self.states[i]['values']
             try:when=self.row_datetime(i,vals[0])
             except ValueError:when=None
+            if self.profile=='cqww' and when is None:continue
             if when is not None and not start<=when<=end:continue
             if call and vals[1].strip() and vals[1].strip().upper()!=call:continue
             try:
@@ -239,7 +304,9 @@ class CabrilloDialog(QDialog):
         else:w.setText(value)
 
     def info(self):
-        values={k:self.value(k).strip() for k in self.fields};values['JARL-PORTABLE']='YES' if self.portable.isChecked() else 'NO';return values
+        values={k:self.value(k).strip() for k in self.fields};values['JARL-PORTABLE']='YES' if self.portable.isChecked() else 'NO'
+        if self.profile=='cqww':values['CQ-REGION']='USVE' if self.cq_region.currentIndex()==1 else 'JA' if self.cq_region.currentIndex()==0 else 'OTHER'
+        return values
 
     def category_changed(self,*args):
         if not hasattr(self,'portable'):return
@@ -268,8 +335,11 @@ class CabrilloDialog(QDialog):
         if key!='generic':self.set_value('CONTEST',CONTESTS[key])
         self.form.setRowVisible(self.fields['LAYOUT'],key=='generic');self.layout_help.setVisible(key=='generic')
         self.form.setRowVisible(self.fields['CATEGORY-TIME'],key=='generic')
+        self.form.setRowVisible(self.fields['MY-CQ-ZONE'],key=='cqww')
         if key!='generic':self.set_value('CATEGORY-TIME','')
         self.portable.setVisible(key=='jarl');self.dates.setEnabled(key!='generic');self.period_note.setVisible(key!='generic')
+        if key!='cqww':
+            self.band_filter.setEnabled(True);self.call_filter.setEnabled(True)
         self.loaded_profile=key;self.category_changed()
         if key!='generic':self.set_period()
 
@@ -349,19 +419,27 @@ class CabrilloDialog(QDialog):
         return entries,errors
 
     def _set_page(self,index):
-        self.pages.setCurrentIndex(index);self.heading.setText(['① 出力形式','② 対象QSOの選択・出力用編集','③ 提出情報','④ 確認・保存'][index])
-        self.back.setEnabled(index>0);self.next.setText('ファイルに保存' if index==3 else '次へ');self.error.clear()
+        titles={0:'① 出力形式',5:'② CQ WW運用地・期間',1:'③ 対象QSOの選択・出力用編集',3:'④ 必須項目',2:'⑤ 任意項目',4:'⑥ 確認・保存'}
+        self.pages.setCurrentIndex(index);self.heading.setText(titles[index])
+        self.back.setEnabled(index!=0);self.next.setText('ファイルに保存' if index==4 else '次へ');self.error.clear()
+        self.cq_warning.setVisible(self.profile=='cqww' and bool(self.cq_warning.text()) and index in (3,2,4))
+        self.submit_site.setVisible(self.profile=='cqww' and index==4)
 
     def go_back(self):
-        if self.pages.currentIndex()>0:self._set_page(self.pages.currentIndex()-1)
+        index=self.pages.currentIndex()
+        if index: self._set_page({5:0,1:5 if self.profile=='cqww' else 0,3:1,2:3,4:2}[index])
 
     def go_next(self):
         index=self.pages.currentIndex();self.error.clear()
         if index==0:
             self.configure_profile(self.formats.checkedButton().property('profile'))
-            self._set_page(1)
-            if not self.records:self.reload()
-            else:self.apply_filter()
+            if self.profile=='cqww':self._set_page(5)
+            else:
+                self._set_page(1)
+                if not self.records:self.reload()
+                else:self.apply_filter()
+        elif index==5:
+            if self._cq_prepare_period():self._set_page(1)
         elif index==1:
             now_filter=(self._read_datetime(self.start),self._read_datetime(self.end),self.call_filter.text().strip().upper(),self.band_filter.currentText())
             if now_filter!=getattr(self,'applied_filter',None):
@@ -370,6 +448,15 @@ class CabrilloDialog(QDialog):
             if self.read_errors:errors=['読み込みエラーのあるADIFを確認し、再読込してください。']+errors
             if not entries and not errors:errors=['出力するQSOを選択してください。']
             if errors:self.error.setText('\n'.join(errors[:8]));return
+            if self.profile=='cqww':
+                zones={q.sent.split()[0] for q,_ in entries if q.sent.strip() and q.sent.split()[0].isdigit()}
+                if len(zones)==1:self.set_value('MY-CQ-ZONE',next(iter(zones)))
+                mixed=sorted({q.station_callsign or '空欄' for q,_ in entries if q.station_callsign.upper()!=self.value('CALLSIGN').upper()})
+                self.cq_warning.setText('注意：選択した交信に異なる自局CALLが含まれます：'+', '.join(mixed)+'。提出CALLと対象を確認してください。' if mixed else '')
+            self._set_page(3)
+        elif index==3:
+            entries,errors=self.selected_entries();_,validation,_=build_cabrillo(self.profile,self.info(),entries);errors+=validation
+            if errors:self.error.setText('\n'.join(errors[:8]));return
             self._set_page(2)
         elif index==2:
             entries,errors=self.selected_entries();body,validation,warnings=build_cabrillo(self.profile,self.info(),entries);errors+=validation
@@ -377,7 +464,7 @@ class CabrilloDialog(QDialog):
                 self.error.setText('\n'.join(errors[:8])+ (f'\nほか{len(errors)-8}件' if len(errors)>8 else ''));return
             self.body=body;self.preview.setPlainText(body);self.warnings.setPlainText('\n'.join(warnings) if warnings else '確認事項なし')
             self.summary.setText(f'{PROFILES[self.profile]} ／ {self.value("CALLSIGN")} ／ {self.value("CATEGORY-OPERATOR")}・{self.value("CATEGORY-POWER")}・{self.value("CATEGORY-BAND")}\n出力 {len(entries)}件（X-QSO {sum(bool(e[1]["xqso"]) for e in entries)}件を含む）／日時はUTC、モードはRY\n期間：{self._read_datetime(self.start):%Y-%m-%d %H:%M} ～ {self._read_datetime(self.end):%Y-%m-%d %H:%M} UTC')
-            self.saved.clear();self.saved_path=None;self.open_folder.setEnabled(False);self._set_page(3)
+            self.saved.clear();self.saved_path=None;self.open_folder.setEnabled(False);self.submit_site.setEnabled(False);self._set_page(4)
         else:self.save_file()
 
     def save_file(self):
@@ -391,7 +478,8 @@ class CabrilloDialog(QDialog):
         except Exception as exc:
             self.record_diagnostic('Cabrillo保存',exc)
             self.error.setText(str(exc) if isinstance(exc,ValueError) else '保存できませんでした。書き込み権限や空き容量、ファイルが開かれていないかを確認し、保存先を変更して再試行してください。');return
-        self.saved_path=Path(path);self.saved.setText(f'保存しました：{path}');self.open_folder.setEnabled(True)
+        self.saved_path=Path(path);self.saved.setText(f'保存しました：{path}'+ ('\n出力したファイルをCQ WW RTTY公式提出フォームから送信してください。' if self.profile=='cqww' else ''));self.open_folder.setEnabled(True)
+        self.submit_site.setEnabled(self.profile=='cqww')
         old=deepcopy(self.store.data.get('cabrillo',{}));self.store.data.setdefault('cabrillo',{})[self.profile]=self.info()
         try:self.store.save()
         except Exception as exc:

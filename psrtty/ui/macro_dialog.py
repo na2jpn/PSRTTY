@@ -86,7 +86,7 @@ class MacroDialog(QDialog):
         self.applied_template = self.template.currentText()
         self.macros = TEMPLATES[self.template.currentText()]()
         self.sent.setText({CQWW_TEMPLATE_NAME: "25", TEMPLATE_NAME: "01",
-                           NORMAL_TEMPLATE_NAME: ""}[self.applied_template])
+                           NORMAL_TEMPLATE_NAME: ""}.get(self.applied_template, ""))
         self.sent_fixed.setChecked(True)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)
         for r, m in enumerate(self.macros):

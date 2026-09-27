@@ -13,7 +13,7 @@ class Macro73Tests(unittest.TestCase):
         for name, sent in ((TEMPLATE_NAME,'01'),(CQWW_TEMPLATE_NAME,'25')):
             rows=TEMPLATES[name]()
             self.assertEqual([m['key'] for m in rows],[f'F{i}' for i in range(1,10)])
-            self.assertEqual(expand_macro(rows[2]['text'],{'HISCALL':'W1AW','SENT':sent}),f'W1AW 599 {sent} {sent}')
+            self.assertEqual(expand_macro(rows[2]['text'],{'HISCALL':'W1AW','SENT':sent,'MYCALL':'JH1HST'}),f'W1AW 599 {sent} {sent} DE JH1HST K')
             self.assertIn('TU 73',rows[3]['text'])
             rows[2]['text']='custom'
             self.assertNotEqual(TEMPLATES[name]()[2]['text'],'custom')

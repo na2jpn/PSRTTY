@@ -29,7 +29,7 @@ class Cabrillo75Tests(unittest.TestCase):
         self.assertIn('CONTEST: CQ-WW-RTTY\r\n',body)
         self.assertTrue(body.endswith('END-OF-LOG:\r\n'))
         self.assertNotIn('\n',body.replace('\r\n',''))
-        self.assertNotIn('CLAIMED-SCORE:',body)
+        self.assertIn('CLAIMED-SCORE: ',body)
         self.assertTrue(warnings)
         body.encode('ascii')
 
@@ -91,6 +91,8 @@ class UI75Tests(unittest.TestCase):
         adif=Mock();adif.load_recent.return_value=records if records is not None else [qso()];adif.read_errors=[]
         d=CabrilloDialog(adif,self.store,self.window);self.addCleanup(d.close)
         d.formats.button(profile).setChecked(True);d.year.setValue(2026);d.go_next()
+        if profile==2:
+            d.cq_year.setValue(2026);d.go_next()
         return d
 
     def test_all_profiles_save_and_back_preserves_edits(self):
@@ -101,12 +103,13 @@ class UI75Tests(unittest.TestCase):
                 if profile==0:
                     d._display_datetime(d.start,datetime(2026,9,1,tzinfo=UTC));d._display_datetime(d.end,datetime(2026,10,1,tzinfo=UTC));d.apply_filter()
                 d.table.item(0,7).setText('26' if profile==2 else '01')
-                d.go_next();self.assertEqual(d.pages.currentIndex(),2,d.error.text())
+                d.go_next();self.assertEqual(d.pages.currentIndex(),3,d.error.text())
                 d.set_value('NAME','Test Operator')
                 if profile==0:d.set_value('CONTEST','TEST-RTTY')
                 d.go_back();self.assertEqual(d.table.item(0,7).text(),'26' if profile==2 else '01')
                 d.go_next();self.assertEqual(d.value('NAME'),'Test Operator')
-                d.go_next();self.assertEqual(d.pages.currentIndex(),3,d.error.text())
+                d.go_next();self.assertEqual(d.pages.currentIndex(),2,d.error.text())
+                d.go_next();self.assertEqual(d.pages.currentIndex(),4,d.error.text())
                 target=Path(self.tmp.name)/f'{profile}.log'
                 with patch('psrtty.ui.cabrillo_dialog.QFileDialog.getSaveFileName',return_value=(str(target),'')):d.save_file()
                 self.assertTrue(target.exists());self.assertEqual(target.read_bytes(),d.body.encode('ascii'))
@@ -123,16 +126,16 @@ class UI75Tests(unittest.TestCase):
         d.table.item(1,1).setText('2026-09-28 00:00')
         d.go_next();self.assertEqual(d.pages.currentIndex(),1);self.assertIn('期間外',d.error.text())
         d.table.item(1,1).setText('2026-09-27 23:59');d.go_next();d.set_value('CALLSIGN','')
-        d.go_next();self.assertEqual(d.pages.currentIndex(),2);self.assertTrue(d.error.text())
+        d.go_next();self.assertEqual(d.pages.currentIndex(),3);self.assertTrue(d.error.text())
 
     def test_save_cancel_failure_retry_and_config_failure(self):
-        d=self.dialog();d.go_next();d.go_next();self.assertEqual(d.pages.currentIndex(),3)
+        d=self.dialog();d.go_next();d.go_next();d.go_next();self.assertEqual(d.pages.currentIndex(),4,d.error.text())
         with patch('psrtty.ui.cabrillo_dialog.QFileDialog.getSaveFileName',return_value=('','')):d.save_file()
         self.assertIsNone(d.saved_path)
         target=Path(self.tmp.name)/'retry.log'
         with patch('psrtty.ui.cabrillo_dialog.QFileDialog.getSaveFileName',return_value=(str(target),'')):
             with patch('psrtty.ui.cabrillo_dialog.save_cabrillo',side_effect=OSError('disk full')):d.save_file()
-            self.assertEqual(d.pages.currentIndex(),3);self.assertTrue(d.body);self.assertIn('保存できませんでした',d.error.text());self.assertNotIn('disk full',d.error.text())
+            self.assertEqual(d.pages.currentIndex(),4);self.assertTrue(d.body);self.assertIn('保存できませんでした',d.error.text());self.assertNotIn('disk full',d.error.text())
             self.store.save.side_effect=OSError('config denied');d.save_file()
             self.assertTrue(target.exists());self.assertIn('ファイルは保存済み',d.error.text())
             self.store.save.side_effect=None;d.save_file()
@@ -141,9 +144,9 @@ class UI75Tests(unittest.TestCase):
     def test_read_error_blocks_partial_output_and_original_adif_unchanged(self):
         log=ADIFLog(Path(self.tmp.name)/'actual');log.append(qso(),datetime(2026,9,26))
         path=log.path_for(datetime(2026,9,26));before=path.read_bytes()
-        d=self.dialog(log.load_recent(limit=None));d.table.item(0,8).setText('04 NY');d.go_next();d.go_next()
-        self.assertEqual(d.pages.currentIndex(),3,d.error.text());self.assertEqual(path.read_bytes(),before)
-        d.go_back();d.go_back();d.read_errors=['unreadable file'];d.go_next()
+        d=self.dialog(log.load_recent(limit=None));d.table.item(0,8).setText('04 NY');d.go_next();d.go_next();d.go_next()
+        self.assertEqual(d.pages.currentIndex(),4,d.error.text());self.assertEqual(path.read_bytes(),before)
+        d.go_back();d.go_back();d.go_back();d.read_errors=['unreadable file'];d.go_next()
         self.assertEqual(d.pages.currentIndex(),1);self.assertIn('読み込みエラー',d.error.text())
 
     def test_backup_default_and_existing_value(self):

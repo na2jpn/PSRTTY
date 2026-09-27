@@ -110,6 +110,12 @@ def build_cabrillo(profile, info, entries):
         if info.get('JARL-PORTABLE')=='YES' and not clean.get('LOCATION'):errors.append('LOCATION：移動運用地の都道府県を入力してください。')
     if profile=='cqww':
         if not clean.get('LOCATION'):errors.append('LOCATION：米国・カナダは州/地域、その他はDXを入力してください。')
+        region=clean.get('CQ-REGION','')
+        if region in ('JA','OTHER') and clean.get('LOCATION')!='DX':errors.append('LOCATION：米国・カナダ以外はDXを指定してください。')
+        if region=='USVE' and (not re.fullmatch('[A-Z]{2,3}',clean.get('LOCATION','')) or clean.get('LOCATION')=='DX'):
+            errors.append('LOCATION：米国・カナダの州・地域略号を指定してください。')
+        zone=clean.get('MY-CQ-ZONE','')
+        if zone and (not zone.isdigit() or not 1<=int(zone)<=40):errors.append('自局CQゾーン：1～40を指定してください。')
         if op=='MULTI-OP':
             if band!='ALL':errors.append('CQ WW：マルチオペはALLを選択してください。')
             if tx not in ('ONE','TWO','UNLIMITED'):errors.append('CQ WW：送信機区分を選択してください。')
@@ -168,7 +174,9 @@ def build_cabrillo(profile, info, entries):
             his=call_value(q.call,'相手CALL');freq=frequency(q.freq_hz)
             if q.when_utc is None or q.when_utc.tzinfo is None:raise ValueError('日時を指定してください。')
             when=q.when_utc.astimezone(timezone.utc)
-            if q.station_callsign and q.station_callsign.upper()!=mycall:raise ValueError('記録の自局CALLと提出CALLが異なります。②で対象/自局CALLを確認してください。')
+            if q.station_callsign and q.station_callsign.upper()!=mycall:
+                if profile=='cqww':warnings.append(f'QSO {i} {his}：記録の自局CALL {q.station_callsign} が提出CALL {mycall} と異なります。')
+                else:raise ValueError('記録の自局CALLと提出CALLが異なります。②で対象/自局CALLを確認してください。')
             if profile!='generic' and q.band.upper() not in HF_BANDS:raise ValueError('対象は3.5/7/14/21/28MHzです。')
             for label,value in [('RST-S',q.rst_sent),('RST-R',q.rst_rcvd)]:
                 if not re.fullmatch('[1-5][1-9][1-9]',value):raise ValueError(f'{label}は3桁のRSTを入力してください。')
@@ -176,6 +184,8 @@ def build_cabrillo(profile, info, entries):
             if not sent or not rcvd:raise ValueError('SENT・RCVDを入力してください。')
             if profile=='cqww':
                 sz,sq=cq_exchange(sent,mycall,'SENT');rz,rq=cq_exchange(rcvd,his,'RCVD');sent=f'{sz} {sq:<4}';rcvd=f'{rz} {rq:<4}'
+                if clean.get('MY-CQ-ZONE','').isdigit() and int(sz)!=int(clean['MY-CQ-ZONE']):
+                    raise ValueError('SENTのCQゾーンが自局CQゾーンと異なります。')
             elif profile=='jarl':
                 for label,value in [('SENT',sent),('RCVD',rcvd)]:
                     if not re.fullmatch('[0-9]{1,3}',value):raise ValueError(f'{label}：年齢または01（00/99も可）を数字で入力してください。')
@@ -195,6 +205,14 @@ def build_cabrillo(profile, info, entries):
             if duplicate in seen:warnings.append(f'QSO {i} {his}：同一バンドの交信が複数あります（自動削除しません）。')
             seen.add(duplicate)
         except (ValueError,KeyError) as exc:errors.append(f'QSO {i} [{q.call}]：{exc}')
+    if profile=='cqww':
+        # Mirror the official ADIF converter's named but empty optional headers.
+        present={line.partition(':')[0] for line in lines}
+        position=next((i for i,line in enumerate(lines) if line.startswith(('QSO:','X-QSO:'))),len(lines))
+        for key in ('CLAIMED-SCORE','NAME','ADDRESS','ADDRESS-CITY','ADDRESS-STATE-PROVINCE',
+                    'ADDRESS-POSTALCODE','ADDRESS-COUNTRY','OPERATORS','CLUB','SOAPBOX'):
+            if key not in present:
+                lines.insert(position,key+': ');position+=1
     lines.append('END-OF-LOG:')
     if errors:return '',errors,warnings
     return '\r\n'.join(lines)+'\r\n',[],warnings

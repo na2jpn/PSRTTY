@@ -184,6 +184,30 @@ class YaesuController(CIVController):
                 return bool(actual and actual['mode']==current['mode'] and actual['narrow'] is bool(on))
             except Exception: return False
 
+    def read_tuner(self):
+        with self._lock:
+            if not self._control_ready(): return None
+            try:
+                raw=self._query('AC;', 'AC', .25)
+                # Internal tuner only. Never change external tuner/ATAS selection.
+                if re.fullmatch(r'AC00[0123];',raw):
+                    value=int(raw[4])
+                    if self.model=='FTX-1' and value==2: return None
+                    return 2 if value==3 else value
+            except Exception: pass
+            return None
+
+    def stop_tuner(self):
+        with self._lock:
+            if self.ser and self.status.connected: self.ser.write(b'AC000;')
+
+    def start_tuner(self):
+        with self._lock:
+            if self.read_tuner() not in (0,1) or self.read_transmitting() is not False: return False
+            command='AC003;' if self.model=='FTX-1' else 'AC002;'
+            self.ser.write(command.encode('ascii'))
+            return True  # Completion is polled by the control window.
+
     def _feature_format(self, name):
         # FTX-1 has level commands instead of FT-991's NB/NR switches.
         if self.model == 'FTX-1' and name in ('NB', 'NR'):

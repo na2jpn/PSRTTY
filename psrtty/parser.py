@@ -10,7 +10,7 @@ CALL_RE = re.compile(
     r"(?<![A-Z0-9])([A-Z0-9]{1,3}\d[A-Z]{1,4}(?:/[A-Z0-9]{1,5})?)(?![A-Z0-9])",
     re.IGNORECASE,
 )
-RST_RE = re.compile(r"(?<!\d)([1-5][1-9][1-9])(?!\d)")
+RST_RE = re.compile(r"(?<![A-Z0-9])([1-5][1-9][1-9])(?![A-Z0-9])")
 TOKEN_RE = re.compile(r"[A-Z0-9][A-Z0-9/\-]{0,15}", re.IGNORECASE)
 
 
@@ -34,7 +34,27 @@ def parse_exchange(text: str, mycall: str = "", *, cqww: bool = False) -> Parsed
     mycall = normalize_call(mycall)
     calls = [normalize_call(m.group(1)) for m in CALL_RE.finditer(upper)]
     calls = [c for c in calls if not mycall or c != mycall]
-    call = calls[0] if calls else ""
+    # Explicit sender identification wins; never choose the addressee of an exchange.
+    call = ""
+    identified = False
+    for marker in ("DE", "TU"):
+        match = re.search(r"\b" + marker + r"\s+(" + CALL_RE.pattern + r")", upper)
+        if match:
+            candidate = normalize_call(match.group(1))
+            identified = True
+            if candidate in calls: call = candidate
+            break
+    if not identified:
+        if RST_RE.search(upper):
+            call = ""  # e.g. JF3DCH 599 18 18: sender is the already selected station.
+        elif len(set(calls)) == 1:
+            call = calls[0]
+        elif calls:
+            # Only consider calls after CQ, avoiding a preceding thanked station.
+            cq = re.search(r"\bCQ\b", upper)
+            if cq:
+                after = [m.group(1) for m in CALL_RE.finditer(upper[cq.end():]) if normalize_call(m.group(1)) in calls]
+                if len(set(after)) == 1: call = normalize_call(after[0])
 
     rst_match = RST_RE.search(upper)
     rst = rst_match.group(1) if rst_match else ""
@@ -48,6 +68,7 @@ def parse_exchange(text: str, mycall: str = "", *, cqww: bool = False) -> Parsed
                 continue
             if CALL_RE.fullmatch(token):
                 continue
+            if token in {"DE", "K", "SK", "TU", "TNX", "RRR", "BK", "CQ", "TEST"}: break
             exchange = token
             if cqww and token.isdigit() and len(token) <= 2 and 1 <= int(token) <= 40:
                 # Only an adjacent official QTH, allowing repeated zone numbers.

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, asdict, field
+from dataclasses import dataclass, asdict, field, replace
 import hashlib
 import os
 import tempfile
@@ -25,13 +25,14 @@ class QSORecord:
     freq_hz: int | None = None
     when_utc: datetime | None = None
 
+    stored_band: str = field(default='', repr=False, compare=False)
     source_path: str = field(default='', repr=False, compare=False)
     source_index: int = field(default=-1, repr=False, compare=False)
     source_hash: str = field(default='', repr=False, compare=False)
 
     @property
     def band(self) -> str:
-        return band_from_hz(self.freq_hz)
+        return band_from_hz(self.freq_hz) or self.stored_band
 
     @property
     def freq_mhz(self) -> str:
@@ -82,6 +83,65 @@ def _field(name: str, value: str) -> str:
     return f"<{name}:{len(value)}>{value}"
 
 
+def adif_header() -> str:
+    from . import __version__
+    return (_field("ADIF_VER", "3.1.7") + " "
+            + _field("PROGRAMID", "PSRTTY") + " "
+            + _field("PROGRAMVERSION", __version__) + " <EOH>\r\n")
+
+
+def adif_record(qso: QSORecord) -> str:
+    if qso.when_utc is None:
+        raise ValueError("日時のないQSOはADIF出力できません。")
+    when = qso.when_utc.replace(tzinfo=timezone.utc) if qso.when_utc.tzinfo is None else qso.when_utc
+    when = when.astimezone(timezone.utc)
+    parts = [
+        _field("CALL", qso.call.upper()),
+        _field("QSO_DATE", when.strftime("%Y%m%d")),
+        _field("TIME_ON", when.strftime("%H%M%S")),
+        _field("MODE", "RTTY"),
+        _field("RST_SENT", qso.rst_sent),
+        _field("RST_RCVD", qso.rst_rcvd),
+    ]
+    if qso.band:
+        parts.append(_field("BAND", qso.band))
+    if qso.freq_mhz:
+        parts.append(_field("FREQ", qso.freq_mhz))
+    if qso.sent:
+        parts.append(_field("STX_STRING", qso.sent))
+        if qso.sent.isdigit():
+            parts.append(_field("STX", str(int(qso.sent))))
+    if qso.rcvd:
+        parts.append(_field("SRX_STRING", qso.rcvd))
+        if qso.rcvd.isdigit():
+            parts.append(_field("SRX", str(int(qso.rcvd))))
+    if qso.station_callsign:
+        parts.append(_field("STATION_CALLSIGN", qso.station_callsign.upper()))
+    return " ".join(parts) + " <EOR>\r\n"
+
+
+def export_adif(path: Path, records: list[QSORecord], protected=()) -> None:
+    """Write a selected set without modifying its source ADIF or existing files on failure."""
+    path = Path(path)
+    if path.suffix.lower() not in ('.adi', '.adif'):
+        raise ValueError('ADIFファイル（.adiまたは.adif）を選んでください。')
+    if path.resolve() in {Path(p).resolve() for p in protected if p}:
+        raise ValueError('元のADIFログには上書きできません。別の保存先を選んでください。')
+    if not records:
+        raise ValueError('出力するQSOを1件以上選択してください。')
+    content = adif_header() + ''.join(adif_record(qso) for qso in records)
+    temp = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix='.psrtty-adif-', suffix='.tmp', delete=False) as stream:
+            temp = Path(stream.name)
+            stream.write(content.encode('utf-8'))
+            stream.flush(); os.fsync(stream.fileno())
+        os.replace(temp, path)
+    finally:
+        if temp is not None:
+            temp.unlink(missing_ok=True)
+
+
 class ADIFLog:
     def __init__(self, log_dir: Path | None = None):
         self.log_dir = log_dir or ensure_runtime_dirs()["logdata"]
@@ -94,12 +154,7 @@ class ADIFLog:
     def ensure_file(self, now_local: datetime | None = None) -> Path:
         path = self.path_for(now_local)
         if not path.exists() or path.stat().st_size == 0:
-            header = (
-                _field("ADIF_VER", "3.1.7") + " "
-                + _field("PROGRAMID", "PSRTTY") + " "
-                + _field("PROGRAMVERSION", "0.84") + " <EOH>\r\n"
-            )
-            path.write_text(header, encoding="utf-8")
+            path.write_text(adif_header(), encoding="utf-8")
         return path
 
     def append(self, qso: QSORecord, now_local: datetime | None = None) -> Path:
@@ -109,31 +164,8 @@ class ADIFLog:
         when = when.astimezone(timezone.utc)
         path = self.ensure_file(when)
 
-        parts = [
-            _field("CALL", qso.call.upper()),
-            _field("QSO_DATE", when.strftime("%Y%m%d")),
-            _field("TIME_ON", when.strftime("%H%M%S")),
-            _field("MODE", "RTTY"),
-            _field("RST_SENT", qso.rst_sent),
-            _field("RST_RCVD", qso.rst_rcvd),
-        ]
-        if qso.band:
-            parts.append(_field("BAND", qso.band))
-        if qso.freq_mhz:
-            parts.append(_field("FREQ", qso.freq_mhz))
-        if qso.sent:
-            parts.append(_field("STX_STRING", qso.sent))
-            if qso.sent.isdigit():
-                parts.append(_field("STX", str(int(qso.sent))))
-        if qso.rcvd:
-            parts.append(_field("SRX_STRING", qso.rcvd))
-            if qso.rcvd.isdigit():
-                parts.append(_field("SRX", str(int(qso.rcvd))))
-        if qso.station_callsign:
-            parts.append(_field("STATION_CALLSIGN", qso.station_callsign.upper()))
-        record = " ".join(parts) + " <EOR>\r\n"
         with path.open("a", encoding="utf-8", newline="") as f:
-            f.write(record)
+            f.write(adif_record(replace(qso, when_utc=when)))
         return path
 
     def load_recent(self, path: Path | None = None, limit: int | None = 50, *, record_order: bool = False) -> list[QSORecord]:
@@ -158,7 +190,7 @@ class ADIFLog:
                 out.append(QSORecord(call=fields['CALL'],rst_sent=fields.get('RST_SENT','599'),rst_rcvd=fields.get('RST_RCVD','599'),
                     sent=fields.get('STX_STRING',fields.get('STX','')),rcvd=fields.get('SRX_STRING',fields.get('SRX','')),
                     station_callsign=fields.get('STATION_CALLSIGN',''),freq_hz=freq,when_utc=when,
-                    source_path=str(path.resolve()),source_index=index,source_hash=digest))
+                    stored_band=fields.get('BAND','').lower(),source_path=str(path.resolve()),source_index=index,source_hash=digest))
         if not record_order:
             out.sort(key=lambda q:q.when_utc or datetime.min.replace(tzinfo=timezone.utc))
         return out[-limit:] if limit is not None else out

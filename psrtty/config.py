@@ -29,7 +29,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "0.84",
+    "version": "0.88",
     "schema_version": 1,
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
@@ -47,7 +47,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "audio": {
         "input_device": "UNSET",
         "output_device": "AUTO",
-        "rx_gain": 1.0,
+        "rx_gain": 0.5,
         "tx_gain": 0.35,
         "sample_rate": 48000,
     },
@@ -68,6 +68,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "spectrum_gain_db": 0,
         "rx_card_font_size": 12,
         "auto_get_call": True,
+        "cq_only": True,
+        "clear_on_frequency": False,
         "auto_log": False,
     },
 }

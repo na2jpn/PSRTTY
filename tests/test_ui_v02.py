@@ -63,7 +63,7 @@ class UITests(unittest.TestCase):
     def test_rig_unselected_manual_address_and_tabs(self):
         dlg=SettingsDialog(self.store)
         self.assertEqual(dlg.rig.currentText(),'選択してください'); self.assertEqual(dlg.civ_addr.currentText(),'')
-        self.assertEqual([dlg.tabs.tabText(i) for i in range(4)],['基本設定','無線機','Audio','高度な設定'])
+        self.assertEqual([dlg.tabs.tabText(i) for i in range(5)],['基本設定','無線機','Audio IN','Audio OUT','高度な設定'])
         dlg.rig.setCurrentText('IC-705'); self.assertEqual(dlg.civ_addr.currentText(),'A4')
         dlg.civ_addr.setCurrentText('90'); dlg._save(); self.assertEqual(self.store.data['radio']['civ_address'],'90')
     def test_unselected_settings_can_save_audio(self):

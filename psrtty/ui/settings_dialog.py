@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 from copy import deepcopy
+import time
 
-from PySide6.QtCore import Qt, QTimer
+from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFormLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
-    QSpinBox, QTabWidget, QVBoxLayout, QWidget, QGroupBox, QLineEdit, QPlainTextEdit,
+    QSpinBox, QTabWidget, QVBoxLayout, QWidget, QGroupBox, QLineEdit, QPlainTextEdit, QProgressBar,
 )
 
 from ..audio_engine import AudioEngine
@@ -18,9 +19,18 @@ from ..config import DEFAULT_CONFIG, RIG_MODELS
 
 
 class SettingsDialog(QDialog):
+    before_save = Signal()
+    tx_test_finished = Signal(bool, str)
     def __init__(self, config_store, parent=None):
         super().__init__(parent)
         self.test_controller = None
+        self.test_uses_main = False
+        self.verified_values = None
+        self.tx_testing = False
+        self.alc_busy = False
+        self.alc_onset = None
+        self.alc_value = None
+        self.test_deadline = 0.0
         self.connect_requested = False
         self.store = config_store
         self.working = deepcopy(config_store.data)
@@ -40,8 +50,14 @@ class SettingsDialog(QDialog):
         root.addWidget(self.tabs, 1)
         self._build_basic_tab()
         self._build_radio_tab()
-        self._build_audio_tab()
+        self._build_audio_in_tab()
+        self._build_audio_out_tab()
         self._build_advanced_tab()
+        for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
+            combo.currentIndexChanged.connect(self._test_controls_changed)
+        self.civ_addr.currentTextChanged.connect(self._test_controls_changed)
+        self.auto_mode.toggled.connect(self._test_controls_changed)
+        self._adopt_main_connection()
 
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Save).setText("保存")
@@ -49,6 +65,12 @@ class SettingsDialog(QDialog):
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
+        self.tx_test_finished.connect(self._test_tx_finished)
+        self.countdown = QTimer(self); self.countdown.setInterval(200)
+        self.countdown.timeout.connect(self._tick_test_tx)
+        self.level_timer = QTimer(self); self.level_timer.setInterval(100)
+        self.level_timer.timeout.connect(self._refresh_rx_meter)
+        self.level_timer.start()
 
     def _build_basic_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
@@ -161,7 +183,7 @@ class SettingsDialog(QDialog):
             combo.addItem(label, selected)
         self._select_data(combo, selected)
 
-    def _build_audio_tab(self):
+    def _build_audio_in_tab(self):
         tab = QWidget()
         form = QFormLayout(tab)
         self.audio_in = QComboBox()
@@ -175,13 +197,25 @@ class SettingsDialog(QDialog):
         self.rx_gain.setRange(10, 300)
         self.rx_gain.setValue(int(float(self.working["audio"]["rx_gain"]) * 100))
         self.rx_label = QLabel()
-        self.rx_gain.valueChanged.connect(lambda v: self.rx_label.setText(f"{v}%"))
+        self.rx_gain.valueChanged.connect(self._rx_gain_changed)
         self.rx_label.setText(f"{self.rx_gain.value()}%")
-        row = QHBoxLayout(); row.addWidget(self.rx_gain, 1); row.addWidget(self.rx_label)
+        preset = QPushButton('暫定50%'); preset.setToolTip('受信音を聞く前の仮設定です。実際の信号を受信してから再調整してください。')
+        preset.clicked.connect(lambda: self.rx_gain.setValue(50))
+        row = QHBoxLayout(); row.addWidget(self.rx_gain, 1); row.addWidget(self.rx_label); row.addWidget(preset)
         form.addRow("受信レベル", row)
-        n2 = QLabel("※ソフト内部の受信ゲインです。メイン画面のRXメーターを見て、振り切れない範囲に調整します。")
+        self.rx_meter = QProgressBar(); self.rx_meter.setRange(0,100)
+        self.rx_meter.setFormat('%v%　音声レベルの目安')
+        form.addRow('RXメーター', self.rx_meter)
+        self.rx_good = QLabel('青：Good（40～70%）／音が小さいか無信号なら灰色／強すぎる音は注意色')
+        form.addRow('', self.rx_good)
+        n2 = QLabel('受信音を聞く前は暫定50%を使用できます。RTTY信号を受信できたら、RXメーターが青いGoodの範囲に入るよう再調整してください。Goodは音声レベルの目安で、復調成功を保証しません。無信号・弱い信号は音量だけでは区別できないため、低い表示を設定不良と判定しません。受信文字も確認してください。')
         n2.setWordWrap(True); n2.setObjectName("helpText"); form.addRow("", n2)
+        save_in = QPushButton('音量設定を保存'); save_in.clicked.connect(self._save_audio_in)
+        form.addRow('', save_in)
+        self.tabs.addTab(tab, 'Audio IN')
 
+    def _build_audio_out_tab(self):
+        tab = QWidget(); form = QFormLayout(tab)
         self.audio_out = QComboBox()
         self._audio_choices(self.audio_out, 'output', self.working['audio']['output_device'])
         form.addRow("Audio OUT", self.audio_out)
@@ -192,16 +226,32 @@ class SettingsDialog(QDialog):
         self.tx_gain.setRange(1, 90)
         self.tx_gain.setValue(int(float(self.working["audio"]["tx_gain"]) * 100))
         self.tx_label = QLabel()
-        self.tx_gain.valueChanged.connect(lambda v: self.tx_label.setText(f"{v}%"))
+        self.tx_gain.valueChanged.connect(self._tx_gain_changed)
         self.tx_label.setText(f"{self.tx_gain.value()}%")
         row2 = QHBoxLayout(); row2.addWidget(self.tx_gain, 1); row2.addWidget(self.tx_label)
         form.addRow("送信レベル", row2)
-        n4 = QLabel("※RTTY AFSK送信用です。低めから開始し、無線機のALCが大きく振れない範囲で調整してください。")
+        n4 = QLabel('試験送信は実際にPTTをONにしてRTTY音を送出します。低いレベルから始め、無線機のALCが動作し始める手前に合わせてください。無線機が運用接続中ならそのまま使用できます。未接続なら無線機タブで接続テストを成功させてください。')
         n4.setWordWrap(True); n4.setObjectName("helpText"); form.addRow("", n4)
+        self.alc_meter = QProgressBar(); self.alc_meter.setRange(0,120); self.alc_meter.setValue(0)
+        self.alc_meter.setFormat('ALC：未取得')
+        form.addRow('無線機ALC', self.alc_meter)
+        self.alc_good = QLabel('ALC調整目安：未判定')
+        form.addRow('', self.alc_good)
+        self.alc_note = QLabel('ALCを取得できない場合は無線機本体のALCメーターを確認してください。')
+        self.alc_note.setWordWrap(True); self.alc_note.setObjectName('helpText'); form.addRow('', self.alc_note)
+        self.test_tx_button = QPushButton('テスト音＋TX-PTT'); self.test_tx_button.setEnabled(False)
+        self.test_tx_button.clicked.connect(self._toggle_test_tx)
+        self.test_count_label = QLabel('待機中')
+        test_row=QHBoxLayout(); test_row.addWidget(self.test_tx_button); test_row.addWidget(self.test_count_label); test_row.addStretch(1)
+        form.addRow('', test_row)
+        self.tx_test_note = QLabel('もう一度押すと停止。10秒でも自動停止します。送信停止後に保存してください。')
+        self.tx_test_note.setWordWrap(True); self.tx_test_note.setObjectName('helpText'); form.addRow('', self.tx_test_note)
+        self.save_out_button = QPushButton('音量設定を保存'); self.save_out_button.clicked.connect(self._save_audio_out)
+        form.addRow('', self.save_out_button)
 
         note = QLabel(self.audio_error or '有効な音声デバイスを表示します。USB機器を追加した場合はPSRTTYを再起動してください。\n旧版で番号指定した機器は選び直してください。「自動」はWindowsの既定の機器を使用します。')
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
-        self.tabs.addTab(tab, "Audio")
+        self.tabs.addTab(tab, 'Audio OUT')
 
     def _build_advanced_tab(self):
         tab = QWidget()
@@ -272,25 +322,186 @@ class SettingsDialog(QDialog):
         if yaesu: values['cat_stopbits'] = self.stopbits.currentData()
         return values
 
-    def _test_radio(self):
-        if self.test_controller:
+    def _test_controls_changed(self, *_):
+        if not self.tx_testing and self.verified_values != self._radio_values():
+            self.test_tx_button.setEnabled(False)
+            if self.verified_values:
+                self.tx_test_note.setText('無線機設定を変更しました。接続テストを再実行してください。')
+
+    def _adopt_main_connection(self):
+        parent=self.parent()
+        if (parent is None or not hasattr(parent,'_connected') or not parent._connected()
+            or self._radio_values()!=parent.store.data['radio']):
+            return False
+        if self.test_controller and not self.test_uses_main:
+            self._release_test_controller()
+        self.test_controller=parent.radio
+        self.test_uses_main=True
+        self.verified_values=self._radio_values()
+        self.test_tx_button.setEnabled(True)
+        self.test_note.setText('運用接続を確認しました。Audio OUTで試験送信できます。')
+        return True
+
+    def _rx_gain_changed(self, value):
+        self.rx_label.setText(f'{value}%')
+        parent = self.parent()
+        if parent and hasattr(parent, 'audio'): parent.audio.set_rx_gain(value/100)
+
+    def _tx_gain_changed(self, value):
+        self.tx_label.setText(f'{value}%')
+        parent = self.parent()
+        if parent and hasattr(parent, 'audio'): parent.audio.set_tx_gain(value/100)
+        if self.tx_testing: self._show_alc(self.alc_value)
+
+    def _refresh_rx_meter(self):
+        parent = self.parent()
+        value = parent.level.value() if parent and hasattr(parent, 'level') else 0
+        self.rx_meter.setValue(value)
+        color = '#3769c3' if 40 <= value <= 70 else '#a59d92' if value < 25 else '#c96d13' if value <= 85 else '#c0392b'
+        self.rx_meter.setStyleSheet(f'QProgressBar::chunk {{ background: {color}; }}')
+        self.rx_meter.setFormat(f'{value}%　' + ('Good（音声レベルの目安）' if 40 <= value <= 70 else '音が小さいか無信号' if value < 25 else '信号受信中に調整'))
+
+    def _save_audio_in(self):
+        parent=self.parent()
+        old=self.store.data['audio']['input_device']
+        self.store.data['audio'].update(input_device=self.audio_in.currentData() or 'AUTO', rx_gain=self.rx_gain.value()/100)
+        self.working['audio'].update(self.store.data['audio'])
+        self.store.save()
+        if parent and old != self.store.data['audio']['input_device']: parent._restart_audio_input()
+        self.test_note.setText('Audio INの設定を保存しました。')
+
+    def _save_audio_out(self):
+        if self.tx_testing or self.parent().audio._tx_active:
+            self.tx_test_note.setText('送信が止まってから保存してください。'); return
+        self.store.data['audio'].update(output_device=self.audio_out.currentData() or 'AUTO', tx_gain=self.tx_gain.value()/100)
+        self.working['audio'].update(self.store.data['audio'])
+        self.store.save()
+        self.tx_test_note.setText('Audio OUTの設定を保存しました。')
+
+    def _show_alc(self, value):
+        self.alc_value=value
+        if value is None:
+            self.alc_meter.setValue(0); self.alc_meter.setFormat('ALC：取得できません')
+            self.alc_good.setText('ALC調整目安：本体メーターを確認')
+            self.alc_good.setStyleSheet('color: #765d44;')
+            self.alc_note.setText('ALC情報を取得できません。テスト送信中は無線機本体のALCメーターを見て、動き始める手前まで音量を上げてください。')
+            self.alc_meter.setStyleSheet('')
             return
+        self.alc_meter.setValue(min(120,value))
+        self.alc_meter.setFormat(f'ALC {value} / 120')
+        gain=self.tx_gain.value()
+        good = self.alc_onset is not None and self.alc_onset-5 <= gain < self.alc_onset and value <= 1
+        self.alc_good.setText('ALC調整目安：Good' if good else 'ALC調整目安：調整中')
+        self.alc_good.setStyleSheet('background: #208341; color: white; padding: 4px; font-weight: bold;' if good else 'color: #765d44;')
+        color = '#208341' if good else '#c0392b' if value >= 10 else '#c98722'
+        self.alc_meter.setStyleSheet(f'QProgressBar::chunk {{ background: {color}; }}; QProgressBar {{ border: 2px solid {color}; }}')
+        self.alc_note.setText('緑：ALC調整目安（動作開始点から少し下げた位置）' if good else
+                              'ALCが動き始める手前に調整してください。緑は動作開始点を一度確認した後に表示します。')
+
+    def _toggle_test_tx(self):
+        if self.tx_testing:
+            self._stop_test_tx(); return
+        parent=self.parent()
+        if (not self.test_controller or not self.test_controller.status.connected or
+            self.verified_values != self._radio_values() or
+            (parent._connected() and not self.test_uses_main) or
+            (self.test_uses_main and (not parent._connected() or parent.radio is not self.test_controller)) or
+            parent.antenna_tuning or parent.auto_cq_active or
+            parent.audio._tx_active):
+            self.test_tx_button.setEnabled(False)
+            self.tx_test_note.setText('無線機タブで接続テストを再実行してください。'); return
+        ctl=self.test_controller
+        mode=self.verified_values['ptt']
+        ptt={'CI-V':ctl.set_ptt,'CAT':ctl.set_ptt,'RTS':ctl.set_rts,'DTR':ctl.set_dtr}.get(mode)
+        if not ptt:
+            self.tx_test_note.setText('PTT方式を確認してください。'); return
+        adv=self.working['advanced']
+        # RY alternation exercises both mark and space. The worker is cut off at 10 s.
+        text='RY ' * 70
+        ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
+            adv['mark_hz'],adv['space_hz'],adv['invert'],self.tx_gain.value()/100,
+            lambda: bool(self.test_controller is ctl and ctl.status.connected and ptt(True)),
+            lambda: ptt(False), lambda success,note:self.tx_test_finished.emit(success,note))
+        if not ok:
+            self.tx_test_note.setText(msg); return
+        self.tx_testing=True; self.test_deadline=time.monotonic()+10
+        self.test_tx_button.setText('テスト送信を停止')
+        self.test_count_label.setText('残り 10秒')
+        self.save_out_button.setEnabled(False)
+        self.tx_test_note.setText('実際に送信中です。無線機のALCと送信状態を確認してください。')
+        self.countdown.start()
+
+    def _tick_test_tx(self):
+        remaining=max(0,self.test_deadline-time.monotonic())
+        self.test_count_label.setText(f'残り {int(remaining+0.999)}秒' if remaining else '停止中…')
+        if remaining <= 0:
+            self._stop_test_tx(); return
+        if self.alc_busy or not self.test_controller or not hasattr(self.test_controller,'read_alc'): return
+        ctl=self.test_controller
+        self.alc_busy=True
+        def done(value,error):
+            self.alc_busy=False
+            if ctl is not self.test_controller or not self.tx_testing: return
+            if error: value=None
+            if value is not None and value >= 2 and self.alc_onset is None:
+                self.alc_onset=self.tx_gain.value()
+            self._show_alc(value)
+        self.alc_job=BackgroundJob(self,ctl.read_alc,done)
+
+    def _stop_test_tx(self):
+        if not self.tx_testing: return
+        self.countdown.stop()
+        self.test_count_label.setText('停止中…')
+        self.parent().audio.stop_tx()
+
+    def _test_tx_finished(self, success, message):
+        self.tx_testing=False; self.countdown.stop()
+        self.test_tx_button.setText('テスト音＋TX-PTT')
+        self.test_count_label.setText('停止')
+        self.save_out_button.setEnabled(True)
+        self.alc_meter.setValue(0); self.alc_meter.setFormat('ALC：送信停止')
+        self.alc_good.setText('ALC調整目安：送信停止');self.alc_good.setStyleSheet('color: #765d44;')
+        self.tx_test_note.setText('送信を停止しました。音量設定を保存できます。' if success or message=='送信中止' else message)
+        if not self.isVisible(): self._release_test_controller()
+
+    def _release_test_controller(self):
+        ctl,self.test_controller=self.test_controller,None
+        borrowed=self.test_uses_main
+        self.test_uses_main=False
+        self.verified_values=None
+        if ctl and not borrowed:
+            ctl.cancel.set()
+            # If TX is still unwinding, its completion callback owns PTT release.
+            parent=self.parent()
+            if not parent or not hasattr(parent,'audio') or not parent.audio._tx_active: ctl.disconnect()
+
+    def _test_radio(self):
+        parent = self.parent()
+        if parent is not None and hasattr(parent, '_connected') and (parent._connected() or parent.connecting):
+            if not self._adopt_main_connection():
+                self.test_note.setText('運用接続中の設定と画面の選択が異なります。設定を保存して再接続してください。')
+            return
+        if self.tx_testing: return
+        if self.test_controller:
+            self._release_test_controller()
         values = self._radio_values()
         try:
             ctl = create_controller(values)
         except ValueError as exc:
             QMessageBox.warning(self, "接続テスト", str(exc)); return
         self.test_controller = ctl
+        self.test_uses_main = False
+        self.verified_values = None
+        self.alc_onset = None
+        self._show_alc(None)
+        self.test_tx_button.setEnabled(False)
         self.connect_button.setEnabled(False)
         self.test_note.setText("接続確認中…")
         advanced = dict(data_mode=self.data_mode.currentText())
         self.test_button.setEnabled(False); self.test_button.setText("接続確認中…")
         def work():
-            try:
-                return connect_configured(ctl, values, advanced)
-            finally:
-                ctl.disconnect()
-        self.test_job = BackgroundJob(self, work, lambda st, err: self._test_done(st, err) if self.test_controller is ctl else None)
+            return connect_configured(ctl, values, advanced)
+        self.test_job = BackgroundJob(self, work, lambda st, err: self._test_done(st, err, values) if self.test_controller is ctl else None)
         def deadline():
             if self.test_controller is ctl:
                 ctl.cancel.set()
@@ -299,37 +510,49 @@ class SettingsDialog(QDialog):
                 QMessageBox.warning(self, "接続テスト", "接続がタイムアウトしました")
         QTimer.singleShot(10000, self, deadline)
 
-    def _test_done(self, status, error):
-        self.test_controller = None
+    def _test_done(self, status, error, values):
+        if error or not status or not status.connected:
+            self._release_test_controller()
+        else:
+            self.verified_values=values
+            self.test_tx_button.setEnabled(True)
         self.connect_button.setEnabled(bool(self.rig.currentData()))
-        self.test_note.setText("接続テスト失敗" if error or not status.connected else "接続テストに成功しました。運用を開始するには［接続］を押してください。")
+        self.test_note.setText("接続テスト失敗" if error or not status or not status.connected else "接続テストに成功しました。Audio OUTを調整できます。運用を開始するには［接続］を押してください。")
         self.test_button.setEnabled(True); self.test_button.setText("接続テスト")
         if not self.isVisible():
             return
-        if error or not status.connected:
-            QMessageBox.warning(self, "接続テスト", str(error) if error else status.message)
+        if error or not status or not status.connected:
+            QMessageBox.warning(self, "接続テスト", str(error) if error else status.message if status else '応答なし')
         else:
-            QMessageBox.information(self, "接続テスト", f"接続テストに成功しました。運用を開始するには［接続］を押してください。\n{status.port} / {status.baud} bps\n周波数: {status.frequency_hz:,} Hz")
+            QMessageBox.information(self, "接続テスト", f"接続テストに成功しました。Audio OUTで送信レベルを調整できます。\n{status.port} / {status.baud} bps\n周波数: {status.frequency_hz:,} Hz")
 
     def done(self, result):
-        if self.test_controller:
-            self.test_controller.cancel.set()
-            self.test_controller = None
+        self.level_timer.stop()
+        if self.tx_testing:
+            self._stop_test_tx()
+        else:
+            self._release_test_controller()
+        parent=self.parent()
+        if parent and hasattr(parent,'audio'):
+            parent.audio.set_rx_gain(self.store.data['audio']['rx_gain'])
+            parent.audio.set_tx_gain(self.store.data['audio']['tx_gain'])
         super().done(result)
 
     def basic_call_changed(self):
         return self.my_call.text() != self.working.get('station_callsign', '')
 
     def _connect_saved(self):
-        if self.test_controller: return
+        if self.tx_testing: return
+        self._release_test_controller()
         self.connect_requested = True
         self._save()
         if self.result() != QDialog.Accepted: self.connect_requested = False
 
     def _save(self):
-        if self.test_controller:
-            self.test_note.setText("接続テストの終了を待ってください。")
+        if self.tx_testing or (self.test_controller and not self.verified_values):
+            self.test_note.setText("接続テスト・送信テストの終了を待ってください。")
             return
+        self._release_test_controller()
         values = self._radio_values()
         try:
             if values["model"]:
@@ -353,6 +576,7 @@ class SettingsDialog(QDialog):
             "spectrum_width_hz": self.spec_width.currentData(),
             "auto_tune_tolerance_hz": self.tune_tol.value(),
         })
+        self.before_save.emit()
         # Main-window QSO fields remain usable while settings are open.
         for section in ('radio', 'audio', 'advanced'):
             self.store.data[section] = self.working[section]

@@ -15,13 +15,13 @@ TEMPLATE_NAME = "JARL World Wide RTTYコンテスト"
 def jarl_ww_template() -> list[dict[str, str]]:
     """Return independent editable values, retaining legacy completion metadata."""
     rows = [
-        ("CQ", "CQ TEST {MYCALL} {MYCALL}"),
-        ("CALL", "{MYCALL} {MYCALL}"),
-        ("EXCHANGE", "{HISCALL} 599 {SENT} {SENT}"),
-        ("TU 73", "RRR TU 73 {MYCALL}"),
-        ("QRZ", "{MYCALL} QRZ?"),
-        ("NR?", "NR? NR?"),
-        ("RRR EXCHANGE", "RRR {HISCALL} 599 {SENT} {SENT}"),
+        ("CQ", "CQ TEST {MYCALL} {MYCALL} K"),
+        ("CALL", "{MYCALL} {MYCALL} {MYCALL}"),
+        ("EXCHANGE", "{HISCALL} 599 {SENT} {SENT} DE {MYCALL} K"),
+        ("TU 73", "R TU 73 DE {MYCALL}"),
+        ("AGN", "AGN DE {MYCALL} K"),
+        ("NR?", "{HISCALL} NR NR?"),
+        ("TEST", "RRR DE {MYCALL} TEST"),
         ("KKK", "KKK"),
         ("FREE", ""),
     ]
@@ -54,7 +54,20 @@ def cqww_rtty_template() -> list[dict[str, str]]:
     return jarl_ww_template()
 
 
-TEMPLATES = {NORMAL_TEMPLATE_NAME: normal_qso_template, TEMPLATE_NAME: jarl_ww_template,
+SHORT_TEMPLATE_NAME = "通常交信短縮版（英文RTTY）"
+
+
+def short_qso_template():
+    texts = ["CQ DE {MYCALL} K", "{HISCALL} DE {MYCALL} K",
+             "{HISCALL} DE {MYCALL} UR {RSTS} K", "TU 73 {HISCALL} SK",
+             "RRR TU {HISCALL} DE {MYCALL} K", "AGN AGN",
+             "MY QTH {MYJCCJCG} K", "KKK", ""]
+    rows = normal_qso_template()
+    for row, text in zip(rows, texts): row['text'] = text
+    return rows
+
+
+TEMPLATES = {NORMAL_TEMPLATE_NAME: normal_qso_template, SHORT_TEMPLATE_NAME: short_qso_template, TEMPLATE_NAME: jarl_ww_template,
              CQWW_TEMPLATE_NAME: cqww_rtty_template}
 
 TEMPLATE_HELP = {
@@ -69,6 +82,9 @@ TEMPLATE_HELP = {
                         "RST（599）はマクロで付くため、SENTへの入力は不要です。海外運用時は運用地のゾーンを設定します。\n"
                         "米国本土・カナダ局の受信番号は州・地域略号も含めてRCVDに記録します（例：05 MA）。",
 }
+
+
+TEMPLATE_HELP[SHORT_TEMPLATE_NAME] = TEMPLATE_HELP[NORMAL_TEMPLATE_NAME]
 
 
 def completes_qso(text: str) -> bool:

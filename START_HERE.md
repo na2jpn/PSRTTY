@@ -1,25 +1,7 @@
-# PSRTTY Ver0.84 正本
+# PSRTTY 0.88 ソース差分
 
-このZIPがVer0.84のソース正本です。単独で展開でき、過去の差分・FIXの適用は不要です。
-今後は PSRTTY_0.84_CANONICAL_SOURCE.zip だけを開発基準としてください。
-0.79や0.81／0.82の差分・FIXから再構築しないでください。
+0.87 FIX3適用済みのソースへ `PSRTTY_0.88_DIFF.zip` の内容を上書きしてください。設定、ログ、EXEは含みません。0.84正本からの場合は0.85、0.86、0.87 FIX3、0.88の順です。
 
-START_HERE.md → HANDOFF.md → TIME_POLICY_078.md の順に読んでください。
-設定・運用ログ・ビルド済みEXEは含みません。既存の運用データを削除する必要はありません。
+変更内容は `VERSION_088.md`、検証結果は `VALIDATION_088.md` を参照してください。
 
-## 0.84のクロススコープ
-コントロール右のボタンで別ウィンドウを表示。各方向で最新＋1つ前の2本（最大4本）を保持し、前の輪は薄く描きます。残光は取得時刻から最大0.7秒。同調時は線に近い楕円です。
-受信位置変更・入力停止・非表示で残光を消去します。解析は5 Hz、フェード描画は20 Hzです。
-
-## Windowsビルド
-python -m unittest discover -v
-その後 build-windows.ps1 を実行。配布ZIPは release/PSRTTY_0.84.zip。
-
-現行仕様はHANDOFF.md、VERSION_084.md、TIME_POLICY_078.md。docs/history配下は過去の記録であり、追加適用の指示ではありません。
-
-## 0.84変更
-- マクロ編集の保存ボタン上にSENT欄と固定チェックを追加。
-- テンプレート反映時：通常は空欄、JARL WWは01、CQ WWは25。すべて固定ON。編集可能。
-- 選択のみでは変更しない。保存でメイン画面へ反映し、キャンセルで破棄。既存設定は開くだけでは変更しない。
-- マクロ編集、バックアップ設定、基本・無線機・Audio設定のSave/Cancelを保存/キャンセルへ変更。
-- Windowsでのビルド・実機確認は利用者側で実施。
+Windows：`python -m unittest discover -v` の後、`build-windows.ps1`。配布用EXE入りZIPは `release/PSRTTY_0.88.zip` です。

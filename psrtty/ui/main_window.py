@@ -32,6 +32,7 @@ from ..parser import normalize_call, parse_exchange
 from ..macros import CQWW_TEMPLATE_NAME
 from ..paths import ensure_runtime_dirs, resource_path
 from .about_dialog import AboutDialog
+from .history_dialog import HistoryDialog
 from .macro_dialog import MacroDialog
 from .qso_log_dialog import QSOLogDialog
 from .settings_dialog import SettingsDialog
@@ -87,6 +88,7 @@ class MainWindow(QMainWindow):
         self.radio: CIVController | None = None
         self.current_freq_hz: int | None = None
         self.connecting = False
+        self.antenna_tuning = False
         self.polling = False
         self.poll_failures = 0
         self.connection_generation = 0
@@ -110,6 +112,7 @@ class MainWindow(QMainWindow):
         self.audio_input_busy = False
         self.audio_input_requested = False
         self.call_locked = False
+        self.call_frequency = None
         self.rx_buffer = ""
         self.last_spectrum: tuple[np.ndarray, np.ndarray] | None = None
 
@@ -122,7 +125,7 @@ class MainWindow(QMainWindow):
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
 
-        self.setWindowTitle("PSRTTY 0.84")
+        self.setWindowTitle("PSRTTY 0.88")
         self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
@@ -146,7 +149,8 @@ class MainWindow(QMainWindow):
         self.adif_action = self._act(filem, "", self._open_adif)
         filem.aboutToShow.connect(self._refresh_log_menu)
         self._refresh_log_menu()
-        cab = self._act(filem, "Cabrillo出力", self._cabrillo_notice); cab.setEnabled(True)
+        self._act(filem, "ADIFファイル出力", self._export_adif)
+        cab = self._act(filem, "Cabrilloファイル出力", self._cabrillo_notice); cab.setEnabled(True)
         filem.addSeparator(); self._act(filem, "終了", self.close)
 
         edit = mb.addMenu("編集")
@@ -173,7 +177,9 @@ class MainWindow(QMainWindow):
         self._act(helpm, "初期設定ガイド", self._guide_initial)
         self._act(helpm, "起動コマンドフラグについて", self._guide_flags)
         self.update_action = self._act(helpm, "PSRTTYのバージョンアップ", self._upgrade_zip)
-        helpm.addSeparator(); self._act(helpm, "PSRTTYについて", self._about)
+        helpm.addSeparator()
+        self._act(helpm, "PSRTTYの更新履歴", self._history)
+        self._act(helpm, "PSRTTYについて", self._about)
 
     @staticmethod
     def _act(menu: QMenu, text: str, slot):
@@ -201,7 +207,14 @@ class MainWindow(QMainWindow):
         self.scope_button.setCheckable(True)
         self.scope_button.setToolTip("受信音のクロススコープを別ウィンドウで表示")
         self.scope_button.toggled.connect(self._toggle_scope)
-        status.addWidget(self.scope_button); status.addStretch(1)
+        status.addWidget(self.scope_button)
+        status.addSpacing(8)
+        self.center_tuning = QLabel('C同調 -'); self.center_tuning.setMinimumWidth(145)
+        status.addWidget(self.center_tuning); status.addStretch(1)
+        from ..tuning import CenterTuning
+        self.center_meter = CenterTuning()
+        self.center_timer = QTimer(self); self.center_timer.setInterval(333)
+        self.center_timer.timeout.connect(self._refresh_center_tuning); self.center_timer.start()
         self.audio_status = QLabel("Audio IN: 未設定")
         status.addWidget(self.audio_status)
         outer.addLayout(status)
@@ -248,7 +261,7 @@ class MainWindow(QMainWindow):
         self.decode_sq.currentIndexChanged.connect(self._set_decode_sq)
         header = QWidget(); header_row = QHBoxLayout(header)
         header_row.setContentsMargins(4,0,4,0); header_row.setSpacing(5)
-        header_row.addWidget(QLabel('SQ')); header_row.addWidget(self.decode_sq); header_row.addWidget(self.decode_enabled)
+        header_row.addWidget(QLabel('SQ(スケルチ)')); header_row.addWidget(self.decode_sq); header_row.addWidget(self.decode_enabled)
         cards_box = HeaderControlGroupBox("デコード", header)
         self.decode_group = cards_box
         cards_layout = QVBoxLayout(cards_box); cards_layout.setContentsMargins(5,max(12,header.sizeHint().height()),5,5)
@@ -257,31 +270,44 @@ class MainWindow(QMainWindow):
         self.cards_scroll.setWidget(self.cards_host); cards_layout.addWidget(self.cards_scroll); left.addWidget(cards_box, 1)
 
         pending = QGroupBox("現在のQSO")
+        self.worked_label = QLabel(pending)
+        title_width = pending.fontMetrics().horizontalAdvance(pending.title())
+        self.worked_label.move(9 + 8 + title_width + 12, 0)
         grid = QGridLayout(pending); grid.setHorizontalSpacing(7); grid.setVerticalSpacing(4)
         self.auto_get = QCheckBox('自動取得')
         self.auto_get.setToolTip('受信文からCALL・RST-R・RCVDを取得します。各欄は手修正できます。')
+        self.cq_only = QCheckBox('CQのみ')
+        self.cq_only.setChecked(self.store.data['ui'].get('cq_only', True))
+        self.cq_only.toggled.connect(lambda v: self.store.data['ui'].update(cq_only=v))
         self.sent_fixed = QCheckBox('固定')
         self.sent_fixed.setToolTip('ON: SENTを保持。OFF: ログ追加成功時に数値を+1。数字以外は保持。送信だけでは増えません。')
         for i, title in enumerate(['CALL', 'RST-S', 'RST-R', 'SENT', 'RCVD']):
             header = QHBoxLayout(); header.addWidget(QLabel(title))
-            if i == 0: header.addWidget(self.auto_get)
+            if i == 0: header.addWidget(self.auto_get); header.addWidget(self.cq_only)
             if i == 3: header.addWidget(self.sent_fixed)
             header.addStretch(1); grid.addLayout(header, 0, i)
         self.q_call = QLineEdit(); self.q_call.setPlaceholderText('例: JX1XXX')
         self.his_call = self.q_call  # One CALL field; preserve internal/test API.
         self.q_call.textEdited.connect(self._his_call_edited)
+        self.q_call.textChanged.connect(self._call_changed)
         self.rst_s = QLineEdit('599'); self.rst_r = QLineEdit('599')
         self.sent = QLineEdit(self.store.data['qso']['sent']); self.rcvd = QLineEdit()
         self.sent_fixed.setChecked(self.store.data['qso']['sent_fixed'])
         fields=[self.q_call,self.rst_s,self.rst_r,self.sent,self.rcvd]
         for i,w in enumerate(fields): grid.addWidget(w,1,i)
-        self.auto_log = QCheckBox("TU 73送出で自動ログ追加"); grid.addWidget(self.auto_log,2,0,1,2)
+        self.auto_log = QCheckBox("TU 73送出で自動ログ追加")
+        self.clear_on_frequency = QCheckBox('周波数変更でクリア')
+        self.clear_on_frequency.setChecked(self.store.data['ui'].get('clear_on_frequency', False))
+        self.clear_on_frequency.setToolTip('CALL取得・入力時の周波数から±20 Hz以上でCALL・RST-R・RCVDをクリア')
+        self.clear_on_frequency.toggled.connect(lambda v: self.store.data['ui'].update(clear_on_frequency=v))
+        bottom = QHBoxLayout(); bottom.addWidget(self.auto_log); bottom.addWidget(self.clear_on_frequency)
+        bottom.addStretch(1)
         self.q_datetime = QSODatetime()
         self.q_date = self.q_datetime.date; self.q_time = self.q_datetime.time
-        grid.addWidget(self.q_datetime,2,2,1,2)
+        bottom.addWidget(self.q_datetime)
         for field in fields + [self.q_datetime]:
             field.textChanged.connect(self._qso_edited)
-        add = QPushButton("↓ ログに追加"); add.setObjectName("logButton"); add.clicked.connect(self._add_qso); grid.addWidget(add,2,4)
+        add = QPushButton("↓ ログに追加"); add.setObjectName("logButton"); add.clicked.connect(self._add_qso); bottom.addWidget(add); grid.addLayout(bottom,2,0,1,5)
         left.addWidget(pending)
 
         latest_box = self.latest_box = FooterHintGroupBox("最新QSO")
@@ -444,7 +470,8 @@ class MainWindow(QMainWindow):
         for i,m in enumerate(self.store.macros):
             preview=expand_macro(m.get("text",""), vals)
             shown=self.macro_buttons[i].fontMetrics().elidedText(" ".join(preview.split()), Qt.ElideRight, max(60, self.macro_buttons[i].width()-24))
-            self.macro_buttons[i].setToolTip(preview)
+            from html import escape
+            self.macro_buttons[i].setToolTip('<qt><div style="white-space:pre-wrap; max-width:480px">' + escape(preview).replace('\n', '<br>') + '</div></qt>')
             self.macro_buttons[i].setText(f"{m.get('key',f'F{i+1}')}  {m.get('name','')}\n{shown}")
 
         self._refresh_auto_cq_button()
@@ -506,23 +533,50 @@ class MainWindow(QMainWindow):
     def _consider_auto_extract(self,text):
         if not self.auto_get.isChecked() or self.active_tx_id is not None: return
         parsed=parse_exchange(text,self.my_call.text(), cqww=self.store.data.get("macro_template") == CQWW_TEMPLATE_NAME)
-        if parsed.callsign and not self.call_locked:
-            self.his_call.setText(parsed.callsign); self.q_call.setText(parsed.callsign); self.call_locked=True
-        # Once the current station is locked, still accept exchange only when the line contains it or our own call.
-        current=normalize_call(self.his_call.text())
-        upper=text.upper()
-        own = normalize_call(self.my_call.text())
-        relevant=(not current) or (current in upper) or (bool(own) and own in upper)
-        if relevant:
-            if parsed.rst: self.rst_r.setText(parsed.rst)
-            if parsed.exchange: self.rcvd.setText(parsed.exchange)
+        allow_call = not self.cq_only.isChecked() or bool(re.search(r'\bCQ\b', text, re.I))
+        if parsed.callsign and not self.call_locked and allow_call:
+            self.q_call.setText(parsed.callsign); self.call_locked=True
+        if parsed.rst: self.rst_r.setText(parsed.rst)
+        if parsed.exchange: self.rcvd.setText(parsed.exchange)
         self._refresh_macros()
+
+    def _call_changed(self, text):
+        upper = text.upper()
+        if text != upper:
+            pos = self.q_call.cursorPosition()
+            self.q_call.setText(upper); self.q_call.setCursorPosition(pos)
+            return
+        self.call_frequency = self.current_freq_hz if upper.strip() else None
+        if not upper.strip(): self.call_locked = False
+        self._refresh_worked()
+
+    def _refresh_worked(self):
+        if not hasattr(self, 'worked_label'): return
+        from ..adif import band_from_hz, BANDS
+        call = normalize_call(self.q_call.text())
+        records = [q for q in self.qsos if normalize_call(q.call) == call] if call else []
+        bands = {q.band for q in records if q.band}
+        labels = dict(zip([b[2] for b in BANDS], ['0.135','0.472','1.8','3.5','7','10','14','18','21','24','28','50','144','430','1240','2300','5650','10000']))
+        done = bool(band_from_hz(self.current_freq_hz) in bands)
+        text = '' if not call else '初めての局です' if not records else call + ' ' + ' '.join(labels[b[2]]+'MHz' for b in BANDS if b[2] in bands) + ' 交信済み' + ('＊＊＊' if done else '')
+        color = '#d00000' if done else '#008ba3' if records else '#39bce6'
+        self.worked_label.setText(text)
+        self.worked_label.setStyleSheet('background:#fffdf9; padding:0 4px; color:'+color)
+        self.worked_label.setToolTip(text)
+        self.worked_label.adjustSize(); self.worked_label.raise_()
+
+    def _refresh_center_tuning(self):
+        frame = getattr(self.audio, 'tuning_frame', None)
+        value = self.center_meter.update(frame, self.audio.sample_rate)
+        from ..tuning import tuning_display
+        text, color = tuning_display(value)
+        self.center_tuning.setText(text); self.center_tuning.setStyleSheet('color:'+color)
 
     def _connected(self):
         return bool(self.radio and self.radio.status.connected and not self.connecting)
 
     def _manual_tx_allowed(self):
-        return not self.closing and not self.connecting and (self._connected() or self.offline_tx.isChecked())
+        return not self.antenna_tuning and not self.closing and not self.connecting and (self._connected() or self.offline_tx.isChecked())
 
     def _offline_tx_changed(self):
         if not self.offline_tx.isChecked() and not self._connected(): self._stop_tx()
@@ -537,7 +591,7 @@ class MainWindow(QMainWindow):
             button.setEnabled(self._manual_tx_allowed())
         for shortcut in self.shortcuts[:9]:
             shortcut.setEnabled(self._manual_tx_allowed())
-        self.auto_cq_button.setEnabled(ready and not self.auto_cq_active and self.active_tx_id is None)
+        self.auto_cq_button.setEnabled(not self.antenna_tuning and ready and not self.auto_cq_active and self.active_tx_id is None)
         self.connect_action.setEnabled(not ready and not self.connecting)
         self.disconnect_action.setEnabled(ready or self.connecting)
         self.redetect_action.setEnabled(not self.connecting)
@@ -673,7 +727,7 @@ class MainWindow(QMainWindow):
             self.auto_cq_button.setText('Auto CQ開始\n' + shown)
 
     def _start_auto_cq(self):
-        if not self._connected() or self.auto_cq_active or self.active_tx_id is not None or self.audio._tx_active:
+        if self.antenna_tuning or not self._connected() or self.auto_cq_active or self.active_tx_id is not None or self.audio._tx_active:
             return
         if not expand_macro(self.store.macros[0].get('text', ''), self._macro_values()):
             self.statusBar().showMessage('F1が空のためAuto CQを開始できません', 4000); return
@@ -709,6 +763,8 @@ class MainWindow(QMainWindow):
         self._refresh_auto_cq_button(); self._set_radio_controls()
 
     def _stop_tx(self):
+        if self.control_window and hasattr(self.control_window, 'tuner_cancel'):
+            self.control_window.tuner_cancel.set()
         self._cancel_auto_cq()
         self.pending_manual = None
         self.pending_auto_log = None
@@ -773,6 +829,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, '設定の保存', f'QSOはADIFへ保存済みです。再度追加する必要はありません。\nSENTなどの設定を保存できませんでした。\n{settings_error}')
 
     def _refresh_latest_qsos(self):
+        self._refresh_worked()
         count=int(self.store.data["ui"]["latest_qso_count"])
         total=len(self.qsos)
         self.latest_box.set_footer(f"ログ合計 {total}件")
@@ -841,6 +898,8 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(10000, self, deadline)
 
     def disconnect_radio(self):
+        was_tuning = self.antenna_tuning
+        self.antenna_tuning = False
         self.connection_generation += 1
         self.poll_timer.stop(); self.poll_failures=0; self._stop_tx()
         ctl, self.radio = self.radio, None
@@ -851,6 +910,7 @@ class MainWindow(QMainWindow):
             mode = self.store.data["radio"]["ptt"]
             def cleanup():
                 self.audio.wait_tx(2.0)
+                if was_tuning: ctl.stop_tuner()
                 if ctl.status.connected:
                     {"CI-V": ctl.set_ptt, "CAT": ctl.set_ptt, "RTS": ctl.set_rts, "DTR": ctl.set_dtr}.get(mode, ctl.set_ptt)(False)
                 ctl.disconnect()
@@ -897,6 +957,11 @@ class MainWindow(QMainWindow):
             self.current_freq_hz=freq; self._update_freq_label()
 
     def _update_freq_label(self):
+        if self.current_freq_hz and self.q_call.text().strip():
+            if self.call_frequency is None: self.call_frequency = self.current_freq_hz
+            elif self.clear_on_frequency.isChecked() and abs(self.current_freq_hz-self.call_frequency) >= 20:
+                self.q_call.clear(); self.rst_r.setText('599'); self.rcvd.clear()
+        self._refresh_worked()
         self.freq_label.setText(frequency_text(self.current_freq_hz))
         if self.control_window: self.control_window.observe_frequency(self.current_freq_hz)
 
@@ -997,10 +1062,14 @@ class MainWindow(QMainWindow):
     def _settings(self):
         if self.settings_window and self.settings_window.isVisible():
             self.settings_window.raise_(); return
-        self.disconnect_radio()
         self.store.data['station_callsign'] = normalize_call(self.my_call.text())
         old_tones=tuple(self.store.data['advanced'][k] for k in ('mark_hz','space_hz','shift_hz'))
         dlg = self.settings_window = SettingsDialog(self.store, self)
+        disconnected_on_save = {'value': False}
+        def before_save():
+            disconnected_on_save['value'] = self._connected()
+            self.disconnect_radio()
+        dlg.before_save.connect(before_save)
         dlg.setWindowModality(Qt.NonModal)
         def finished(result):
             if result:
@@ -1012,6 +1081,8 @@ class MainWindow(QMainWindow):
                     self.store.save()
                 self._apply_audio_config(); self._load_config_to_ui(); self._restart_audio_input()
                 self.statusBar().showMessage("設定を保存しました。無線機を再接続してください", 4000)
+                if disconnected_on_save['value']:
+                    QMessageBox.information(self, '設定', '設定を有効にするため、接続を一旦切断しました。')
                 if dlg.connect_requested:
                     QTimer.singleShot(0, self, self._connect_after_settings)
             self.connect_action.setEnabled(True); self.redetect_action.setEnabled(True)
@@ -1050,6 +1121,7 @@ class MainWindow(QMainWindow):
         self.qsos=self.adif.load_recent(limit=None, record_order=True)
         self._refresh_latest_qsos()
     def _about(self): AboutDialog(self).exec()
+    def _history(self): HistoryDialog(self).exec()
 
     def _set_spectrum_width(self,v): self.store.data["advanced"]["spectrum_width_hz"]=v; self.store.save(); self.spectrum.set_width(v)
     def _set_card_font(self,v): self.store.data["ui"]["rx_card_font_size"]=v; self.store.save(); self.statusBar().showMessage("新しいカードから文字サイズを反映します",2500)
@@ -1089,6 +1161,9 @@ class MainWindow(QMainWindow):
     def _open_log_dir(self): self._open_path(self.paths["logdata"])
     def _open_transcript(self): self._open_path(self.transcript.ensure_file())
     def _open_adif(self): self._open_path(self.adif.ensure_file())
+    def _export_adif(self):
+        from .adif_export_dialog import ADIFExportDialog
+        ADIFExportDialog(self.adif, self.store, self).exec()
     def _cabrillo_notice(self):
         from .cabrillo_dialog import CabrilloDialog
         CabrilloDialog(self.adif, self.store, self).exec()
@@ -1162,6 +1237,7 @@ class MainWindow(QMainWindow):
         self.update_job = BackgroundJob(self, lambda: inspect_zip(Path(path), __version__, self.paths["root"]), checked)
 
     def closeEvent(self,event):
+        self.center_timer.stop()
         self.q_datetime.timer.stop()
         if not self.closing:
             self.closing = True

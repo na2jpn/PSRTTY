@@ -2,11 +2,13 @@
 from decimal import Decimal, InvalidOperation
 import math
 import time
+import threading
 from PySide6.QtCore import Qt, QTimer, Signal, QPointF
 from PySide6.QtGui import QPainter, QColor, QPen
 from PySide6.QtWidgets import QDialog, QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QPushButton, QComboBox, QLineEdit, QCheckBox, QGroupBox
 from .background import BackgroundJob
 from .formatting import frequency_text
+from ..civ import CIVController
 
 # Recall presets only; not transmit permissions. Use last observed frequency thereafter.
 BANDS = [('1.8',1800000,2000000,1908000),('3.5',3500000,4000000,3520000),
@@ -109,6 +111,9 @@ class ControlWindow(QDialog):
         self.narrow=QPushButton('NARROW —'); self.narrow.setCheckable(True)
         self.narrow.clicked.connect(self.request_narrow); filter_row.addWidget(self.narrow)
         root.addWidget(self.filter_box)
+        self.antenna_tune=QPushButton('アンテナTUNE')
+        self.antenna_tune.setToolTip('無線機へTUNE操作を送ります。外部ATUを含め動作可否は無線機側で判定します。')
+        self.antenna_tune.clicked.connect(self.request_tuner); root.addWidget(self.antenna_tune)
         self.note=QLabel(); self.note.setWordWrap(True); root.addWidget(self.note)
         self.setStyleSheet('QPushButton:checked { background: #ed8b19; color: white; border: 2px solid #9b4c00; }')
         self.timer=QTimer(self); self.timer.setInterval(100); self.timer.timeout.connect(self.tick); self.timer.start(); self.refresh_enabled()
@@ -117,7 +122,7 @@ class ControlWindow(QDialog):
         self.main.store.data['ui']['wheel_reverse']=checked; self.main.store.save()
     def ready(self):
         m=self.main
-        return m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
+        return not m.antenna_tuning and m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
     def reveal(self):
         self.showNormal(); area=self.main.screen().availableGeometry()
         self.resize(min(480,area.width()),min(565,area.height()))
@@ -158,8 +163,13 @@ class ControlWindow(QDialog):
             b.setText((('' if name=='NOTCH' else ('DNR' if yaesu and name=='NR' else name))+' '+('ON' if value is True else 'OFF' if value is False else '—')).strip())
             b.setChecked(value is True); b.setEnabled(ready and value is not None and not self.busy and self.feature_pending is None)
             b.setToolTip('状態未取得／この機種・モードでは非対応' if value is None else ('自動ノッチ' if key=='AN' else '手動ノッチ' if key=='MN' else name))
+        hz=self.main.current_freq_hz
+        icom=isinstance(self.main.radio,CIVController)
+        self.antenna_tune.setEnabled(ready and not self.busy and not self.main.antenna_tuning
+                                     and (self.states.get('TUNER') != 2 if icom else
+                                          self.states.get('TUNER') in (0,1) and bool(hz and 1800000<=hz<=54000000)))
         self.refresh_filter(ready)
-        if not ready: self.note.setText('接続後、受信中に操作できます。送信中・Auto CQ中は停止します。')
+        if not ready and not self.main.antenna_tuning: self.note.setText('接続後、受信中に操作できます。送信中・Auto CQ中は停止します。')
         self.observe_frequency(self.main.current_freq_hz)
     def refresh_filter(self, ready):
         yaesu=self.band_profile in ('FT-991 / FT-991A','FTX-1')
@@ -181,6 +191,40 @@ class ControlWindow(QDialog):
         self.narrow.setText('NARROW '+('ON' if value is True else 'OFF' if value is False else '—'))
         self.narrow.setChecked(value is True); self.narrow.setEnabled(enabled and value is not None)
         self.filter_box.setToolTip('無線機側の受信フィルター。状態未取得・非対応時は操作できません。')
+
+    def request_tuner(self):
+        if not self.antenna_tune.isEnabled() or not self.ready(): return
+        ctl=self.main.radio; generation=self.main.connection_generation
+        self.tuner_cancel=threading.Event()
+        self.main.antenna_tuning=True; self.busy=True
+        self.main._set_radio_controls(); self.note.setText('アンテナチューニング中…')
+        def work():
+            completed=False
+            try:
+                if not ctl.start_tuner(): return False
+                started=time.monotonic(); deadline=started+30; active=False
+                icom=isinstance(ctl,CIVController)
+                while not self.tuner_cancel.wait(.25):
+                    if ctl.cancel.is_set(): break
+                    state=ctl.read_tuner(); tx=ctl.read_transmitting()
+                    active = active or state==2 or tx is True
+                    if (active or not icom and time.monotonic()-started>=2) and state in (0,1) and tx is False:
+                        completed=state==1
+                        return completed
+                    if icom and not active and time.monotonic()-started>=5:
+                        raise RuntimeError('TUNEの動作を確認できません。無線機・ATUの状態を確認してください。')
+                    if time.monotonic()>deadline:
+                        raise RuntimeError('チューン完了を確認できません。無線機の状態を確認してください。')
+                return False
+            finally:
+                if not completed: ctl.stop_tuner()
+        def done(result,error):
+            self.busy=False
+            if generation!=self.main.connection_generation or self.main.radio is not ctl: return
+            self.main.antenna_tuning=False; self.states.pop('TUNER',None)
+            self.main._set_radio_controls()
+            self.note.setText(str(error) if error else 'アンテナチューニング完了' if result else 'TUNE完了を確認できませんでした。無線機・ATUを確認してください。')
+        self.job=BackgroundJob(self,work,done)
 
     def request_filter(self, value):
         state=self.states.get('FILTER')
@@ -235,6 +279,7 @@ class ControlWindow(QDialog):
                     if ctl.cancel.is_set(): break
                     states[name]=ctl.read_feature(name)
                 if not ctl.cancel.is_set(): states['FILTER']=ctl.read_filter()
+                if not ctl.cancel.is_set(): states['TUNER']=ctl.read_tuner()
             return ok,freq,states
         def done(result,error):
             self.busy=False

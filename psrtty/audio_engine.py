@@ -35,10 +35,12 @@ class AudioEngine:
         self.decoder = RTTYDecoder(sample_rate=sample_rate, on_char=self.on_char)
         self.stream = None
         self.rx_gain = 1.0
+        self.tx_gain = 0.35
         self._fft_buf = np.zeros(0, dtype=np.float32)
         self._last_fft = 0.0
         self.scope_enabled = False
         self.scope_frame = None
+        self.tuning_frame = None
         self._tx_lock = threading.Lock()
         self._tx_active = False
         self._tx_cancel = threading.Event()
@@ -56,6 +58,7 @@ class AudioEngine:
         with self._decode_lock:
             self.decoder.configure(baud, mark, space, invert)
             self.scope_frame = None
+            self.tuning_frame = None
 
     def set_decode_enabled(self, enabled):
         with self._decode_lock:
@@ -71,6 +74,10 @@ class AudioEngine:
 
     def set_rx_gain(self, gain: float) -> None:
         self.rx_gain = max(0.05, float(gain))
+
+    def set_tx_gain(self, gain: float) -> None:
+        # The output worker samples this value for each block, including test TX.
+        self.tx_gain = max(0.01, min(0.90, float(gain)))
 
     def start_input(self, device: str | int | None = None) -> tuple[bool, str]:
         if device == 'UNSET':
@@ -113,6 +120,7 @@ class AudioEngine:
                 pass
         self.stream = None
         self.scope_frame = None
+        self.tuning_frame = None
         self._fft_buf = np.zeros(0, dtype=np.float32)
 
     def _input_callback(self, indata, frames, time_info, status) -> None:  # pragma: no cover - hardware callback
@@ -126,6 +134,9 @@ class AudioEngine:
         if len(self._fft_buf) >= 4096 and now - self._last_fft >= 0.10:
             self._last_fft = now
             seg = self._fft_buf[-4096:]
+            with self._decode_lock:
+                tuning_tones = (self.decoder.mark_hz, self.decoder.space_hz, self.decoder.baud)
+            self.tuning_frame = (now, self._fft_buf.copy(), tuning_tones)
             if self.scope_enabled:
                 with self._decode_lock:
                     tones = (self.decoder.mark_hz, self.decoder.space_hz, self.decoder.baud)
@@ -164,6 +175,7 @@ class AudioEngine:
             return False, "sounddeviceがインストールされていません"
         if self._tx_active:
             return False, "送信中です"
+        self.set_tx_gain(amplitude)
         audio = encode_text_audio(
             text,
             sample_rate=self.sample_rate,
@@ -171,7 +183,7 @@ class AudioEngine:
             mark_hz=mark,
             space_hz=space,
             invert=invert,
-            amplitude=max(0.01, min(0.95, amplitude)),
+            amplitude=1.0,
         )
         try:
             chosen = resolve_device(sd, output_device, 'output')
@@ -201,7 +213,7 @@ class AudioEngine:
                 for offset in range(0, len(audio), 960):
                     if self._tx_cancel.is_set():
                         return
-                    output.write(audio[offset:offset+960].reshape(-1, 1))
+                    output.write((audio[offset:offset+960] * self.tx_gain).reshape(-1, 1))
                 if self._tx_cancel.is_set():
                     return
                 output.stop()  # Drain normal playback before unkeying.

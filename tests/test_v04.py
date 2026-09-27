@@ -183,7 +183,7 @@ class UI04Tests(unittest.TestCase):
         self.assertIn('JH1HST',w.auto_cq_button.toolTip())
         self.assertNotIn('現在の相手コールサイン',[x.text() for x in w.findChildren(QLabel)])
     def test_auto_extraction_goes_to_single_call(self):
-        w=self.window; w.my_call.setText('JH1HST'); w._consider_auto_extract('JX1XXX 599 25 25')
+        w=self.window; w.my_call.setText('JH1HST'); w._consider_auto_extract('CQ TEST JX1XXX JX1XXX'); w._consider_auto_extract('JH1HST 599 25 25')
         self.assertEqual(w.q_call.text(),'JX1XXX'); self.assertEqual(w.rcvd.text(),'25')
         w.auto_get.setChecked(False); w._consider_auto_extract('JX1XXX 599 99 99')
         self.assertEqual(w.rcvd.text(),'25')

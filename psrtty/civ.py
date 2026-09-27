@@ -224,6 +224,44 @@ class CIVController:
                 pass
             return None
 
+    def read_tuner(self):
+        with self._lock:
+            if not self._control_ready(): return None
+            try:
+                self.ser.reset_input_buffer(); self.ser.write(self._frame(0x1C, 1))
+                raw = self._read_response(0x1C, timeout=.25)
+                if len(raw)==8 and raw[4:6]==b'\x1c\x01' and raw[6] in (0,1,2): return raw[6]
+            except Exception: pass
+            return None
+
+    def stop_tuner(self):
+        with self._lock:
+            if self.ser and self.status.connected:
+                self.ser.write(self._frame(0x1C,1,0))
+
+    def start_tuner(self):
+        with self._lock:
+            if self.read_transmitting() is not False or self.read_tuner() == 2: return False
+            self.ser.reset_input_buffer(); self.ser.write(self._frame(0x1C,1,2))
+            raw=self._read_response(0x1C,timeout=.3)
+            return len(raw)>=6 and raw[4]==0xFB
+
+    def read_alc(self):
+        """CI-V 15 13, BCD 0000..0255. None means no reliable reply."""
+        with self._lock:
+            if not self._control_ready(): return None
+            try:
+                self.ser.reset_input_buffer(); self.ser.write(self._frame(0x15, 0x13))
+                raw = self._read_response(0x15, timeout=.25)
+                if len(raw) != 9 or raw[4:6] != b'\x15\x13': return None
+                a, b = raw[6:8]
+                digits = ((a >> 4) & 15, a & 15, (b >> 4) & 15, b & 15)
+                if any(d > 9 for d in digits): return None
+                value = digits[0]*1000 + digits[1]*100 + digits[2]*10 + digits[3]
+                return value if value <= 255 else None
+            except Exception:
+                return None
+
     def read_transmitting(self):
         with self._lock:
             if not self._control_ready(): return None

@@ -39,10 +39,10 @@ class ConfigMacroTests(unittest.TestCase):
         rows=jarl_ww_template()
         self.assertEqual([m['key'] for m in rows],[f'F{i}' for i in range(1,10)])
         self.assertEqual([m['text'] for m in rows],[
-            'CQ TEST {MYCALL} {MYCALL}','{MYCALL} {MYCALL}',
-            '{HISCALL} 599 {SENT} {SENT}','RRR TU 73 {MYCALL}',
-            '{MYCALL} QRZ?','NR? NR?',
-            'RRR {HISCALL} 599 {SENT} {SENT}','KKK',''])
+            'CQ TEST {MYCALL} {MYCALL} K','{MYCALL} {MYCALL} {MYCALL}',
+            '{HISCALL} 599 {SENT} {SENT} DE {MYCALL} K','R TU 73 DE {MYCALL}',
+            'AGN DE {MYCALL} K','{HISCALL} NR NR?',
+            'RRR DE {MYCALL} TEST','KKK',''])
         rows[0]['text']='EDIT'; self.assertNotEqual(jarl_ww_template()[0]['text'],'EDIT')
         self.assertTrue(completes_qso('RRR TU 73 JH1HST')); self.assertFalse(completes_qso('TU JH1HST TEST')); self.assertFalse(completes_qso('599 01 01'))
         self.assertEqual(expand_macro('{SENT}',{'SENT':'01A'}),'01A')
