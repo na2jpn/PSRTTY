@@ -1,4 +1,4 @@
-# PSRTTY Ver1.05 正本 引き継ぎ
+# PSRTTY Ver1.05 VerFIX 正本 引き継ぎ
 
 基準はこのVer1.05正本ソースZIPです。Ver1.04やVer1.05の試験用差分を再適用しないでください。Windows配布用バイナリーZIPは `build-windows.ps1` で生成します。
 

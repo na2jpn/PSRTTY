@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QWidget
 
+from .. import __version__
 from ..paths import resource_path
 from ..paths import app_root
 
@@ -18,7 +19,7 @@ def hamlib_about():
     return f'Hamlib：Ver {value}（Yaesu・KenwoodのCAT制御）<br>ライセンス：LGPL 2.1以降。詳細：lib/hamlib/THIRD_PARTY_NOTICES.txt'
 
 
-ABOUT_TEXT = """<h2>PSRTTY 1.04</h2>
+ABOUT_TEXT = f"""<h2>PSRTTY {__version__}</h2>
 <p>Python / PySide6によるRTTYコンテスト向け通信ソフト。</p>
 <p>ICOM無線機とのCI-V接続およびUSB Audioを利用し、RTTYの送受信、マクロ送信、QSO記録を行います。</p>
 <p>Yaesu・Kenwoodの選択機種はHamlibによるCAT接続を利用します。</p>
