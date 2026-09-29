@@ -137,6 +137,8 @@ class ScopeCanvas(QWidget):
         self.points = np.empty((0, 2))
         self.traces = []
         self.alphas = []
+        self.cloud = np.empty((0, 2))
+        self.cloud_alpha = 0.
         self.setMinimumSize(220, 220)
 
     def paintEvent(self, event):
@@ -151,6 +153,12 @@ class ScopeCanvas(QWidget):
         painter.drawText(8, 18, 'SPACE ↑   MARK →')
         painter.setPen(QPen(QColor('#8be9a0'), 1))
         painter.setRenderHint(QPainter.Antialiasing)
+        if len(self.cloud):
+            color = QColor('#f3f5ee')
+            color.setAlphaF(self.cloud_alpha)
+            painter.setPen(QPen(color, 1))
+            painter.drawPoints(QPolygonF([QPointF(center.x()+x*scale,
+                center.y()-y*scale) for x, y in self.cloud]))
         for index, trace in enumerate(self.traces):
             color = QColor('#8be9a0')
             color.setAlphaF(self.alphas[index] if index < len(self.alphas) else 1.)
@@ -164,6 +172,7 @@ class CrossScopeWindow(QDialog):
         super().__init__(parent)
         self.audio = audio
         self.afterglow = ScopeAfterglow()
+        self.cloud_stamp = None
         self.setWindowTitle('クロススコープ')
         self.setWindowModality(Qt.NonModal)
         self.resize(330, 365)
@@ -186,31 +195,51 @@ class CrossScopeWindow(QDialog):
         self.audio.scope_frame = None
         self.audio.scope_enabled = True
         self.afterglow.clear()
+        self.cloud_stamp = None
         self.timer.start()
         self.fade_timer.start()
         self.refresh()
         super().showEvent(event)
 
     def hideEvent(self, event):
+        if self.parent() is not None and hasattr(self.parent(),'store'):
+            from .window_state import save_window
+            self.parent().store.data['ui']['scope_window']=save_window(self)
         self.timer.stop()
         self.fade_timer.stop()
         self.afterglow.clear()
+        self.cloud_stamp = None
         self.audio.scope_enabled = False
         self.audio.scope_frame = None
         self.canvas.points = np.empty((0, 2))
         self.canvas.traces = []
         self.canvas.alphas = []
+        self.canvas.cloud = np.empty((0, 2))
+        self.canvas.cloud_alpha = 0.
         super().hideEvent(event)
 
     def _paint_afterglow(self):
         frame = self.audio.scope_frame
         if frame is None or (self.afterglow.tones is not None and frame[2] != self.afterglow.tones):
             self.afterglow.clear()
+            self.cloud_stamp = None
         visible = self.afterglow.visible(time.monotonic())
         self.canvas.traces = [trace for trace, alpha in visible]
         self.canvas.alphas = [alpha for trace, alpha in visible]
         self.canvas.points = (np.concatenate(self.canvas.traces) if self.canvas.traces
                               else np.empty((0, 2)))
+        # MMTTY's XY display plots paired samples as points. Keep this visual
+        # layer independent of the sparse, stable traces used for afterglow.
+        if frame is not None and time.monotonic()-frame[0] < .7:
+            stamp, samples, tones = frame
+            if stamp != self.cloud_stamp:
+                xy = scope_points(samples, self.audio.sample_rate, *tones)
+                self.canvas.cloud = xy[::max(1,len(xy)//512)][:512]
+                self.cloud_stamp = stamp
+            self.canvas.cloud_alpha = max(0., .75*(1-(time.monotonic()-stamp)/.7))
+        else:
+            self.canvas.cloud = np.empty((0, 2))
+            self.canvas.cloud_alpha = 0.
         self.canvas.update()
 
     def refresh(self):

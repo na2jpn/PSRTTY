@@ -8,6 +8,8 @@ from functools import lru_cache
 from .paths import resource_path
 
 CONTINENTS = ('AF', 'AN', 'AS', 'EU', 'NA', 'OC', 'SA')
+CONTINENT_NAMES = {'AF':'アフリカ','AN':'南極','AS':'アジア','EU':'ヨーロッパ',
+                   'NA':'北アメリカ','OC':'オセアニア','SA':'南アメリカ'}
 MAINLAND = {'JA': 'JA', 'K': 'W', 'VE': 'VE', 'VK': 'VK'}
 
 
@@ -74,3 +76,12 @@ def calculate(entries, own_continent, overrides=None):
         details.append((call,band,value,place.get('multiplier','マルチなし')))
     return dict(points=points,multipliers=len(mults),total=points*len(mults),
                 details=details,unknown=sorted(set(unknown)))
+
+
+def location_label(call, overrides=None):
+    """Display-only database name and continent, preserving scoring tuples."""
+    place = locate(call, overrides)
+    if not place:
+        return ''
+    parts = [place.get('name',''), CONTINENT_NAMES.get(place.get('continent',''), '')]
+    return ' / '.join(part for part in parts if part)

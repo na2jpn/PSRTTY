@@ -10,6 +10,7 @@ from .background import BackgroundJob
 from .formatting import frequency_text
 from ..civ import CIVController
 from ..hamlib_radio import HamlibController, HAMLIB_MODELS
+from .window_state import place_tool_window, save_window
 
 # Recall presets only; not transmit permissions. Use last observed frequency thereafter.
 BANDS = [('1.8',1800000,2000000,1908000),('3.5',3500000,4000000,3520000),
@@ -128,12 +129,10 @@ class ControlWindow(QDialog):
         m=self.main
         return not m.antenna_tuning and m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
     def reveal(self):
-        self.showNormal(); area=self.main.screen().availableGeometry()
-        self.resize(min(480,area.width()),min(630,area.height()))
-        rect=self.frameGeometry(); rect.moveCenter(self.main.frameGeometry().center())
-        rect.moveLeft(max(area.left(),min(rect.left(),area.right()-rect.width()+1)))
-        rect.moveTop(max(area.top(),min(rect.top(),area.bottom()-rect.height()+1)))
-        self.move(rect.topLeft()); self.raise_(); self.activateWindow(); self.last_poll=0; self.refresh_enabled()
+        saved = self.main.store.data['ui'].get('control_window')
+        self.showNormal()
+        place_tool_window(self,self.main,(480,630),(400,450),saved)
+        self.raise_(); self.activateWindow(); self.last_poll=0; self.refresh_enabled()
     def observe_frequency(self,hz):
         if hz:
             self.frequency.setText(frequency_text(hz))
@@ -327,4 +326,5 @@ class ControlWindow(QDialog):
                 self.request_tuner()
         self.job=BackgroundJob(self,work,done)
     def hideEvent(self,event):
+        self.main.store.data['ui']['control_window']=save_window(self)
         self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; super().hideEvent(event)

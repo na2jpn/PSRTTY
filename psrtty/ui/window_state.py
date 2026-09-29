@@ -44,3 +44,27 @@ def restore_window(window, saved, reset=False):
 def save_window(window):
     rect = window.normalGeometry() if window.isMaximized() or window.isMinimized() else window.geometry()
     return dict(x=rect.x(), y=rect.y(), w=rect.width(), h=rect.height(), maximized=window.isMaximized())
+
+
+def place_tool_window(window, main, default_size, minimum_size, saved=None):
+    """Open a tool next to main and recover tiny/off-screen saved geometry."""
+    screen = main.screen() or QGuiApplication.primaryScreen()
+    area = screen.availableGeometry()
+    mw, mh = minimum_size
+    width = min(max(mw, default_size[0]), area.width())
+    height = min(max(mh, default_size[1]), area.height())
+    if isinstance(saved, dict) and all(type(saved.get(k)) is int for k in ('x','y','w','h')):
+        candidate = QRect(saved['x'],saved['y'],saved['w'],saved['h'])
+        if (candidate.width() >= mw and candidate.height() >= mh and
+            area.contains(candidate)):
+            window.setGeometry(candidate)
+            return
+    main_rect = main.frameGeometry()
+    if main_rect.right()+12+width <= area.right():
+        x = main_rect.right()+12
+    elif main_rect.left()-12-width >= area.left():
+        x = main_rect.left()-12-width
+    else:
+        x = min(area.right()-width+1,max(area.left(),main_rect.right()-width//2))
+    y = min(area.bottom()-height+1,max(area.top(),main_rect.top()))
+    window.setGeometry(x,y,width,height)

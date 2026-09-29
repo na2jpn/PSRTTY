@@ -22,13 +22,14 @@ class Legacy101UpgradeTests(unittest.TestCase):
             exe.write_bytes(b'MZ future 1.02 executable')
             release = build_distribution(exe, base / 'release')
             with patch('psrtty.updater.HAMLIB_REQUIRED', legacy_required):
-                self.assertEqual(inspect_zip(release, '1.01')['version'], '1.03')
+                from psrtty import __version__
+                self.assertEqual(inspect_zip(release, '1.01')['version'], __version__)
             with zipfile.ZipFile(release) as z:
                 names = set(z.namelist())
                 for filename in ('DISTRIBUTION_TERMS.txt', 'docs/DISTRIBUTION_TERMS.txt'):
-                    self.assertIn('PSRTTY_1.03/' + filename, names)
-                self.assertEqual(z.read('PSRTTY_1.03/DISTRIBUTION_TERMS.txt'),
-                                 z.read('PSRTTY_1.03/docs/DISTRIBUTION_TERMS.txt'))
+                    self.assertIn(f'PSRTTY_{__version__}/' + filename, names)
+                self.assertEqual(z.read(f'PSRTTY_{__version__}/DISTRIBUTION_TERMS.txt'),
+                                 z.read(f'PSRTTY_{__version__}/docs/DISTRIBUTION_TERMS.txt'))
             old = base / 'installed'
             old.mkdir()
             (old / 'psrtty.exe').write_bytes(b'MZ old 1.01')
@@ -45,7 +46,7 @@ class Legacy101UpgradeTests(unittest.TestCase):
             self.assertTrue((old / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file())
             self.assertEqual((old / 'config' / 'saved.json').read_text(), 'settings')
             self.assertEqual((old / 'logdata' / 'saved.adi').read_text(), 'qsos')
-            self.assertEqual(json.loads((old / MANIFEST).read_text())['version'], '1.03')
+            self.assertEqual(json.loads((old / MANIFEST).read_text())['version'], __version__)
 
     def test_unrelated_root_file_is_preserved(self):
         with tempfile.TemporaryDirectory() as td:

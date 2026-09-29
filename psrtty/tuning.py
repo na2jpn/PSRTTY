@@ -60,10 +60,10 @@ class CenterTuning:
 
 def tuning_display(value):
     if value is None or not np.isfinite(value) or abs(value) >= 25:
-        return 'C同調 -', '#000000'
+        return 'C同調 ---', '#000000'
     # Classify the displayed value so rounded boundary values match their color.
     value=round(value,1)
-    if abs(value)>=25: return 'C同調 -', '#000000'
+    if abs(value)>=25: return 'C同調 ---', '#000000'
     color=next(color for limit,color in [(5,'#0055dd'),(9,'#006400'),(11,'#80b918'),(15,'#e0bd00'),(20,'#f28c00'),(25,'#e34234')] if abs(value)<limit)
     number='0.0' if value == 0 else f'{value:+.1f}'
     return f'C同調 {number} Hz',color

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (QDialog,QWidget,QVBoxLayout,QHBoxLayout,QFormLayo
     QTableWidgetItem,QHeaderView,QAbstractItemView,QPlainTextEdit,QScrollArea,QMessageBox,QFileDialog,QCheckBox)
 from ..paths import app_root
 from ..paths import resource_path
-from ..jarl_score import calculate, CONTINENTS
+from ..jarl_score import calculate, CONTINENTS, location_label
 import csv
 from ..adif import band_from_hz
 from ..cabrillo import PROFILES,CONTESTS,HF_BANDS,BANDS,DEFAULT_LAYOUT,JST,period,build_cabrillo,save_cabrillo
@@ -262,8 +262,11 @@ class CabrilloDialog(QDialog):
             self.jarl_unknown.setCellWidget(row,2,continent)
             self.jarl_unknown.setItem(row,3,QTableWidgetItem(previous.get(call,{}).get('multiplier','')))
         self.jarl_result.setText(f"得点 {result['points']} × マルチ {result['multipliers']} ＝ {result['total']} 点")
-        self.jarl_details.setPlainText('\n'.join(f'{call} {band}：{point if point is not None else "未判定"}点 / {mult}'
-                         for call,band,point,mult in result['details']))
+        overrides=self._jarl_overrides()
+        self.jarl_details.setPlainText('\n'.join(
+            f'{call} {band}：{point if point is not None else "未判定"}点 / {mult}'
+            + (f' / {label}' if (label:=location_label(call,overrides)) else '')
+            for call,band,point,mult in result['details']))
         self.error.setText('未判定局の運用地を入力して再計算してください。' if result['unknown'] else '')
         return result
 

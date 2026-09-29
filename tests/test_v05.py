@@ -30,7 +30,8 @@ class Config05Tests(unittest.TestCase):
             st=ConfigStore(cfg,macros)
             self.assertEqual(st.data['audio']['input_device'],'UNSET')
             self.assertEqual(st.macros,normal_qso_template())
-            old=copy.deepcopy(DEFAULT_CONFIG); old['audio']['input_device']='AUTO'; old.pop('station')
+            old=copy.deepcopy(DEFAULT_CONFIG); old.pop('profiles'); old.pop('active_profile')
+            old['audio']['input_device']='AUTO'; old.pop('station')
             cfg.write_text(json.dumps(old)); rows=jarl_ww_template(); rows[0]['text']='MY CUSTOM CQ'
             macros.write_text(json.dumps(rows))
             st=ConfigStore(cfg,macros); self.assertEqual(st.macros,rows)

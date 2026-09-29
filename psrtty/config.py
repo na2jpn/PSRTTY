@@ -29,7 +29,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.03",
+    "version": "1.05",
     "schema_version": 1,
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
@@ -76,10 +76,20 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "rx_card_font_size": 12,
         "auto_get_call": True,
         "cq_only": True,
-        "clear_on_frequency": False,
+        "clear_on_frequency": True,
         "auto_log": False,
     },
 }
+
+PROFILE_KEYS = ("station_callsign", "station", "radio", "external", "audio", "advanced")
+DEFAULT_CONFIG['active_profile'] = 0
+DEFAULT_CONFIG['profiles'] = [{"name": "Profile1", **{
+    key: deepcopy(DEFAULT_CONFIG[key]) for key in PROFILE_KEYS}}]
+
+
+def profile_name(value: Any) -> str:
+    name = str(value or "")
+    return name if 1 <= len(name) <= 10 and name.isascii() and all(c.isalnum() or c in '-/' for c in name) else ""
 
 
 def _merge(default: dict[str, Any], current: dict[str, Any]) -> dict[str, Any]:
@@ -101,13 +111,63 @@ class ConfigStore:
         self.macros = deepcopy(DEFAULT_MACROS)
         self.load()
 
+    def _profile_values(self) -> dict[str, Any]:
+        return {**{key: deepcopy(self.data[key]) for key in PROFILE_KEYS},
+                "rx_tones": deepcopy(self.data["ui"].get("rx_tones"))}
+
+    def _load_profiles(self, raw_profiles=None) -> None:
+        profiles = []
+        if isinstance(raw_profiles, list):
+            for item in raw_profiles[:8]:
+                if not isinstance(item, dict):
+                    continue
+                values = {key: _merge(DEFAULT_CONFIG[key], item.get(key, {}))
+                          if isinstance(DEFAULT_CONFIG[key], dict) and isinstance(item.get(key), dict)
+                          else deepcopy(item.get(key, DEFAULT_CONFIG[key])) for key in PROFILE_KEYS}
+                values["name"] = profile_name(item.get("name")) or f"Profile{len(profiles)+1}"
+                tones = item.get("rx_tones")
+                values["rx_tones"] = deepcopy(tones) if isinstance(tones, list) and len(tones) == 2 else None
+                profiles.append(values)
+        if not profiles:
+            profiles = [{**self._profile_values(), "name": "Profile1"}]
+        self.data["profiles"] = profiles
+        index = self.data.get("active_profile", 0)
+        self.data["active_profile"] = index if isinstance(index, int) and 0 <= index < len(profiles) else 0
+        active = self.data["active_profile"]
+        if isinstance(raw_profiles, list) and active < len(raw_profiles) and isinstance(raw_profiles[active], dict):
+            if "rx_tones" not in raw_profiles[active]:
+                profiles[active]["rx_tones"] = deepcopy(self.data["ui"].get("rx_tones"))
+        for key in PROFILE_KEYS:
+            self.data[key] = deepcopy(profiles[self.data["active_profile"]][key])
+        tones = profiles[self.data["active_profile"]].get("rx_tones")
+        if tones is None: self.data["ui"].pop("rx_tones", None)
+        else: self.data["ui"]["rx_tones"] = deepcopy(tones)
+
+    def snapshot_profile(self) -> None:
+        item = self.data["profiles"][self.data["active_profile"]]
+        item.update(self._profile_values())
+
+    def activate_profile(self, index: int) -> None:
+        if not 0 <= index < len(self.data["profiles"]):
+            raise IndexError(index)
+        self.snapshot_profile()
+        self.data["active_profile"] = index
+        for key in PROFILE_KEYS:
+            self.data[key] = deepcopy(self.data["profiles"][index][key])
+        tones = self.data["profiles"][index].get("rx_tones")
+        if tones is None: self.data["ui"].pop("rx_tones", None)
+        else: self.data["ui"]["rx_tones"] = deepcopy(tones)
+        self.save()
+
     def load(self) -> None:
         previous_font = None
+        profile_records = None
         if self.config_path.exists():
             try:
                 raw = json.loads(self.config_path.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
                     self.data = _merge(DEFAULT_CONFIG, raw)
+                    profile_records = raw.get('profiles')
                     previous_font = raw.get("ui", {}).get("rx_card_font_size")
             except Exception:
                 self.data = deepcopy(DEFAULT_CONFIG)
@@ -121,6 +181,8 @@ class ConfigStore:
                             self.macros[i] = dict(m, key=f"F{i+1}")
             except Exception:
                 self.macros = deepcopy(DEFAULT_MACROS)
+
+        self._load_profiles(profile_records)
 
         ui = self.data['ui']
         if ui.get('latest_qso_count') not in (2, 4, 6, 8, 10):
@@ -138,6 +200,7 @@ class ConfigStore:
             self.data["macro_defaults_v03"] = True
 
     def save(self) -> None:
+        self.snapshot_profile()
         self.config_path.parent.mkdir(parents=True, exist_ok=True)
         self.config_path.write_text(
             json.dumps(self.data, ensure_ascii=False, indent=2), encoding="utf-8"

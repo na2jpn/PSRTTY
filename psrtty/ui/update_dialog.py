@@ -6,7 +6,7 @@ class UpdateDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle('PSRTTYのバージョンアップ')
-        self.resize(560, 360)
+        self.resize(600, 420)
         layout = QVBoxLayout(self)
         text = QLabel(
             f'現在のバージョン：PSRTTY Ver{__version__}\n\n'
@@ -18,6 +18,13 @@ class UpdateDialog(QDialog):
             '更新に失敗した場合は復元結果とバックアップの場所を表示します。\n\n'
             '同じ内容のZIP、古いバージョンへの更新はできません。')
         text.setWordWrap(True); layout.addWidget(text)
+        warning=QLabel('バージョンが大きく離れていると画面内で更新できない場合があります。\n'
+                       'その場合はPSRTTYを閉じ、新しいバイナリー配布ZIPを開いて、'
+                       '中身を既存のPSRTTYフォルダーへ上書きしてください。')
+        warning.setWordWrap(True)
+        warning.setStyleSheet('color:#bb5a00; font-weight:bold; background:#fff0d8; '
+                              'border:1px solid #e6a45b; padding:8px;')
+        layout.addWidget(warning)
         buttons = QDialogButtonBox()
         buttons.addButton('更新ZIPを選択…', QDialogButtonBox.AcceptRole)
         buttons.addButton('キャンセル', QDialogButtonBox.RejectRole)

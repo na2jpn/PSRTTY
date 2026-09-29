@@ -3,7 +3,8 @@ from __future__ import annotations
 from copy import deepcopy
 import time
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer, Signal, QRegularExpression
+from PySide6.QtGui import QColor, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFormLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
@@ -17,7 +18,7 @@ from ..external_ptt import ExternalPTT, validate_external
 from ..yaesu import YAESU_MODELS
 from ..hamlib_radio import HAMLIB_MODELS
 from .background import BackgroundJob
-from ..config import DEFAULT_CONFIG, RIG_MODELS
+from ..config import DEFAULT_CONFIG, RIG_MODELS, PROFILE_KEYS, profile_name
 
 
 class SettingsDialog(QDialog):
@@ -39,6 +40,14 @@ class SettingsDialog(QDialog):
         self.connect_requested = False
         self.store = config_store
         self.working = deepcopy(config_store.data)
+        self.profile_index = 0
+        self.active_profile_index = config_store.data['active_profile']
+        self.working_profiles = deepcopy(config_store.data['profiles'])
+        # The main window may have edited the active settings since the last save.
+        # Show those live values if its Profile is selected without changing the store.
+        self.working_profiles[self.active_profile_index].update(
+            {key: deepcopy(config_store.data[key]) for key in PROFILE_KEYS})
+        self.working.update({key: deepcopy(self.working_profiles[0][key]) for key in PROFILE_KEYS})
         self.setWindowTitle("PSRTTY 設定")
         self.resize(660, 600)
 
@@ -51,26 +60,33 @@ class SettingsDialog(QDialog):
         intro.setObjectName("helpText")
         root.addWidget(intro)
 
-        self.tabs = QTabWidget()
-        root.addWidget(self.tabs, 1)
-        self._build_basic_tab()
-        self._build_radio_tab()
-        self._build_audio_in_tab()
-        self._build_audio_out_tab()
-        self._build_external_tab()
-        self._build_advanced_tab()
-        for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
-            combo.currentIndexChanged.connect(self._test_controls_changed)
-        self.civ_addr.currentTextChanged.connect(self._test_controls_changed)
-        self.auto_mode.toggled.connect(self._test_controls_changed)
-        self._adopt_main_connection()
+        self.profile_tabs = QTabWidget()
+        root.addWidget(self.profile_tabs, 1)
+        for profile in self.working_profiles:
+            page = QWidget(); page.setLayout(QVBoxLayout())
+            page.layout().setContentsMargins(0, 2, 0, 0)
+            self.profile_tabs.addTab(page, profile['name'])
+        add_profile = QPushButton('＋ Profile追加')
+        add_profile.setMinimumHeight(28)
+        add_profile.clicked.connect(self._add_profile)
+        self.profile_tabs.setCornerWidget(add_profile, Qt.TopRightCorner)
+        self._rebuild_inner_tabs()
+        self.profile_tabs.currentChanged.connect(self._profile_changed)
+        self.profile_tabs.currentChanged.connect(self._update_profile_tab_colors)
+        self._update_profile_tab_colors()
 
+        actions = QHBoxLayout()
+        self.delete_profile_button = QPushButton('このProfileを削除')
+        self.delete_profile_button.clicked.connect(self._delete_profile)
+        actions.addWidget(self.delete_profile_button)
+        actions.addStretch(1)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Save).setText("保存")
         buttons.button(QDialogButtonBox.Cancel).setText("キャンセル")
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
-        root.addWidget(buttons)
+        actions.addWidget(buttons)
+        root.addLayout(actions)
         self.tx_test_finished.connect(self._test_tx_finished)
         self.countdown = QTimer(self); self.countdown.setInterval(200)
         self.countdown.timeout.connect(self._tick_test_tx)
@@ -80,6 +96,10 @@ class SettingsDialog(QDialog):
 
     def _build_basic_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
+        self.profile_name_edit = QLineEdit(self.working_profiles[self.profile_index]['name'])
+        self.profile_name_edit.setMaxLength(10)
+        self.profile_name_edit.setValidator(QRegularExpressionValidator(QRegularExpression('[A-Za-z0-9/-]{0,10}'), self.profile_name_edit))
+        form.addRow('プロファイル名（英数字・-/、10文字以内）', self.profile_name_edit)
         self.my_call = QLineEdit(self.working.get('station_callsign', ''))
         self.my_call.setPlaceholderText('例: JX1XXX')
         station = self.working['station']
@@ -96,6 +116,131 @@ class SettingsDialog(QDialog):
         note = QLabel('自局コールサインはメイン画面と共用です。Saveで反映します。\n通常交信では QTH {MYQTH} {MYJCCJCG} の順に送ります。\n追加送信文は複数行・空欄も使用できます。送信文は英数字で入力してください。')
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
         self.tabs.addTab(tab, '基本設定')
+
+    def _rebuild_inner_tabs(self):
+        page = self.profile_tabs.widget(self.profile_index)
+        if hasattr(self, 'tabs'):
+            page.layout().removeWidget(self.tabs)
+            self.tabs.deleteLater()
+        self.tabs = QTabWidget(page)
+        page.layout().addWidget(self.tabs)
+        for method in (self._build_basic_tab, self._build_radio_tab,
+                       self._build_audio_in_tab, self._build_audio_out_tab,
+                       self._build_external_tab, self._build_advanced_tab):
+            method()
+        self.tabs.currentChanged.connect(self._update_inner_tab_colors)
+        self._update_inner_tab_colors()
+        for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
+            combo.currentIndexChanged.connect(self._test_controls_changed)
+        self.civ_addr.currentTextChanged.connect(self._test_controls_changed)
+        self.auto_mode.toggled.connect(self._test_controls_changed)
+        if self.profile_index == self.active_profile_index:
+            self._adopt_main_connection()
+        else:
+            self.connect_button.setEnabled(False)
+            self.connect_button.setToolTip('運用するプロファイルはメイン画面で切り替えてください。')
+
+    def _capture_profile(self):
+        name = profile_name(self.profile_name_edit.text().strip())
+        if not name:
+            QMessageBox.warning(self, 'プロファイル名', '英数字と - / を10文字以内で入力してください。')
+            return False
+        if any(i != self.profile_index and p['name'].lower() == name.lower()
+               for i, p in enumerate(self.working_profiles)):
+            QMessageBox.warning(self, 'プロファイル名', '同じ名前のプロファイルがあります。')
+            return False
+        self.working_profiles[self.profile_index]['name'] = name
+        self.profile_tabs.setTabText(self.profile_index, name)
+        self.working['radio'].update(self._radio_values())
+        self.working['external'].update(self._external_values())
+        self.working['audio'].update(input_device=self.audio_in.currentData() or 'AUTO',
+                                     output_device=self.audio_out.currentData() or 'AUTO',
+                                     rx_gain=self.rx_gain.value()/100, tx_gain=self.tx_gain.value()/100)
+        self.working['advanced'].update(data_mode=self.data_mode.currentText(),
+            rtty_baud=self.rtty_baud.value(), shift_hz=self.shift.value(),
+            mark_hz=self.mark.value(), space_hz=self.space.value(), invert=self.invert.isChecked(),
+            spectrum_width_hz=self.spec_width.currentData(), auto_tune_tolerance_hz=self.tune_tol.value())
+        from ..parser import normalize_call
+        self.working['station_callsign'] = normalize_call(self.my_call.text())
+        self.working['station'].update(qth=self.my_qth.text().strip(),
+            jcc_jcg=self.my_jcc_jcg.text().strip(), text=self.my_text.toPlainText().strip())
+        self.working_profiles[self.profile_index].update(
+            {key: deepcopy(self.working[key]) for key in PROFILE_KEYS})
+        return True
+
+    def _profile_changed(self, index):
+        if index < 0 or index == self.profile_index:
+            return
+        if self.tx_testing or self.test_pending or not self._capture_profile():
+            self.profile_tabs.blockSignals(True)
+            self.profile_tabs.setCurrentIndex(self.profile_index)
+            self.profile_tabs.blockSignals(False)
+            return
+        self._release_test_controller()
+        old = self.tabs
+        self.profile_tabs.widget(self.profile_index).layout().removeWidget(old)
+        old.deleteLater()
+        del self.tabs
+        self.profile_index = index
+        self.working = deepcopy(self.store.data)
+        self.working.update({key: deepcopy(self.working_profiles[index][key]) for key in PROFILE_KEYS})
+        self._rebuild_inner_tabs()
+
+    def _add_profile(self):
+        if len(self.working_profiles) >= 6:
+            QMessageBox.information(self, 'プロファイル', '最大6件です。'); return
+        if not self._capture_profile(): return
+        used = {p['name'].lower() for p in self.working_profiles}
+        number = next(n for n in range(1, 10) if f'profile{n}' not in used)
+        new = deepcopy(self.working_profiles[self.profile_index])
+        new['name'] = f'Profile{number}'
+        self.working_profiles.append(new)
+        page = QWidget(); page.setLayout(QVBoxLayout())
+        page.layout().setContentsMargins(0, 2, 0, 0)
+        self.profile_tabs.addTab(page, new['name'])
+        self.profile_tabs.setCurrentIndex(len(self.working_profiles)-1)
+
+    def _update_profile_tab_colors(self, *_):
+        bar = self.profile_tabs.tabBar()
+        for index in range(self.profile_tabs.count()):
+            bar.setTabTextColor(index, QColor('#c6670b' if index == self.profile_tabs.currentIndex() else '#604b37'))
+
+    def _update_inner_tab_colors(self, *_):
+        bar = self.tabs.tabBar()
+        for index in range(self.tabs.count()):
+            bar.setTabTextColor(index, QColor('#c6670b' if index == self.tabs.currentIndex() else '#604b37'))
+
+    def _delete_profile(self):
+        index = self.profile_index
+        if index == 0:
+            QMessageBox.information(self, 'Profile削除', '先頭のProfileは基準となるため削除できません。')
+            return
+        if index == self.active_profile_index:
+            QMessageBox.information(self, 'Profile削除', '使用中です。先にメイン画面で別のProfileへ切り替えてください。')
+            return
+        if self.tx_testing or self.test_pending:
+            QMessageBox.information(self, 'Profile削除', '接続テスト・送信テストの終了を待ってください。')
+            return
+        name = self.working_profiles[index]['name']
+        if QMessageBox.question(self, 'Profile削除', f'{name} を削除しますか？\n保存すると削除が確定します。') != QMessageBox.Yes:
+            return
+        self._release_test_controller()
+        old = self.tabs
+        self.profile_tabs.widget(index).layout().removeWidget(old)
+        old.deleteLater()
+        del self.tabs
+        self.profile_tabs.blockSignals(True)
+        self.profile_tabs.removeTab(index)
+        self.profile_tabs.setCurrentIndex(0)
+        self.profile_tabs.blockSignals(False)
+        del self.working_profiles[index]
+        if index < self.active_profile_index:
+            self.active_profile_index -= 1
+        self.profile_index = 0
+        self.working = deepcopy(self.store.data)
+        self.working.update({key: deepcopy(self.working_profiles[0][key]) for key in PROFILE_KEYS})
+        self._rebuild_inner_tabs()
+        self._update_profile_tab_colors()
 
     def _build_radio_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
@@ -415,12 +560,14 @@ class SettingsDialog(QDialog):
     def _rx_gain_changed(self, value):
         self.rx_label.setText(f'{value}%')
         parent = self.parent()
-        if parent and hasattr(parent, 'audio'): parent.audio.set_rx_gain(value/100)
+        if self.profile_index == self.store.data['active_profile'] and parent and hasattr(parent, 'audio'):
+            parent.audio.set_rx_gain(value/100)
 
     def _tx_gain_changed(self, value):
         self.tx_label.setText(f'{value}%')
         parent = self.parent()
-        if parent and hasattr(parent, 'audio'): parent.audio.set_tx_gain(value/100)
+        if self.profile_index == self.store.data['active_profile'] and parent and hasattr(parent, 'audio'):
+            parent.audio.set_tx_gain(value/100)
         if self.tx_testing: self._show_alc(self.alc_value)
 
     def _refresh_rx_meter(self):
@@ -433,6 +580,9 @@ class SettingsDialog(QDialog):
 
     def _save_audio_in(self):
         parent=self.parent()
+        if self.profile_index != self.store.data['active_profile']:
+            self.test_note.setText('別のプロファイルです。画面下の［保存］で設定を保存してください。')
+            return
         old=self.store.data['audio']['input_device']
         self.store.data['audio'].update(input_device=self.audio_in.currentData() or 'AUTO', rx_gain=self.rx_gain.value()/100)
         self.working['audio'].update(self.store.data['audio'])
@@ -441,6 +591,9 @@ class SettingsDialog(QDialog):
         self.test_note.setText('Audio INの設定を保存しました。')
 
     def _save_audio_out(self):
+        if self.profile_index != self.store.data['active_profile']:
+            self.tx_test_note.setText('別のプロファイルです。画面下の［保存］で設定を保存してください。')
+            return
         if self.tx_testing or self.parent().audio._tx_active:
             self.tx_test_note.setText('送信が止まってから保存してください。'); return
         self.store.data['audio'].update(output_device=self.audio_out.currentData() or 'AUTO', tx_gain=self.tx_gain.value()/100)
@@ -680,7 +833,7 @@ class SettingsDialog(QDialog):
         return self.my_call.text() != self.working.get('station_callsign', '')
 
     def _connect_saved(self):
-        if self.tx_testing: return
+        if self.tx_testing or self.profile_index != self.store.data['active_profile']: return
         self._release_test_controller()
         self.connect_requested = True
         self._save()
@@ -701,34 +854,19 @@ class SettingsDialog(QDialog):
             validate_external(self._external_values(), values['com_port'])
         except ValueError as exc:
             QMessageBox.warning(self, "外部接続", str(exc)); return
-        self.working["radio"].update(values)
-        self.working['external'].update(self._external_values())
-        self.working["audio"].update({
-            "input_device": self.audio_in.currentData() or "AUTO",
-            "output_device": self.audio_out.currentData() or "AUTO",
-            "rx_gain": self.rx_gain.value() / 100.0,
-            "tx_gain": self.tx_gain.value() / 100.0,
-        })
-        self.working["advanced"].update({
-            "data_mode": self.data_mode.currentText(),
-            "rtty_baud": self.rtty_baud.value(),
-            "shift_hz": self.shift.value(),
-            "mark_hz": self.mark.value(),
-            "space_hz": self.space.value(),
-            "invert": self.invert.isChecked(),
-            "spectrum_width_hz": self.spec_width.currentData(),
-            "auto_tune_tolerance_hz": self.tune_tol.value(),
-        })
+        call_edited = self.basic_call_changed()
+        if not self._capture_profile(): return
         self.before_save.emit()
-        # Main-window QSO fields remain usable while settings are open.
-        for section in ('radio', 'audio', 'advanced', 'external'):
-            self.store.data[section] = self.working[section]
-        from ..parser import normalize_call
-        # Preserve a main-window CALL edit when this field was not edited.
-        if self.basic_call_changed():
-            self.store.data['station_callsign'] = normalize_call(self.my_call.text())
-        self.store.data['station'].update(qth=self.my_qth.text().strip(),
-                                        jcc_jcg=self.my_jcc_jcg.text().strip(),
-                                        text=self.my_text.toPlainText().strip())
+        active = self.active_profile_index
+        # Keep edits made to the main-window callsign while this dialog was open.
+        if active == self.profile_index and not call_edited and self.parent() and hasattr(self.parent(), 'my_call'):
+            from ..parser import normalize_call
+            self.working_profiles[active]['station_callsign'] = normalize_call(self.parent().my_call.text())
+        elif active != self.profile_index:
+            self.working_profiles[active]['station_callsign'] = self.store.data['station_callsign']
+        self.store.data['profiles'] = self.working_profiles
+        self.store.data['active_profile'] = active
+        for key in PROFILE_KEYS:
+            self.store.data[key] = deepcopy(self.working_profiles[active][key])
         self.store.save()
         self.accept()

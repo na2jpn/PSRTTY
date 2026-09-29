@@ -11,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 from PySide6.QtCore import QObject, QTimer, Qt, QUrl, Signal
-from PySide6.QtGui import QAction, QDesktopServices, QFont, QIcon, QKeySequence, QShortcut
+from PySide6.QtGui import QAction, QDesktopServices, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QFrame, QGridLayout, QGroupBox,
     QHBoxLayout, QLabel, QLineEdit, QMainWindow, QMenu, QMessageBox,
@@ -24,7 +24,7 @@ from ..audio_engine import AudioEngine
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller
 from .background import BackgroundJob
-from .window_state import restore_window, save_window
+from .window_state import restore_window, save_window, place_tool_window
 from ..config import ConfigStore
 from ..logging_store import TranscriptLogger
 from ..macros import expand_macro
@@ -48,6 +48,7 @@ class AudioBridge(QObject):
     char = Signal(object)
     level = Signal(float)
     spectrum = Signal(object, object)
+    sub_char = Signal(int, str)
 
 
 class ReceiveCard(QFrame):
@@ -97,6 +98,7 @@ class MainWindow(QMainWindow):
         self.pending_auto_log = None
         self.qso_revision = 0
         self.control_window = None
+        self.sub_window = None
         self.tx_sequence = 0
         self.active_tx_id = None
         self.pending_manual = None
@@ -122,11 +124,12 @@ class MainWindow(QMainWindow):
         self.bridge.char.connect(self._rx_char)
         self.bridge.level.connect(self._rx_level)
         self.bridge.spectrum.connect(self._spectrum_data)
+        self.bridge.sub_char.connect(self._sub_char)
         sr = int(self.store.data["audio"]["sample_rate"])
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
 
-        self.setWindowTitle("PSRTTY 1.03")
+        self.setWindowTitle("PSRTTY 1.05")
         self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
@@ -140,6 +143,9 @@ class MainWindow(QMainWindow):
 
         self.rx_idle_timer = QTimer(self); self.rx_idle_timer.setSingleShot(True); self.rx_idle_timer.setInterval(750); self.rx_idle_timer.timeout.connect(self._finalize_rx_card)
         self.poll_timer = QTimer(self); self.poll_timer.setInterval(1200); self.poll_timer.timeout.connect(self._poll_radio)
+        self.track_timer = QTimer(self); self.track_timer.setInterval(450)
+        self.track_timer.timeout.connect(self._auto_track_tick); self.track_timer.start()
+        self.track_pause_until = 0.; self.track_candidate = None; self.track_confirm = 0
         QTimer.singleShot(0, self, self._restart_audio_input)
 
     def _build_menu(self):
@@ -176,6 +182,9 @@ class MainWindow(QMainWindow):
         view.addSeparator()
         self._act(view, "コントロール", self._show_control)
         self._act(view, "クロススコープ", lambda: self.scope_button.setChecked(True))
+        view.addSeparator()
+        sub_action=self._act(view, "サブデコ", self._show_sub)
+        sub_action.setToolTip('A/Bの受信専用サブデコードウィンドウを表示します。送信・自動ログは行いません。')
 
         helpm = mb.addMenu("ヘルプ")
         self._act(helpm, "初期設定ガイド", self._guide_initial)
@@ -206,21 +215,40 @@ class MainWindow(QMainWindow):
         self.scope_window = None
         self.control_button = QPushButton("コントロール")
         self.control_button.clicked.connect(self._show_control)
+        self.control_button.setToolTip('無線機の周波数・モード・フィルターなどを別ウィンドウで操作します。')
         status.addWidget(self.control_button)
         self.scope_button = QPushButton("クロススコープ")
         self.scope_button.setCheckable(True)
         self.scope_button.setToolTip("受信音のクロススコープを別ウィンドウで表示")
         self.scope_button.toggled.connect(self._toggle_scope)
         status.addWidget(self.scope_button)
+        self.sub_button=QPushButton('サブデコ')
+        self.sub_button.setToolTip('別ウィンドウで周辺の2か所を受信専用でデコードします。')
+        self.sub_button.clicked.connect(self._show_sub)
+        status.addWidget(self.sub_button)
         status.addSpacing(8)
-        self.center_tuning = QLabel('C同調 -'); self.center_tuning.setMinimumWidth(145)
+        self.center_tuning = QLabel('C同調 ---')
+        indicator_font = self.center_tuning.font()
+        indicator_font.setBold(True)
+        self.center_tuning.setFont(indicator_font)
+        metrics = QFontMetrics(indicator_font)
+        # Longest number plus one full-width character of breathing room,
+        # and the existing stylesheet's 7px side padding and borders.
+        self.center_tuning.setFixedWidth(
+            metrics.horizontalAdvance('C同調 +24.9 Hz')
+            + metrics.horizontalAdvance('あ') + 16)
+        self.center_tuning.setAlignment(Qt.AlignCenter)
+        self.center_tuning.setToolTip('受信中のMARK/SPACEと設定位置の周波数差。判定できない場合は「---」を表示します。')
         status.addWidget(self.center_tuning); status.addStretch(1)
         from ..tuning import CenterTuning
         self.center_meter = CenterTuning()
         self.center_timer = QTimer(self); self.center_timer.setInterval(333)
         self.center_timer.timeout.connect(self._refresh_center_tuning); self.center_timer.start()
         self.audio_status = QLabel("Audio IN: 未設定")
-        status.addWidget(self.audio_status)
+        self.profile_buttons = QGridLayout()
+        self.profile_buttons.setSpacing(4)
+        status.addLayout(self.profile_buttons)
+        self._refresh_profile_buttons()
         outer.addLayout(status)
 
         main = QHBoxLayout(); main.setSpacing(10); outer.addLayout(main, 1)
@@ -228,6 +256,7 @@ class MainWindow(QMainWindow):
         right = QVBoxLayout(); right.setSpacing(4); right.setContentsMargins(2,0,0,0); main.addLayout(right, 0)
 
         spectrum_box = HintGroupBox("Audio Spectrum", "クリックで受信位置を調整")
+        spectrum_box.setToolTip('受信音の周波数を表示します。メインの位置とサブデコの位置を合わせて確認できます。')
         sv = QVBoxLayout(spectrum_box); sv.setContentsMargins(8,8,8,7)
         self.spectrum = SpectrumWidget(); self.spectrum.frequency_clicked.connect(self._spectrum_click); self.spectrum.tones_dragged.connect(self._set_tones); self.spectrum.tones_committed.connect(self.store.save); sv.addWidget(self.spectrum)
         controls = QHBoxLayout()
@@ -248,7 +277,12 @@ class MainWindow(QMainWindow):
         self.shift_edit.setMaxLength(12); self.shift_edit.editingFinished.connect(self._shift_changed)
         self.shift_edit.setToolTip('10～2000 Hz。MARKを固定し、SPACEを移動します。')
         controls.addWidget(self.shift_edit); controls.addWidget(QLabel('Hz')); controls.addStretch(1)
-        auto = QPushButton("AUTO TUNE"); auto.clicked.connect(self._auto_tune); controls.addWidget(auto)
+        self.auto_track=QCheckBox('AUTO TRACK');self.auto_track.setChecked(False)
+        self.auto_track.setToolTip('現在受信している局の小さな周波数ずれだけを追います。初期OFF。送信・手動調整中は停止します。')
+        controls.addWidget(self.auto_track)
+        auto = QPushButton("AUTO TUNE"); auto.clicked.connect(self._auto_tune)
+        auto.setToolTip('現在のスペクトラムからMARK/SPACEの2ピークを一度だけ探して受信位置を合わせます。')
+        controls.addWidget(auto)
         reset = QPushButton("幅RESET"); reset.clicked.connect(self._reset_170); controls.addWidget(reset)
         reset.setToolTip('MARK位置を保ってシフト幅を170 Hzに戻します。')
         position=QPushButton('位置RESET'); position.clicked.connect(self._reset_position); controls.addWidget(position)
@@ -281,6 +315,7 @@ class MainWindow(QMainWindow):
         self.auto_get = QCheckBox('自動取得')
         self.auto_get.setToolTip('受信文からCALL・RST-R・RCVDを取得します。各欄は手修正できます。')
         self.cq_only = QCheckBox('CQのみ')
+        self.cq_only.setToolTip('ONではCQを含む受信文からのみCALLを自動取得します。')
         self.cq_only.setChecked(self.store.data['ui'].get('cq_only', True))
         self.cq_only.toggled.connect(lambda v: self.store.data['ui'].update(cq_only=v))
         self.sent_fixed = QCheckBox('固定')
@@ -300,6 +335,7 @@ class MainWindow(QMainWindow):
         fields=[self.q_call,self.rst_s,self.rst_r,self.sent,self.rcvd]
         for i,w in enumerate(fields): grid.addWidget(w,1,i)
         self.auto_log = QCheckBox("TU 73送出で自動ログ追加")
+        self.auto_log.setToolTip('送信が正常に完了し、交信欄が変わっていなければQSOをログへ追加します。')
         self.clear_on_frequency = QCheckBox('周波数変更でクリア')
         self.clear_on_frequency.setChecked(self.store.data['ui'].get('clear_on_frequency', False))
         self.clear_on_frequency.setToolTip('CALL取得・入力時の周波数から±20 Hz以上でCALL・RST-R・RCVDをクリア')
@@ -311,7 +347,9 @@ class MainWindow(QMainWindow):
         bottom.addWidget(self.q_datetime)
         for field in fields + [self.q_datetime]:
             field.textChanged.connect(self._qso_edited)
-        add = QPushButton("↓ ログに追加"); add.setObjectName("logButton"); add.clicked.connect(self._add_qso); bottom.addWidget(add); grid.addLayout(bottom,2,0,1,5)
+        add = QPushButton("↓ ログに追加"); add.setObjectName("logButton"); add.clicked.connect(self._add_qso)
+        add.setToolTip('交信欄の内容を確認してQSOログに追加します。')
+        bottom.addWidget(add); grid.addLayout(bottom,2,0,1,5)
         left.addWidget(pending)
 
         latest_box = self.latest_box = FooterHintGroupBox("最新QSO")
@@ -335,7 +373,9 @@ class MainWindow(QMainWindow):
         lv.addWidget(self.latest_panel); left.addWidget(latest_box)
 
         my = QGroupBox("自局")
-        myl = QVBoxLayout(my); row=QHBoxLayout(); self.my_call=QLineEdit(); self.my_call.setPlaceholderText("自局コールサイン"); setb=QPushButton("SET"); setb.clicked.connect(self._set_my_call); row.addWidget(self.my_call,1); row.addWidget(setb); myl.addLayout(row); right.addWidget(my)
+        myl = QVBoxLayout(my); row=QHBoxLayout(); self.my_call=QLineEdit(); self.my_call.setPlaceholderText("自局コールサイン"); setb=QPushButton("SET"); setb.clicked.connect(self._set_my_call)
+        setb.setToolTip('入力した自局コールサインを保存します。')
+        row.addWidget(self.my_call,1); row.addWidget(setb); myl.addLayout(row); right.addWidget(my)
 
         auto_cq_box = QGroupBox('Auto CQ')
         cq = QVBoxLayout(auto_cq_box); cq.setContentsMargins(8, 6, 8, 6); cq.setSpacing(4)
@@ -345,6 +385,7 @@ class MainWindow(QMainWindow):
         self.auto_cq_button.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Fixed)
         self.auto_cq_button.clicked.connect(self._start_auto_cq)
         self.auto_cq_stop = QPushButton('STOP'); self.auto_cq_stop.setObjectName('stopButton')
+        self.auto_cq_stop.setToolTip('Auto CQの繰り返し送信を停止します。')
         self.auto_cq_stop.clicked.connect(self._stop_tx)
         start_row.addWidget(self.auto_cq_button, 1); start_row.addWidget(self.auto_cq_stop)
         cq.addLayout(start_row)
@@ -378,7 +419,9 @@ class MainWindow(QMainWindow):
 
         tx_box=QGroupBox("手動送信")
         tv=QVBoxLayout(tx_box); self.manual_tx=QLineEdit(); self.manual_tx.setPlaceholderText("自由送信テキスト")
-        tv.addWidget(self.manual_tx); rr=QHBoxLayout(); send=QPushButton("TX"); self.send_button=send; send.clicked.connect(self._send_manual); stop=QPushButton("STOP"); stop.setObjectName("stopButton"); stop.clicked.connect(self._stop_tx); rr.addWidget(send); rr.addWidget(stop); tv.addLayout(rr); right.addWidget(tx_box)
+        tv.addWidget(self.manual_tx); rr=QHBoxLayout(); send=QPushButton("TX"); self.send_button=send; send.clicked.connect(self._send_manual); stop=QPushButton("STOP"); stop.setObjectName("stopButton"); stop.clicked.connect(self._stop_tx)
+        send.setToolTip('入力した文章をRTTYで送信します。'); stop.setToolTip('現在の送信を停止します。')
+        rr.addWidget(send); rr.addWidget(stop); tv.addLayout(rr); right.addWidget(tx_box)
         for field in [self.q_call, self.my_call, self.rst_s, self.rst_r, self.sent, self.rcvd]:
             field.textChanged.connect(self._refresh_macros)
         self.sent.textChanged.connect(self._remember_qso_options)
@@ -435,6 +478,63 @@ class MainWindow(QMainWindow):
         rx=self.store.data['ui'].get('rx_tones',[a['mark_hz'],a['space_hz']])
         self.audio.configure_decoder(a['rtty_baud'],rx[0],rx[1],a['invert'])
         self.audio.set_rx_gain(self.store.data["audio"]["rx_gain"])
+        self.audio.set_tx_gain(self.store.data["audio"]["tx_gain"])
+
+    def _refresh_profile_buttons(self, selected=None):
+        while self.profile_buttons.count():
+            item = self.profile_buttons.takeAt(0)
+            if item.widget(): item.widget().deleteLater()
+        if selected is None: selected = self.store.data['active_profile']
+        for i, profile in enumerate(self.store.data['profiles']):
+            button = QPushButton(profile['name'])
+            button.setFixedSize(108, 22)
+            button.setToolTip(f"{profile['name']} に切り替える")
+            if i == selected:
+                button.setStyleSheet('QPushButton { background: #e3f0ff; color: #1767cf; border: 2px solid #1767cf; font-weight: 700; padding: 2px; }')
+            else:
+                button.setStyleSheet('QPushButton { background: #e8e8e8; color: #454545; border: 2px solid #777777; font-weight: 700; padding: 2px; }')
+            button.clicked.connect(lambda checked=False, index=i: self._switch_profile(index))
+            self.profile_buttons.addWidget(button, i // 3, i % 3)
+
+    def _switch_profile(self, index):
+        old = self.store.data['active_profile']
+        if index == old or self.closing: return
+        if (self.active_tx_id is not None or self.audio._tx_active or self.antenna_tuning
+            or self.auto_cq_active or self.connecting or
+            (self.settings_window and self.settings_window.isVisible())):
+            self.statusBar().showMessage('送信・接続・設定の操作が終わってから切り替えてください', 5000)
+            return
+        if getattr(self, '_profile_switch', None): return
+        previous_connected = self._connected()
+        self.store.data['station_callsign'] = normalize_call(self.my_call.text())
+        self.disconnect_radio()
+        self.store.activate_profile(index)
+        self.last_known_freq_hz = None
+        self._update_freq_label()
+        self._apply_audio_config()
+        self._load_config_to_ui()
+        self._restart_audio_input()
+        self._refresh_profile_buttons()
+        if not previous_connected or not self.store.data['radio']['model']:
+            self.statusBar().showMessage('Profileを切り替えました。無線機は未接続です', 5000)
+            return
+        self._profile_switch = True
+        def after_cleanup():
+            if not self._profile_switch or self.closing: return
+            cleanup = getattr(self, 'cleanup_job', None)
+            if cleanup and cleanup.thread.is_alive():
+                QTimer.singleShot(100, self, after_cleanup)
+            else:
+                self.connect_radio()
+        QTimer.singleShot(0, self, after_cleanup)
+
+    def _profile_connect_failed(self, reason=''):
+        if not getattr(self, '_profile_switch', None): return
+        self._profile_switch = None
+        self.disconnect_radio()
+        self._refresh_profile_buttons()
+        self.statusBar().showMessage(
+            'Profileは切り替わりました。無線機は未接続です' + (f'：{reason}' if reason else ''), 10000)
 
     def _restart_audio_input(self):
         self.audio_input_requested = True
@@ -505,6 +605,7 @@ class MainWindow(QMainWindow):
         if isinstance(ch, tuple):
             generation, ch=ch
             if generation != self.audio.decode_generation: return
+        if self.sub_window and self.sub_window.isVisible():self.sub_window.main_char(ch)
         if ch in "\r\n":
             if self.rx_buffer.strip(): self._finalize_rx_card()
             return
@@ -574,7 +675,10 @@ class MainWindow(QMainWindow):
         value = self.center_meter.update(frame, self.audio.sample_rate)
         from ..tuning import tuning_display
         text, color = tuning_display(value)
-        self.center_tuning.setText(text); self.center_tuning.setStyleSheet('color:'+color)
+        self.center_tuning.setText(text)
+        self.center_tuning.setStyleSheet(
+            'QLabel { color:'+color+'; background:#fffdf6; border:1px solid #c88432;'
+            'border-radius:4px; padding:3px 7px; font-weight:bold; }')
 
     def _connected(self):
         return bool(self.radio and self.radio.status.connected and not self.connecting)
@@ -895,7 +999,11 @@ class MainWindow(QMainWindow):
         try:
             ctl = create_controller(values)
         except ValueError as exc:
-            QMessageBox.warning(self, "無線機", str(exc)); return
+            if getattr(self, '_profile_switch', None):
+                self._profile_connect_failed(str(exc))
+            else:
+                QMessageBox.warning(self, "無線機", str(exc))
+            return
         self.radio = ctl
         self.connecting = True
         generation = self.connection_generation
@@ -908,18 +1016,25 @@ class MainWindow(QMainWindow):
             if error or not status.connected:
                 self.rig_status.setText("未接続")
                 self.statusBar().showMessage(str(error) if error else status.message, 10000)
+                if getattr(self, '_profile_switch', None):
+                    message = str(error) if error else status.message
+                    QTimer.singleShot(0, self, lambda: self._profile_connect_failed(message))
             else:
                 self.rig_status.setText(f"{values['model']}  {status.port}  接続")
                 self.current_freq_hz = status.frequency_hz
                 if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
                 self.poll_failures=0; self.rig_status.setToolTip(f"{values['model']}  {status.port}\nクリックで切断"); self._update_freq_label(); self.poll_timer.start()
                 self.statusBar().showMessage('無線機に接続しました', 5000)
+                if getattr(self, '_profile_switch', None):
+                    self._profile_switch = None
+                    self._refresh_profile_buttons()
             self._set_radio_controls()
         self.connection_job = BackgroundJob(self, lambda: connect_configured(ctl, values, advanced), done)
         def deadline():
             if generation == self.connection_generation and self.connecting:
                 self.disconnect_radio()
                 self.statusBar().showMessage("接続がタイムアウトしました", 8000)
+                if getattr(self, '_profile_switch', None): self._profile_connect_failed('タイムアウト')
         QTimer.singleShot(10000, self, deadline)
 
     def disconnect_radio(self):
@@ -1001,9 +1116,12 @@ class MainWindow(QMainWindow):
                 from .cross_scope import CrossScopeWindow
                 self.scope_window = CrossScopeWindow(self.audio, self)
                 self.scope_window.finished.connect(lambda _: self.scope_button.setChecked(False))
+            place_tool_window(self.scope_window,self,(330,365),(260,280),
+                              self.store.data['ui'].get('scope_window'))
             self.scope_window.show()
             self.scope_window.raise_()
         elif self.scope_window is not None:
+            self.store.data['ui']['scope_window']=save_window(self.scope_window)
             self.scope_window.hide()
 
     def _show_control(self):
@@ -1012,8 +1130,66 @@ class MainWindow(QMainWindow):
             self.control_window = ControlWindow(self)
         self.control_window.reveal()
 
+    def _show_sub(self):
+        if self.sub_window and self.sub_window.isVisible():
+            self.sub_window.raise_();self.sub_window.activateWindow();return
+        message=QMessageBox(self)
+        message.setWindowTitle('サブデコの使用について')
+        message.setIcon(QMessageBox.Information)
+        message.setTextFormat(Qt.RichText)
+        message.setText('「CQ WW RTTY DXコンテスト」でサブデコを使って別の局を探す場合、'
+                        '<span style="color:#b3261e;font-weight:bold">Single Operator Assisted</span>での参加が必要です。'
+                        '<br><br>「JARL World Wide RTTYコンテスト」では、RTTYスキマーなどの使用が認められており、サブデコも使用できます。'
+                        '<br><br>サブデコの推奨環境：4コア以上のCPU、メモリ8 GB以上。PCの負荷が高い場合は、'
+                        'メインの受信を優先し、サブデコの探索や表示更新を自動的に抑えます。')
+        message.setStandardButtons(QMessageBox.Ok|QMessageBox.Cancel)
+        message.button(QMessageBox.Ok).setText('OK')
+        message.button(QMessageBox.Cancel).setText('キャンセル')
+        if message.exec()!=QMessageBox.Ok:return
+        if self.sub_window is None:
+            from .sub_decode import SubDecodeWindow
+            self.sub_window=SubDecodeWindow(self)
+        place_tool_window(self.sub_window,self,(480,400),(400,300),
+                          self.store.data['ui'].get('sub_window'))
+        self.sub_window.show();self.sub_window.raise_();self.sub_window.activateWindow()
+
+    def _sub_char(self,index,ch):
+        if self.sub_window and self.sub_window.isVisible():self.sub_window.sub_char(index,ch)
+
     def _rx_level(self,v): self.level.setValue(int(max(0,min(1,float(v)))*100))
     def _spectrum_data(self,f,p): self.last_spectrum=(np.asarray(f),np.asarray(p)); self.spectrum.set_data(self.last_spectrum[0],self.last_spectrum[1])
+
+    def _auto_track_tick(self):
+        if (not self.auto_track.isChecked() or not self.last_spectrum or
+            self.active_tx_id is not None or self.audio._tx_active or
+            time.monotonic()<self.track_pause_until):
+            self.track_confirm=0;return
+        freqs,power=self.last_spectrum
+        if len(freqs)<8:return
+        mark=self.spectrum.mark_hz;space=self.spectrum.space_hz
+        peaks=[]
+        for tone in (mark,space):
+            indices=np.flatnonzero(abs(freqs-tone)<=30)
+            if len(indices)==0:return
+            i=indices[np.argmax(power[indices])]
+            peaks.append((float(freqs[i]),float(power[i])))
+        if min(p[1] for p in peaks)<float(np.percentile(power,35))+8:
+            self.track_confirm=0;return
+        offsets=[peaks[0][0]-mark,peaks[1][0]-space]
+        if abs(offsets[0]-offsets[1])>12:
+            self.track_confirm=0;return
+        delta=sum(offsets)/2
+        if abs(delta)<3:
+            self.track_confirm=0;return
+        if self.track_candidate is not None and abs(delta-self.track_candidate)<8:
+            self.track_confirm+=1
+        else:self.track_candidate=delta;self.track_confirm=1
+        if self.track_confirm>=3:
+            delta=max(-12.,min(12.,delta))
+            self._track_programmatic=True
+            try:self._set_tones(mark+delta,space+delta,save=False)
+            finally:self._track_programmatic=False
+            self.track_confirm=0
 
     def _auto_tune(self):
         if not self.last_spectrum:
@@ -1048,6 +1224,9 @@ class MainWindow(QMainWindow):
         mark,space=float(mark),float(space)
         if not (100<=mark<=3900 and 100<=space<=3900): return False
         if not 10<=abs(space-mark)<=2000: return False
+        if not getattr(self,'_track_programmatic',False):
+            self.track_pause_until=time.monotonic()+2
+            self.track_confirm=0
         a=self.store.data['advanced']
         self.store.data['ui']['rx_tones']=[mark,space]
         self.spectrum.set_tones(mark,space)
@@ -1105,10 +1284,7 @@ class MainWindow(QMainWindow):
             if result:
                 if old_tones!=tuple(self.store.data['advanced'][k] for k in ('mark_hz','space_hz','shift_hz')):
                     self.store.data['ui'].pop('rx_tones',None); self.store.save()
-                # If the dialog CALL was untouched, keep concurrent main edits.
-                if not dlg.basic_call_changed():
-                    self.store.data['station_callsign'] = normalize_call(self.my_call.text())
-                    self.store.save()
+                self._refresh_profile_buttons()
                 self._apply_audio_config(); self._load_config_to_ui(); self._restart_audio_input()
                 self.statusBar().showMessage("設定を保存しました。無線機を再接続してください", 4000)
                 if disconnected_on_save['value']:
@@ -1268,13 +1444,19 @@ class MainWindow(QMainWindow):
 
     def closeEvent(self,event):
         self.center_timer.stop()
+        self.track_timer.stop()
         self.q_datetime.timer.stop()
         if not self.closing:
             self.closing = True
             self.scope_button.setChecked(False)
             if self.scope_window: self.scope_window.close()
+            if self.sub_window:
+                self.store.data['ui']['sub_window']=save_window(self.sub_window)
+                self.sub_window.close()
             for window in self.help_windows.values(): window.close()
-            if self.control_window: self.control_window.close()
+            if self.control_window:
+                self.store.data['ui']['control_window']=save_window(self.control_window)
+                self.control_window.close()
             if self.settings_window: self.settings_window.close()
             self.cq_count.normalize(); self.cq_interval.normalize(); self._remember_cq_options()
             self.store.data["ui"]["auto_get_call"] = self.auto_get.isChecked()

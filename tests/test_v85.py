@@ -39,6 +39,8 @@ class Logic85Tests(unittest.TestCase):
         for v,c in zip([0,5,9,11,15,20,25],colors):
             self.assertEqual(tuning_display(v)[1],c);self.assertEqual(tuning_display(-v)[1],c)
         self.assertEqual(tuning_display(-.01)[0],'C同調 0.0 Hz')
+        self.assertEqual(tuning_display(None)[0],'C同調 ---')
+        self.assertEqual(tuning_display(25)[0],'C同調 ---')
         meter=CenterTuning();frame=(10,t,(2125,2295,45.45))
         self.assertIsNone(meter.update(frame,sr,now=11))
 

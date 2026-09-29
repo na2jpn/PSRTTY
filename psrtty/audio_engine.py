@@ -41,6 +41,7 @@ class AudioEngine:
         self.scope_enabled = False
         self.scope_frame = None
         self.tuning_frame = None
+        self.sub_worker = None  # Optional worker. Audio callback never waits for it.
         self._tx_lock = threading.Lock()
         self._tx_active = False
         self._tx_cancel = threading.Event()
@@ -122,6 +123,8 @@ class AudioEngine:
         self.scope_frame = None
         self.tuning_frame = None
         self._fft_buf = np.zeros(0, dtype=np.float32)
+        if self.sub_worker is not None:
+            self.sub_worker.clear()
 
     def _input_callback(self, indata, frames, time_info, status) -> None:  # pragma: no cover - hardware callback
         samples = np.asarray(indata[:, 0], dtype=np.float32) * self.rx_gain
@@ -148,6 +151,8 @@ class AudioEngine:
             freqs = np.fft.rfftfreq(len(seg), 1 / self.sample_rate)
             mask = freqs <= 4000
             self.on_spectrum(freqs[mask].astype(np.float32), power[mask].astype(np.float32))
+        if self.sub_worker is not None and not self._tx_active:
+            self.sub_worker.offer(samples)
 
     def stop_tx(self, ptt_off=None) -> None:
         self._tx_cancel.set()

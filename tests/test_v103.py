@@ -60,12 +60,12 @@ class UI103Tests(unittest.TestCase):
         w=self.window;w.show()
         view=next(menu for menu in w.menuBar().findChildren(QMenu) if menu.title()=='表示')
         labels=[action.text() for action in view.actions()]
-        self.assertEqual(labels[-2:],['コントロール','クロススコープ'])
-        view.actions()[-2].trigger(); self.pump(.04)
+        self.assertEqual(labels[-4:],['コントロール','クロススコープ','','サブデコ'])
+        view.actions()[-4].trigger(); self.pump(.04)
         self.assertIsInstance(w.control_window,ControlWindow)
         self.assertLess(w.control_window.mode_box.geometry().y(),w.control_window.antenna_tune.geometry().y())
         self.assertEqual(set(w.control_window.mode_buttons), {'LSB-D','USB-D','LSB','USB'} if w.store.data['radio']['model']=='IC-705' else set())
-        view.actions()[-1].trigger();self.pump(.04)
+        view.actions()[-3].trigger();self.pump(.04)
         self.assertTrue(w.scope_button.isChecked())
         self.assertTrue(w.scope_window.isVisible())
 
