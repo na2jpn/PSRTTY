@@ -1,3 +1,4 @@
+from .i18n import tr
 """Factory preserving ICOM CI-V and isolating experimental CAT support."""
 from .civ import CIVController, radio_address, connect_configured
 from .config import RIG_MODELS
@@ -9,18 +10,18 @@ def validate_radio(values):
     model = values.get('model', '')
     if model in HAMLIB_MODELS:
         if values.get('ptt','CAT')!='CAT':
-            raise ValueError('HamlibではCATによるPTTを選択してください。')
+            raise ValueError(tr('HamlibではCATによるPTTを選択してください。'))
         if str(values.get('com_port','AUTO')).upper()=='AUTO' or str(values.get('cat_baud','AUTO')).upper()=='AUTO':
-            raise ValueError('HamlibではCOMポートとCAT速度を指定してください。')
+            raise ValueError(tr('HamlibではCOMポートとCAT速度を指定してください。'))
     elif model in YAESU_MODELS:
         if values.get('ptt', 'CAT') != 'CAT':
-            raise ValueError('Yaesu試験対応はCATによるPTTを選んでください。')
+            raise ValueError(tr('Yaesu試験対応はCATによるPTTを選んでください。'))
         if int(values.get('cat_stopbits', 1 if model == 'FTX-1' else 2)) not in (1, 2):
-            raise ValueError('ストップビットは1または2です。')
+            raise ValueError(tr('ストップビットは1または2です。'))
     elif model in RIG_MODELS:
         radio_address(values)
     else:
-        raise ValueError('無線機を選択してください。')
+        raise ValueError(tr('無線機を選択してください。'))
 
 
 def create_controller(values):

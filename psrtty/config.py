@@ -29,7 +29,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.05",
+    "version": "1.06",
     "schema_version": 1,
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
@@ -69,8 +69,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "auto_tune_tolerance_hz": 90,
     },
     "ui": {
+        "language": "ja",
+        "time_zone": "JST",
         "latest_qso_count": 4,
         "decode_sq": 4,
+        "decode_ignore_chars": 0,
         "wheel_reverse": False,
         "spectrum_gain_db": 0,
         "rx_card_font_size": 12,
@@ -82,6 +85,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
 }
 
 PROFILE_KEYS = ("station_callsign", "station", "radio", "external", "audio", "advanced")
+from .printer import DEFAULT_PRINTER, normalize_settings
+DEFAULT_CONFIG['printer'] = deepcopy(DEFAULT_PRINTER)
 DEFAULT_CONFIG['active_profile'] = 0
 DEFAULT_CONFIG['profiles'] = [{"name": "Profile1", **{
     key: deepcopy(DEFAULT_CONFIG[key]) for key in PROFILE_KEYS}}]
@@ -184,7 +189,13 @@ class ConfigStore:
 
         self._load_profiles(profile_records)
 
+        self.data['printer'] = normalize_settings(self.data.get('printer'))
         ui = self.data['ui']
+        try: ui['decode_ignore_chars'] = max(0, min(10, int(ui.get('decode_ignore_chars', 0))))
+        except (TypeError, ValueError, OverflowError): ui['decode_ignore_chars'] = 0
+        if ui.get('time_zone') not in ('JST', 'UTC'): ui['time_zone'] = 'JST'
+        if ui.get('language') not in ('ja', 'en'):
+            ui['language'] = 'ja'
         if ui.get('latest_qso_count') not in (2, 4, 6, 8, 10):
             ui['latest_qso_count'] = 4
         if not ui.get('compact_font_v40'):

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .i18n import tr
 
 import threading
 import time
@@ -108,11 +109,11 @@ class CIVController:
 
     def _connect(self, port, baud) -> CIVStatus:
         if serial is None:
-            self.status = CIVStatus(False, message="pyserialがインストールされていません")
+            self.status = CIVStatus(False, message=tr("pyserialがインストールされていません"))
             return self.status
         ports = self.available_ports() if str(port).upper() == "AUTO" else [str(port)]
         if not ports:
-            self.status = CIVStatus(False, message="COMポートが見つかりません")
+            self.status = CIVStatus(False, message=tr("COMポートが見つかりません"))
             return self.status
         bauds = [115200, 57600, 38400, 19200, 9600, 4800] if str(baud).upper() == "AUTO" else [int(baud)]
         self.disconnect()
@@ -120,7 +121,7 @@ class CIVController:
             for speed in bauds:
                 if self.cancel.is_set() or time.monotonic() >= self._connect_deadline:
                     self.disconnect()
-                    self.status.message = "接続を中止しました／タイムアウト（COMと速度の手動指定もお試しください）"
+                    self.status.message = tr("接続を中止しました／タイムアウト（COMと速度の手動指定もお試しください）")
                     return self.status
                 try:
                     s = serial.Serial(candidate, speed, timeout=0.05, write_timeout=0.3, rtscts=False, dsrdtr=False)
@@ -143,7 +144,7 @@ class CIVController:
                         except Exception:
                             pass
                     self.ser = None
-        self.status = CIVStatus(False, message="CI-V応答を確認できませんでした")
+        self.status = CIVStatus(False, message=tr("CI-V応答を確認できませんでした"))
         return self.status
 
     def disconnect(self) -> None:
@@ -334,7 +335,7 @@ class CIVController:
     def set_data_mode(self, mode: str = "LSB-D") -> bool:
         """Select SSB and DATA ON using the model-specific command; FIL1."""
         if mode not in ("LSB-D", "USB-D"):
-            raise ValueError("未対応のDATAモード")
+            raise ValueError(tr("未対応のDATAモード"))
         with self._lock:
             if not self.ser or not self.status.connected:
                 return False
@@ -390,13 +391,13 @@ class CIVController:
 
 def radio_address(settings: dict) -> int:
     if not settings.get("model"):
-        raise ValueError("無線機を選択してください。")
+        raise ValueError(tr("無線機を選択してください。"))
     try:
         addr = int(settings.get("civ_address", ""), 16)
     except (TypeError, ValueError):
-        raise ValueError("CI-Vアドレスは16進数で入力してください。") from None
+        raise ValueError(tr("CI-Vアドレスは16進数で入力してください。")) from None
     if not 1 <= addr < 0xE0:
-        raise ValueError("CI-Vアドレスは01〜DFで指定してください。")
+        raise ValueError(tr("CI-Vアドレスは01〜DFで指定してください。"))
     return addr
 
 
@@ -407,11 +408,11 @@ def connect_configured(controller, settings, advanced):
         if status.connected and settings.get("auto_data_mode", True):
             if not controller.set_data_mode(advanced.get("data_mode", "LSB-D")):
                 controller.disconnect()
-                controller.status.message = "DATAモード切替を確認できません。機種対応・設定を確認し、手動切替の場合は自動切替をOFFにしてください。"
+                controller.status.message = tr("DATAモード切替を確認できません。機種対応・設定を確認し、手動切替の場合は自動切替をOFFにしてください。")
         if controller.cancel.is_set():
             controller.disconnect()
         return controller.status
     except Exception as exc:
         controller.disconnect()
-        controller.status.message = f"接続失敗: {exc}"
+        controller.status.message = tr('接続失敗: {error}').format(error=exc)
         return controller.status

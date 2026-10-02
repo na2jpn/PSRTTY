@@ -75,7 +75,10 @@ class UI74Tests(unittest.TestCase):
             self.assertEqual(w.store.data['backup']['pending_qsos'],0)
             backup.reset_mock()
             w.closing=True;w.audio_input_busy=False;w.audio._tx_active=False
-            w.closeEvent(QCloseEvent());w.closeEvent(QCloseEvent())
+            w.closeEvent(QCloseEvent())
+            w.printer.thread.join(2)
+            self.assertFalse(w.printer.thread.is_alive())
+            w.closeEvent(QCloseEvent())
             backup.assert_called_once()
 
     def test_settings_cancel_failure_and_menu_dates(self):

@@ -1,0 +1,56 @@
+test_autolog_only_after_successful_tu_and_unchanged_qso (tests.test_ui_v02.UITests.test_autolog_only_after_successful_tu_and_unchanged_qso) ... ok
+test_cancel_ignores_late_success (tests.test_ui_v02.UITests.test_cancel_ignores_late_success) ... ok
+test_connect_failure_ui_keeps_ticking (tests.test_ui_v02.UITests.test_connect_failure_ui_keeps_ticking) ... ok
+test_function_key_f9_invokes_macro (tests.test_ui_v02.UITests.test_function_key_f9_invokes_macro) ... ok
+test_gui_watchdog_restores_controls (tests.test_ui_v02.UITests.test_gui_watchdog_restores_controls) ... ok
+test_help_and_settings_nonmodal (tests.test_ui_v02.UITests.test_help_and_settings_nonmodal) ... This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_macro_apply_edit_and_cancel (tests.test_ui_v02.UITests.test_macro_apply_edit_and_cancel) ... ok
+test_nine_buttons_shortcuts_and_unconnected_guards (tests.test_ui_v02.UITests.test_nine_buttons_shortcuts_and_unconnected_guards) ... ok
+test_rig_unselected_manual_address_and_tabs (tests.test_ui_v02.UITests.test_rig_unselected_manual_address_and_tabs) ... ok
+test_settings_connection_test_is_async (tests.test_ui_v02.UITests.test_settings_connection_test_is_async) ... This plugin does not support propagateSizeHints()
+ok
+test_settings_success_does_not_later_report_timeout (tests.test_ui_v02.UITests.test_settings_success_does_not_later_report_timeout) ... This plugin does not support propagateSizeHints()
+ok
+test_settings_timeout_ignores_late_success (tests.test_ui_v02.UITests.test_settings_timeout_ignores_late_success) ... This plugin does not support propagateSizeHints()
+ok
+test_success_and_disconnect (tests.test_ui_v02.UITests.test_success_and_disconnect) ... ok
+test_unselected_settings_can_save_audio (tests.test_ui_v02.UITests.test_unselected_settings_can_save_audio) ... ok
+test_v03_reset_ignores_maximized_and_restores_bounds (tests.test_ui_v02.UITests.test_v03_reset_ignores_maximized_and_restores_bounds) ... ok
+test_v03_six_macro_rows_and_rx_position (tests.test_ui_v02.UITests.test_v03_six_macro_rows_and_rx_position) ... ok
+test_v03_window_save_and_reset_help (tests.test_ui_v02.UITests.test_v03_window_save_and_reset_help) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_ack_stops_after_unconfirmed_line (tests.test_v106_fix3.Printer106Fix3Tests.test_ack_stops_after_unconfirmed_line) ... ok
+test_ack_success_partial_writes_and_escape_filter (tests.test_v106_fix3.Printer106Fix3Tests.test_ack_success_partial_writes_and_escape_filter) ... ok
+test_disconnect_preserves_later_jobs_no_automatic_replay (tests.test_v106_fix3.Printer106Fix3Tests.test_disconnect_preserves_later_jobs_no_automatic_replay) ... ok
+test_limits_normalization_ascii_wrap_and_snapshot_time (tests.test_v106_fix3.Printer106Fix3Tests.test_limits_normalization_ascii_wrap_and_snapshot_time) ... ok
+test_off_default_short_filter_targets_and_nonblocking_writes (tests.test_v106_fix3.Printer106Fix3Tests.test_off_default_short_filter_targets_and_nonblocking_writes) ... ok
+test_overflow_keeps_accepted_jobs_and_pauses_intake (tests.test_v106_fix3.Printer106Fix3Tests.test_overflow_keeps_accepted_jobs_and_pauses_intake) ... ok
+test_queue_clear_off_and_test_bypass_short_filter (tests.test_v106_fix3.Printer106Fix3Tests.test_queue_clear_off_and_test_bypass_short_filter) ... ok
+test_stop_cancels_ack_wait_quickly (tests.test_v106_fix3.Printer106Fix3Tests.test_stop_cancels_ack_wait_quickly) ... ok
+test_existing_cards_update_from_aware_instant_and_tuning_both_states (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_existing_cards_update_from_aware_instant_and_tuning_both_states) ... ok
+test_invalid_manual_zone_change_keeps_input_and_selection (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_invalid_manual_zone_change_keeps_input_and_selection) ... ok
+test_menu_order_filter_and_main_only_rx_tx_complete (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_menu_order_filter_and_main_only_rx_tx_complete) ... ok
+test_printer_failure_is_nonmodal_and_port_conflicts_rejected (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_printer_failure_is_nonmodal_and_port_conflicts_rejected) ... ok
+test_printer_settings_default_short_filter_bilingual_no_japanese (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_printer_settings_default_short_filter_bilingual_no_japanese) ... ok
+test_utc_qso_editor_and_export_bounds (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_utc_qso_editor_and_export_bounds) ... ok
+test_zone_manual_rollover_preserves_qso_revision_and_saved_utc (tests.test_v106_fix3.TimePrinterUI106Fix3Tests.test_zone_manual_rollover_preserves_qso_revision_and_saved_utc) ... ok
+test_cancel_and_custom_macro_text_are_preserved (tests.test_v106_fix2.Language106Fix2Tests.test_cancel_and_custom_macro_text_are_preserved) ... ok
+test_cq_region_identity_survives_translation (tests.test_v106_fix2.Language106Fix2Tests.test_cq_region_identity_survives_translation) ... ok
+test_english_template_selection_apply_save_reload_and_japanese_reopen (tests.test_v106_fix2.Language106Fix2Tests.test_english_template_selection_apply_save_reload_and_japanese_reopen) ... ok
+test_help_all_tabs_history_about_update_are_english (tests.test_v106_fix2.Language106Fix2Tests.test_help_all_tabs_history_about_update_are_english) ... ok
+test_radio_and_external_validation_messages (tests.test_v106_fix2.Language106Fix2Tests.test_radio_and_external_validation_messages) ... ok
+test_settings_tabs_dynamic_labels_and_saved_radio_identity (tests.test_v106_fix2.Language106Fix2Tests.test_settings_tabs_dynamic_labels_and_saved_radio_identity) ... ok
+test_translation_placeholders_and_japanese_identity (tests.test_v106_fix2.Language106Fix2Tests.test_translation_placeholders_and_japanese_identity) ... ok
+
+----------------------------------------------------------------------
+Ran 39 tests in 6.682s
+
+OK

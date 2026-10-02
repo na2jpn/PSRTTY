@@ -4,9 +4,12 @@ The DLL is an external, replaceable file beside the one-file PSRTTY executable.
 Never silently fall back to raw CAT when Hamlib cannot open or verify a rig.
 """
 from __future__ import annotations
+from .i18n import tr
 
 import ctypes
+import ctypes.util
 import os
+import sys
 from pathlib import Path
 
 from .civ import CIVController, CIVStatus
@@ -28,21 +31,71 @@ HAMLIB_MODELS = {
 VFO = 1 << 29  # RIG_VFO_CURR in Hamlib 4.7
 
 
+def _library_filename() -> str:
+    if sys.platform == 'win32':
+        return 'libhamlib-4.dll'
+    if sys.platform == 'darwin':
+        return 'libhamlib-4.dylib'
+    return 'libhamlib-4.so'
+
+
 def library_path():
-    return app_root() / 'lib' / 'hamlib' / 'libhamlib-4.dll'
+    return app_root() / 'lib' / 'hamlib' / _library_filename()
+
+
+def _library_candidates(path=None):
+    # Windows keeps its original explicit, bundled DLL loading policy.
+    if sys.platform == 'win32':
+        yield Path(path or library_path()).resolve()
+        return
+    if path is not None:
+        yield path
+        return
+    yield library_path()
+    for name in ('hamlib-4', 'hamlib'):
+        found = ctypes.util.find_library(name)
+        if found:
+            yield found
+    if sys.platform == 'win32':
+        yield 'libhamlib-4.dll'
+    elif sys.platform == 'darwin':
+        yield 'libhamlib-4.dylib'
 
 
 def load_library(path=None):
-    path=Path(path or library_path()).resolve()
-    if not path.is_file():
-        raise FileNotFoundError(f'Hamlib DLLがありません: {path}')
-    # Keep the handle: MinGW's dependent DLLs must resolve in the same folder.
-    directory=os.add_dll_directory(str(path.parent)) if hasattr(os,'add_dll_directory') else None
-    try:
-        lib=ctypes.CDLL(str(path))
-    except Exception:
-        if directory:directory.close()
-        raise
+    if sys.platform == 'win32' and not Path(path or library_path()).resolve().is_file():
+        raise FileNotFoundError(tr('Hamlib DLLがありません: {path}').format(path=Path(path or library_path()).resolve()))
+    directory = None
+    lib = None
+    last_error = None
+    for candidate in _library_candidates(path):
+        try:
+            if isinstance(candidate, (str, os.PathLike)):
+                candidate_path = Path(candidate)
+                if candidate_path.is_file():
+                    load_target = candidate_path.resolve()
+                elif candidate_path.parent != Path('.') and candidate_path.suffix:
+                    continue
+                else:
+                    load_target = candidate
+            else:
+                load_target = candidate
+            if isinstance(load_target, Path):
+                # Keep the handle: MinGW's dependent DLLs must resolve in the same folder.
+                if sys.platform == 'win32' and hasattr(os, 'add_dll_directory'):
+                    directory = os.add_dll_directory(str(load_target.parent))
+                lib = ctypes.CDLL(str(load_target))
+            else:
+                lib = ctypes.CDLL(load_target)
+            break
+        except Exception as exc:
+            last_error = exc
+            if directory:
+                directory.close()
+                directory = None
+            lib = None
+    if lib is None:
+        raise FileNotFoundError(tr('Hamlibライブラリが見つかりません: {error}').format(error=last_error))
     signatures={
         'rig_init':(ctypes.c_void_p,[ctypes.c_int]),
         'rig_cleanup':(ctypes.c_int,[ctypes.c_void_p]),
@@ -60,35 +113,43 @@ def load_library(path=None):
     }
     for name,(restype,argtypes) in signatures.items():
         function=getattr(lib,name);function.restype=restype;function.argtypes=argtypes
+    for name, (restype, argtypes) in {
+        'rig_parse_func': (ctypes.c_uint64, [ctypes.c_char_p]),
+        'rig_get_func': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.POINTER(ctypes.c_int)]),
+        'rig_set_func': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.c_int]),
+    }.items():
+        function = getattr(lib, name, None)
+        if function is not None:
+            function.restype, function.argtypes = restype, argtypes
     return lib,directory
 
 
 class HamlibController(CIVController):
     def __init__(self, model):
-        if model not in HAMLIB_MODELS:raise ValueError('Hamlibの選択機種ではありません。')
+        if model not in HAMLIB_MODELS:raise ValueError(tr('Hamlibの選択機種ではありません。'))
         super().__init__(0,model=model)
         self.handle=None;self.lib=None;self.dll_directory=None
 
     def _configure(self, name, value):
         token=self.lib.rig_token_lookup(self.handle,name.encode('ascii'))
         if token<=0 or self.lib.rig_set_conf(self.handle,token,str(value).encode('ascii'))!=0:
-            raise RuntimeError(f'Hamlib設定 {name} を受け付けませんでした。')
+            raise RuntimeError(tr('Hamlib設定 {name} を受け付けませんでした。').format(name=name))
 
     def connect(self,port='AUTO',baud='AUTO',timeout=8.0):
         with self._lock:
             self.disconnect();self.cancel.clear()
             if str(port).upper()=='AUTO' or str(baud).upper()=='AUTO':
-                self.status=CIVStatus(message='HamlibではCOMポートとCAT速度を明示して接続テストしてください。')
+                self.status=CIVStatus(message=tr('HamlibではCOMポートとCAT速度を明示して接続テストしてください。'))
                 return self.status
             try:
                 self.lib,self.dll_directory=load_library()
                 self.handle=self.lib.rig_init(HAMLIB_MODELS[self.model][0])
-                if not self.handle:raise RuntimeError('Hamlibが機種を認識できませんでした。')
+                if not self.handle:raise RuntimeError(tr('Hamlibが機種を認識できませんでした。'))
                 self._configure('rig_pathname',port)
                 self._configure('serial_speed',int(baud))
-                if self.lib.rig_open(self.handle)!=0:raise RuntimeError('Hamlibが無線機に接続できませんでした。')
+                if self.lib.rig_open(self.handle)!=0:raise RuntimeError(tr('Hamlibが無線機に接続できませんでした。'))
                 freq=self.read_frequency()
-                if not freq:raise RuntimeError('Hamlibから周波数を取得できませんでした。')
+                if not freq:raise RuntimeError(tr('Hamlibから周波数を取得できませんでした。'))
                 self.status=CIVStatus(True,str(port),int(baud),freq,'Hamlib接続')
             except Exception as exc:
                 self.disconnect();self.status.message=str(exc)
@@ -184,6 +245,65 @@ class HamlibController(CIVController):
             value=self.lib.rig_parse_mode(token.encode('ascii'))
             if not value or self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
             return self.read_operating_mode()==mode
+
+    def _control_ready(self):
+        return bool(self.handle and self.lib and self.status.connected and not self.cancel.is_set())
+
+    def read_feature(self, name):
+        with self._lock:
+            if not self._control_ready() or self.model not in ('FT-991 / FT-991A', 'FTX-1') or name not in ('NB', 'NR'):
+                return None
+            try:
+                flag = self.lib.rig_parse_func(name.encode('ascii'))
+                value = ctypes.c_int()
+                if not flag or self.lib.rig_get_func(self.handle, VFO, flag, ctypes.byref(value)) != 0:
+                    return None
+                return bool(value.value)
+            except (AttributeError, OSError):
+                return None
+
+    def set_feature(self, name, on):
+        with self._lock:
+            if self.read_feature(name) is None or self.read_transmitting() is not False:
+                return False
+            try:
+                flag = self.lib.rig_parse_func(name.encode('ascii'))
+                return self.lib.rig_set_func(self.handle, VFO, flag, int(bool(on))) == 0 and self.read_feature(name) is bool(on)
+            except (AttributeError, OSError):
+                return False
+
+    def read_filter(self):
+        with self._lock:
+            if not self._control_ready() or self.model not in ('FT-991 / FT-991A', 'FTX-1'):
+                return None
+            mode = ctypes.c_uint64(); width = ctypes.c_long()
+            if self.lib.rig_get_mode(self.handle, VFO, ctypes.byref(mode), ctypes.byref(width)) != 0 or width.value <= 0:
+                return None
+            data_modes = [self.lib.rig_parse_mode(m) for m in (b'PKTLSB', b'PKTUSB', b'RTTY', b'RTTYR')]
+            ssb_modes = [self.lib.rig_parse_mode(m) for m in (b'LSB', b'USB')]
+            if mode.value in data_modes:
+                widths = ([50,100,150,200,250,300,350,400,450,500,800,1200,1400,1700,2000,2400,3000]
+                          if self.model == 'FT-991 / FT-991A' else [250,500,1200,1800,2400])
+            elif mode.value in ssb_modes:
+                widths = ([600,850,1100,1350,1500,1650,1950,2100,2200,2300,2400,2500,2600,2700,2800,2900,3000,3200] if self.model == 'FT-991 / FT-991A'
+                          else [1200,1400,1600,1800,2000,2200,2400,2600,2800,3000])
+            else:
+                return None
+            widths = sorted(set(widths + [width.value]))
+            return dict(kind='HAMLIB', mode=mode.value, value=width.value,
+                        options=[(v, f'{v} Hz') for v in widths], narrow=None)
+
+    def set_filter(self, value, expected):
+        with self._lock:
+            if type(value) is not int or not expected or self.read_transmitting() is not False:
+                return False
+            current = self.read_filter()
+            if not current or current['mode'] != expected.get('mode') or value not in dict(current['options']):
+                return False
+            if self.lib.rig_set_mode(self.handle, VFO, current['mode'], value) != 0:
+                return False
+            actual = self.read_filter()
+            return bool(actual and actual['mode'] == current['mode'] and actual['value'] == value)
 
     def set_narrow(self,*_):return False
 

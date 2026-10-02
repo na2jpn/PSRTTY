@@ -1,0 +1,28 @@
+test_saved_filter_reload_and_legacy_default (tests.test_v106_fix4.ConfigFix4Tests.test_saved_filter_reload_and_legacy_default) ... ok
+test_filter_boundary_streaming_and_independent_outputs (tests.test_v106_fix4.Fix4Tests.test_filter_boundary_streaming_and_independent_outputs) ... ok
+test_filter_save_failure_rolls_back (tests.test_v106_fix4.Fix4Tests.test_filter_save_failure_rolls_back) ... ok
+test_printer_status_toggle_error_and_menu_order_bilingual (tests.test_v106_fix4.Fix4Tests.test_printer_status_toggle_error_and_menu_order_bilingual) ... ok
+test_thanks_text_order_reuse_and_parent_close_bilingual (tests.test_v106_fix4.Fix4Tests.test_thanks_text_order_reuse_and_parent_close_bilingual) ... This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support raise()
+ok
+test_cancel_and_custom_macro_text_are_preserved (tests.test_v106_fix2.Language106Fix2Tests.test_cancel_and_custom_macro_text_are_preserved) ... ok
+test_cq_region_identity_survives_translation (tests.test_v106_fix2.Language106Fix2Tests.test_cq_region_identity_survives_translation) ... ok
+test_english_template_selection_apply_save_reload_and_japanese_reopen (tests.test_v106_fix2.Language106Fix2Tests.test_english_template_selection_apply_save_reload_and_japanese_reopen) ... ok
+test_help_all_tabs_history_about_update_are_english (tests.test_v106_fix2.Language106Fix2Tests.test_help_all_tabs_history_about_update_are_english) ... ok
+test_radio_and_external_validation_messages (tests.test_v106_fix2.Language106Fix2Tests.test_radio_and_external_validation_messages) ... ok
+test_settings_tabs_dynamic_labels_and_saved_radio_identity (tests.test_v106_fix2.Language106Fix2Tests.test_settings_tabs_dynamic_labels_and_saved_radio_identity) ... ok
+test_translation_placeholders_and_japanese_identity (tests.test_v106_fix2.Language106Fix2Tests.test_translation_placeholders_and_japanese_identity) ... ok
+test_center_tracks_tones_and_shift_in_both_polarities (tests.test_v50.UI50Tests.test_center_tracks_tones_and_shift_in_both_polarities) ... ok
+test_header_control_remains_accessible_after_resize (tests.test_v50.UI50Tests.test_header_control_remains_accessible_after_resize) ... ok
+test_parent_owned_menus_survive_collection (tests.test_v50.UI50Tests.test_parent_owned_menus_survive_collection) ... ok
+
+----------------------------------------------------------------------
+Ran 15 tests in 1.394s
+
+OK

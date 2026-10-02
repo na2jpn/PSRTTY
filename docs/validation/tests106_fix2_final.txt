@@ -1,0 +1,85 @@
+test_cancel_and_custom_macro_text_are_preserved (tests.test_v106_fix2.Language106Fix2Tests.test_cancel_and_custom_macro_text_are_preserved) ... ok
+test_cq_region_identity_survives_translation (tests.test_v106_fix2.Language106Fix2Tests.test_cq_region_identity_survives_translation) ... ok
+test_english_template_selection_apply_save_reload_and_japanese_reopen (tests.test_v106_fix2.Language106Fix2Tests.test_english_template_selection_apply_save_reload_and_japanese_reopen) ... ok
+test_help_all_tabs_history_about_update_are_english (tests.test_v106_fix2.Language106Fix2Tests.test_help_all_tabs_history_about_update_are_english) ... ok
+test_radio_and_external_validation_messages (tests.test_v106_fix2.Language106Fix2Tests.test_radio_and_external_validation_messages) ... ok
+test_settings_tabs_dynamic_labels_and_saved_radio_identity (tests.test_v106_fix2.Language106Fix2Tests.test_settings_tabs_dynamic_labels_and_saved_radio_identity) ... ok
+test_translation_placeholders_and_japanese_identity (tests.test_v106_fix2.Language106Fix2Tests.test_translation_placeholders_and_japanese_identity) ... ok
+test_csv_order_asymmetric_rst_jst_rollover_exchanges (tests.test_v106.Export106Tests.test_csv_order_asymmetric_rst_jst_rollover_exchanges) ... ok
+test_default_audio_pair_object (tests.test_v106.Export106Tests.test_default_audio_pair_object) ... ok
+test_failed_export_preserves_existing_file (tests.test_v106.Export106Tests.test_failed_export_preserves_existing_file) ... ok
+test_saved_language_and_invalid_value (tests.test_v106.Export106Tests.test_saved_language_and_invalid_value) ... ok
+test_small_screen_includes_frame_and_taskbar (tests.test_v106.Export106Tests.test_small_screen_includes_frame_and_taskbar) ... ok
+test_station_optional_and_csv_escaping (tests.test_v106.Export106Tests.test_station_optional_and_csv_escaping) ... ok
+test_windows_never_searches_system_library (tests.test_v106.Export106Tests.test_windows_never_searches_system_library) ... ok
+test_features_both_models_readback_and_transmit_guard (tests.test_v106.Radio106Tests.test_features_both_models_readback_and_transmit_guard) ... ok
+test_filter_mode_and_width_readback_and_guards (tests.test_v106.Radio106Tests.test_filter_mode_and_width_readback_and_guards) ... ok
+test_csv_wizard_exports_selected_records_only (tests.test_v106.UI106Tests.test_csv_wizard_exports_selected_records_only) ... ok
+test_export_menu_order_and_exclusive_checks (tests.test_v106.UI106Tests.test_export_menu_order_and_exclusive_checks) ... ok
+test_language_selection_saves_for_next_restart (tests.test_v106.UI106Tests.test_language_selection_saves_for_next_restart) ... ok
+test_autolog_only_after_successful_tu_and_unchanged_qso (tests.test_ui_v02.UITests.test_autolog_only_after_successful_tu_and_unchanged_qso) ... ok
+test_cancel_ignores_late_success (tests.test_ui_v02.UITests.test_cancel_ignores_late_success) ... ok
+test_connect_failure_ui_keeps_ticking (tests.test_ui_v02.UITests.test_connect_failure_ui_keeps_ticking) ... ok
+test_function_key_f9_invokes_macro (tests.test_ui_v02.UITests.test_function_key_f9_invokes_macro) ... ok
+test_gui_watchdog_restores_controls (tests.test_ui_v02.UITests.test_gui_watchdog_restores_controls) ... ok
+test_help_and_settings_nonmodal (tests.test_ui_v02.UITests.test_help_and_settings_nonmodal) ... This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+This plugin does not support propagateSizeHints()
+This plugin does not support propagateSizeHints()
+ok
+test_macro_apply_edit_and_cancel (tests.test_ui_v02.UITests.test_macro_apply_edit_and_cancel) ... ok
+test_nine_buttons_shortcuts_and_unconnected_guards (tests.test_ui_v02.UITests.test_nine_buttons_shortcuts_and_unconnected_guards) ... ok
+test_rig_unselected_manual_address_and_tabs (tests.test_ui_v02.UITests.test_rig_unselected_manual_address_and_tabs) ... ok
+test_settings_connection_test_is_async (tests.test_ui_v02.UITests.test_settings_connection_test_is_async) ... This plugin does not support propagateSizeHints()
+ok
+test_settings_success_does_not_later_report_timeout (tests.test_ui_v02.UITests.test_settings_success_does_not_later_report_timeout) ... This plugin does not support propagateSizeHints()
+ok
+test_settings_timeout_ignores_late_success (tests.test_ui_v02.UITests.test_settings_timeout_ignores_late_success) ... This plugin does not support propagateSizeHints()
+ok
+test_success_and_disconnect (tests.test_ui_v02.UITests.test_success_and_disconnect) ... ok
+test_unselected_settings_can_save_audio (tests.test_ui_v02.UITests.test_unselected_settings_can_save_audio) ... ok
+test_v03_reset_ignores_maximized_and_restores_bounds (tests.test_ui_v02.UITests.test_v03_reset_ignores_maximized_and_restores_bounds) ... ok
+test_v03_six_macro_rows_and_rx_position (tests.test_ui_v02.UITests.test_v03_six_macro_rows_and_rx_position) ... ok
+test_v03_window_save_and_reset_help (tests.test_ui_v02.UITests.test_v03_window_save_and_reset_help) ... This plugin does not support propagateSizeHints()
+This plugin does not support raise()
+ok
+test_all_chosen_models_are_explicit (tests.test_hamlib_089.HamlibBridgeTest.test_all_chosen_models_are_explicit) ... ok
+test_library_search_prefers_shared_library_on_non_windows (tests.test_hamlib_089.HamlibBridgeTest.test_library_search_prefers_shared_library_on_non_windows) ... ok
+test_missing_explicit_port_fails_closed (tests.test_hamlib_089.HamlibBridgeTest.test_missing_explicit_port_fails_closed) ... ok
+test_open_verify_mode_and_ptt (tests.test_hamlib_089.HamlibBridgeTest.test_open_verify_mode_and_ptt) ... ok
+test_ptt_failure_never_plays_audio (tests.test_v02.AudioSafetyTests.test_ptt_failure_never_plays_audio) ... ok
+test_stop_during_leadin (tests.test_v02.AudioSafetyTests.test_stop_during_leadin) ... ok
+test_success_and_double_send_guard (tests.test_v02.AudioSafetyTests.test_success_and_double_send_guard) ... ok
+test_cancelled_connect (tests.test_v02.CIVTests.test_cancelled_connect) ... ok
+test_connect_deadline (tests.test_v02.CIVTests.test_connect_deadline) ... ok
+test_connection_exception_closes_port (tests.test_v02.CIVTests.test_connection_exception_closes_port) ... ok
+test_data_mode_commands (tests.test_v02.CIVTests.test_data_mode_commands) ... ok
+test_data_mode_failure_disconnects (tests.test_v02.CIVTests.test_data_mode_failure_disconnects) ... ok
+test_no_mode_command_when_disabled (tests.test_v02.CIVTests.test_no_mode_command_when_disabled) ... ok
+test_ptt_requires_connected_and_ack (tests.test_v02.CIVTests.test_ptt_requires_connected_and_ack) ... ok
+test_exchange_strings_adif_roundtrip (tests.test_v02.ConfigMacroTests.test_exchange_strings_adif_roundtrip) ... ok
+test_existing_settings_and_eight_macros_preserved (tests.test_v02.ConfigMacroTests.test_existing_settings_and_eight_macros_preserved) ... ok
+test_template_exact_and_independent (tests.test_v02.ConfigMacroTests.test_template_exact_and_independent) ... ok
+test_unselected_default_and_address_validation (tests.test_v02.ConfigMacroTests.test_unselected_default_and_address_validation) ... ok
+test_backup_failure_does_not_touch_executable (tests.test_v02.UpdateTests.test_backup_failure_does_not_touch_executable) ... ok
+test_build_package_filename_and_validation (tests.test_v02.UpdateTests.test_build_package_filename_and_validation) ... ok
+test_changed_install_rejected (tests.test_v02.UpdateTests.test_changed_install_rejected) ... ok
+test_corrupt_hash (tests.test_v02.UpdateTests.test_corrupt_hash) ... ok
+test_failed_second_replace_rolls_back (tests.test_v02.UpdateTests.test_failed_second_replace_rolls_back) ... ok
+test_migration_failure_restores_settings_and_program (tests.test_v02.UpdateTests.test_migration_failure_restores_settings_and_program) ... ok
+test_new_only (tests.test_v02.UpdateTests.test_new_only) ... ok
+test_no_manifest (tests.test_v02.UpdateTests.test_no_manifest) ... ok
+test_snapshot_not_original_is_applied (tests.test_v02.UpdateTests.test_snapshot_not_original_is_applied) ... ok
+test_success_backup_and_user_data_preservation (tests.test_v02.UpdateTests.test_success_backup_and_user_data_preservation) ... ok
+test_traversal_rejected (tests.test_v02.UpdateTests.test_traversal_rejected) ... ok
+test_user_data_in_zip_rejected (tests.test_v02.UpdateTests.test_user_data_in_zip_rejected) ... ok
+test_version_comparison (tests.test_v02.UpdateTests.test_version_comparison) ... ok
+test_wrong_product (tests.test_v02.UpdateTests.test_wrong_product) ... ok
+
+----------------------------------------------------------------------
+Ran 68 tests in 4.693s
+
+OK

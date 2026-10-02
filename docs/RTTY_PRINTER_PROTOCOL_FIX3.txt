@@ -1,0 +1,56 @@
+PSRTTY 1.06 FIX3 — RTTYプリンター接続仕様／ファーム担当者への引継ぎ
+
+対象：PSRTTY → USBシリアル → XIAO ESP32S3等のブリッジ → TTLプリンター。
+この差分はPCアプリ側のみです。ブリッジのファーム、配線、実機検証は含みません。
+プリンター機種・制御基板の完成仕様と照合してから使用してください。
+
+基本プロトコル
+・シリアル初期値115200 bps、8 data bits、no parity、1 stop bit。
+・RTS/CTS、XON/XOFFなし。無線機／外部制御とは別のCOMを指定。
+・USBオープン後1.5秒待ってから送出。リセット／起動が長い機器は対応調整が必要。
+・7bit ASCIIテキスト、改行LF (0x0A)。初期32文字幅でアプリが折返し。
+・1件は「MM-DD HH:MM:SS JST RX」等の見出し＋本文の複数行。
+  時刻OFFでは見出しはRX/TXのみ。テスト印刷はTEST。
+・日本語その他の非ASCIIや制御文字は?へ置換。CRとTABは空白へ置換。
+  ESC/POSの制御コマンド、画像、カットコマンドは送らない。
+・既定はACKなし、各物理行の送出後0.5秒待つ。0.05～5秒で調整可能。
+  通常モードの送出完了は実際の印字完了を意味しない。
+
+オプション：ACKモード（双方が対応している場合だけ有効）
+・アプリはLFまで1行送った後、ASCII OK + LFを待つ（OK + CRLFも受理）。
+・ブリッジはその行を確実に受け付け、次の行を処理できる時点で1回だけOKを返す。
+  印字待ちが増え続けないよう、実印字完了または確実に空きがあるバッファと連動させる。
+・OK受信後にも指定の行間隔を待つ。タイムアウト初期10秒（1～60秒）。
+・行の送出前に受信バッファをクリアする。起動時の無条件OKや定期OKは送らない。
+・OK以外の短い行は読み飛ばす。タイムアウト、接続エラーで印刷を停止。
+・連番／重複検出／再送プロトコルはない。結果不明の途中ジョブは自動再送しない。
+・このACK仕様はFIX3アプリ側の定義です。既存ファームが対応していると確認したものではありません。
+
+過負荷・停止時の挙動
+・印刷は独立ワーカースレッド。上限初期500件（10～2000件）。
+・1件8192文字、待ち本文UTF-8合計2MiBも上限。上限に達すると新規受付を停止。
+・満杯時は処理中の1件を完了し、それ以降の待ちを保持。接続エラー時は処理途中を再送しない。
+・停止中に新規に到着した対象本文は印刷待ちへ追加されない。件数を状態のツールチップに表示。
+・ステータス欄で通知。音、モーダルダイアログ、フォーカス移動はない。
+・再開は原因を解消して出力をON。OFF／待ち消去／アプリ終了は未送出分を取り消す。
+  PCやブリッジへ既に送ったデータは印刷される場合がある。待ちはディスクへ永続保存しない。
+・起動時は必ず出力OFF。設定・RX/TX対象は保存される。
+
+実機での確認手順
+1. 無線機と別のCOM、速度、紙幅を選び、出力OFFのままテスト印刷を実施。
+2. 見出しと本文、改行、文字欠け、文字化けを確認。必要に応じ行間隔を長くする。
+3. メインRX、TX、RX+TX、1文字以下の除外、JST/UTCを確認。
+4. 連続入力で欠落や装置バッファの溢れがないか確認。ACK対応ならACKを有効にして確認。
+5. 切断・紙切れ・電源断・ACK停止の検出と再開、出力OFF、待ち消去を確認。
+  ACKなしでは紙切れや装置内部の溢れをPCが検出できない場合がある。
+6. 無線機操作やログ保存に遅延が出ないかWindows実機で確認。
+
+English summary
+USB serial, default 115200 8N1, no flow control. Printable ASCII + LF only,
+32 columns, 0.5-second per-line delay, 1.5-second startup delay.
+Optional per-line ACK is OK + LF (CRLF accepted); enable only with compatible
+firmware. The bridge must reply when it can safely accept another line.
+Default timeout: 10 seconds. No automatic retry of uncertain partial output.
+The bounded worker queue pauses intake on overflow/error without UI dialogs.
+Output defaults OFF at each launch. Physical printing and firmware compatibility
+require hardware validation; this package contains the PC application only.

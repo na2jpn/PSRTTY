@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ..i18n import tr
 
 import numpy as np
 from PySide6.QtCore import Qt, Signal
@@ -24,7 +25,7 @@ class SpectrumWidget(QWidget):
         self.drag = None
         self.view_bounds = None
         self.setMouseTracking(True)
-        self.setToolTip("クリックでMARKを移動。MARK／Center／SPACEの線をドラッグすると間隔を保って移動します。")
+        self.setToolTip(tr('クリックでMARKを移動。MARK／Center／SPACEの線をドラッグすると間隔を保って移動します。'))
 
     def set_data(self, freqs: np.ndarray, power: np.ndarray) -> None:
         same = len(self.freqs)==len(freqs) and np.array_equal(self.freqs,freqs)

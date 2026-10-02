@@ -1,0 +1,10 @@
+# PSRTTY 1.06 正本の確認（2026-10-02）
+
+- 日英の更新履歴を1.06の機能別説明に統合。画面内に開発途中の番号を表示しないことを確認。
+- 日英の更新履歴画面で1.06の見出しが1つであることを確認。1.05以前の画面内履歴を保持。
+- 同梱のUPDATE_HISTORY.txt、CHANGELOG.md、START_HERE.md、VERSION_106.mdを更新。
+- 関連回帰テスト15件成功、失敗・エラー0。記録はdocs/validation/tests106_canonical.txt。
+- 変更は更新履歴と案内文書のみ。機能コードは直前の検証済みソースを維持。
+- 全ソースZIPのCRCと全ファイルのSHA-256を確認。
+
+Linux / Python 3.12 / PySide6 6.11.2 / Qt offscreenで検証。Windows EXEビルド、Windows実画面、無線機・プリンター実機試験は未実施。

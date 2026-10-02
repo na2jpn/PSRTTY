@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ..i18n import tr
 
 from copy import deepcopy
 
@@ -15,26 +16,28 @@ class MacroDialog(QDialog):
         super().__init__(parent)
         self.store = store
         self.macros = deepcopy(store.macros)
-        self.setWindowTitle("マクロ編集")
+        self.setWindowTitle(tr("マクロ編集"))
         self.resize(820, 590)
         root = QVBoxLayout(self)
-        instruction = QLabel("テンプレートを選択し、［反映］を押してから［保存］してください。")
+        instruction = QLabel(tr("テンプレートを選択し、［反映］を押してから［保存］してください。"))
         instruction.setWordWrap(True)
         root.addWidget(instruction)
         row = QHBoxLayout()
-        row.addWidget(QLabel("テンプレート"))
-        self.template = QComboBox(); self.template.addItems(list(TEMPLATES)); row.addWidget(self.template, 1)
+        row.addWidget(QLabel(tr("テンプレート")))
+        self.template = QComboBox(); row.addWidget(self.template, 1)
+        for key in TEMPLATES:
+            self.template.addItem(tr(key), key)
         self.applied_template = store.data.get("macro_template", NORMAL_TEMPLATE_NAME)
         if self.applied_template in TEMPLATES:
-            self.template.setCurrentText(self.applied_template)
-        apply = QPushButton("反映"); apply.clicked.connect(self._apply_template); row.addWidget(apply)
+            self.template.setCurrentIndex(self.template.findData(self.applied_template))
+        apply = QPushButton(tr("反映")); apply.clicked.connect(self._apply_template); row.addWidget(apply)
         root.addLayout(row)
-        note = QLabel("使用可能: {MYCALL} {HISCALL} {RSTS} {RSTR} {SENT} {RCVD}\n{MYQTH} {MYJCCJCG} {MYTXT}"); note.setWordWrap(True)
+        note = QLabel(tr("使用可能: {MYCALL} {HISCALL} {RSTS} {RSTR} {SENT} {RCVD}\n{MYQTH} {MYJCCJCG} {MYTXT}")); note.setWordWrap(True)
         root.addWidget(note)
-        root.addWidget(QLabel("自動ログ: 送信文に TU 73 / TU73 がある場合、正常送信終了後に追加します。"))
+        root.addWidget(QLabel(tr("自動ログ: 送信文に TU 73 / TU73 がある場合、正常送信終了後に追加します。")))
         self.table = QTableWidget(9, 4)
         self.table.setColumnHidden(3, True)  # Preserve legacy metadata without presenting an obsolete control.
-        self.table.setHorizontalHeaderLabels(["キー", "名称", "送信内容", "QSO完了"])
+        self.table.setHorizontalHeaderLabels([tr("キー"), tr("名称"), tr("送信内容"), tr("QSO完了")])
         self.table.horizontalHeader().setSectionResizeMode(0, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(1, QHeaderView.ResizeToContents)
         self.table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
@@ -47,7 +50,7 @@ class MacroDialog(QDialog):
             flag = QTableWidgetItem()
             flag.setFlags(Qt.ItemIsEnabled | Qt.ItemIsUserCheckable)
             flag.setCheckState(Qt.Checked if m.get("completes_qso") is True else Qt.Unchecked)
-            flag.setToolTip("正常送信完了時に日時を設定。自動ログONなら追加します。")
+            flag.setToolTip(tr("正常送信完了時に日時を設定。自動ログONなら追加します。"))
             self.table.setItem(r, 3, flag)
         root.addWidget(self.table)
         self.template_help = QLabel()
@@ -63,15 +66,15 @@ class MacroDialog(QDialog):
         sent_row.addWidget(QLabel("SENT"))
         self.sent = QLineEdit(str(store.data['qso']['sent']))
         self.sent.setFixedWidth(140)
-        self.sent_fixed = QCheckBox("固定")
+        self.sent_fixed = QCheckBox(tr("固定"))
         self.sent_fixed.setChecked(store.data['qso']['sent_fixed'])
-        self.sent_fixed.setToolTip("ON: SENTを保持。OFF: ログ追加成功時に数値を+1。")
+        self.sent_fixed.setToolTip(tr("ON: SENTを保持。OFF: ログ追加成功時に数値を+1。"))
         sent_row.addWidget(self.sent)
         sent_row.addWidget(self.sent_fixed)
         root.addLayout(sent_row)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Save).setText("保存")
-        buttons.button(QDialogButtonBox.Cancel).setText("キャンセル")
+        buttons.button(QDialogButtonBox.Save).setText(tr("保存"))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr("キャンセル"))
         buttons.accepted.connect(self._save); buttons.rejected.connect(self.reject)
         root.addWidget(buttons)
 
@@ -80,11 +83,11 @@ class MacroDialog(QDialog):
         self.table.setFixedHeight(self.table.horizontalHeader().height() + self.table.verticalHeader().length() + 2 * self.table.frameWidth() + 4)
 
     def _update_template_help(self):
-        self.template_help.setText(TEMPLATE_HELP.get(self.template.currentText(), ""))
+        self.template_help.setText(tr(TEMPLATE_HELP.get(self.template.currentData(), "")))
 
     def _apply_template(self):
-        self.applied_template = self.template.currentText()
-        self.macros = TEMPLATES[self.template.currentText()]()
+        self.applied_template = self.template.currentData()
+        self.macros = TEMPLATES[self.template.currentData()]()
         self.sent.setText({CQWW_TEMPLATE_NAME: "25", TEMPLATE_NAME: "01",
                            NORMAL_TEMPLATE_NAME: ""}.get(self.applied_template, ""))
         self.sent_fixed.setChecked(True)

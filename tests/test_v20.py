@@ -161,7 +161,7 @@ class UI20Tests(unittest.TestCase):
         self.assertTrue(output); self.assertTrue(all(0<n<4 for n in output))
     def test_guide_tabs_readable_and_reused(self):
         w=self.window; w._guide_initial(); guide=w.help_windows['初期設定ガイド']
-        self.assertEqual(guide.tabs.count(),7); self.assertIn('Cabrillo出力', [guide.tabs.tabText(i) for i in range(guide.tabs.count())]); self.assertGreaterEqual(guide.tabs.widget(0).font().pointSize(),11)
+        self.assertEqual(guide.tabs.count(),8); self.assertIn('Cabrillo出力', [guide.tabs.tabText(i) for i in range(guide.tabs.count())]); self.assertGreaterEqual(guide.tabs.widget(0).font().pointSize(),11)
         self.assertIn('表示感度',guide.tabs.widget(2).toPlainText())
         w._guide_initial(); self.assertIs(guide,w.help_windows['初期設定ガイド'])
     def test_activation_message_restores_window_and_acknowledges(self):

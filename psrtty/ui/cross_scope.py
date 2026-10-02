@@ -1,3 +1,4 @@
+from ..i18n import tr
 """Receive-only XY view. DSP runs in the GUI timer, never in the decoder."""
 import time
 import numpy as np
@@ -173,7 +174,7 @@ class CrossScopeWindow(QDialog):
         self.audio = audio
         self.afterglow = ScopeAfterglow()
         self.cloud_stamp = None
-        self.setWindowTitle('クロススコープ')
+        self.setWindowTitle(tr('クロススコープ'))
         self.setWindowModality(Qt.NonModal)
         self.resize(330, 365)
         layout = QVBoxLayout(self)
@@ -181,7 +182,7 @@ class CrossScopeWindow(QDialog):
         layout.addWidget(self.canvas)
         self.caption = QLabel()
         layout.addWidget(self.caption)
-        note = QLabel('横長：MARK  縦長：SPACE\n縦横の楕円が同調の目安（SQとは独立）')
+        note = QLabel(tr('横長：MARK  縦長：SPACE\n縦横の楕円が同調の目安（SQとは独立）'))
         layout.addWidget(note)
         self.timer = QTimer(self)
         self.timer.setInterval(200)
@@ -246,7 +247,7 @@ class CrossScopeWindow(QDialog):
         frame = self.audio.scope_frame
         if frame is None or time.monotonic()-frame[0] > .5:
             self.afterglow.clear()
-            self.caption.setText('受信音待ち')
+            self.caption.setText(tr('受信音待ち'))
         else:
             stamp, samples, tones = frame
             mark, space, baud = tones

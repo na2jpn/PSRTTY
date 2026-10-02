@@ -1,8 +1,20 @@
 """Logical-pixel window placement, bounded by the available monitor area."""
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QGuiApplication
+import sys
 
 DEFAULT_SIZE = (1280, 800)
+
+
+def frame_margins(window):
+    handle = window.windowHandle()
+    if handle:
+        m = handle.frameMargins()
+        values = (m.left(), m.top(), m.right(), m.bottom())
+        if any(values):
+            return values
+    # A newly shown Windows window may not yet report its decoration.
+    return (8, 32, 8, 8) if sys.platform == 'win32' else (0, 0, 0, 0)
 
 
 def fitted_rect(saved, areas, reset=False, margins=(0, 0, 0, 0)):
@@ -32,9 +44,8 @@ def restore_window(window, saved, reset=False):
     screens = QGuiApplication.screens()
     primary = QGuiApplication.primaryScreen()
     screens = [primary] + [s for s in screens if s != primary]
-    margins = window.windowHandle().frameMargins()
     rect = fitted_rect(saved, [s.availableGeometry() for s in screens], reset,
-                       (margins.left(), margins.top(), margins.right(), margins.bottom()))
+                       frame_margins(window))
     window.setGeometry(rect)
     if not reset and isinstance(saved, dict) and saved.get('maximized') is True:
         window.showMaximized()
@@ -50,6 +61,8 @@ def place_tool_window(window, main, default_size, minimum_size, saved=None):
     """Open a tool next to main and recover tiny/off-screen saved geometry."""
     screen = main.screen() or QGuiApplication.primaryScreen()
     area = screen.availableGeometry()
+    left, top, right, bottom = frame_margins(window)
+    area = area.adjusted(left, top, -right, -bottom)
     mw, mh = minimum_size
     width = min(max(mw, default_size[0]), area.width())
     height = min(max(mh, default_size[1]), area.height())

@@ -8,6 +8,7 @@ from tests.test_ui_v02 import UITests as _Fixture
 from psrtty.civ import CIVController
 from psrtty.yaesu import YaesuController
 from psrtty.audio_engine import AudioEngine
+from psrtty.audio_devices import resolve_device
 from psrtty.adif import QSORecord
 from psrtty.ui.main_window import ReceiveCard
 
@@ -71,6 +72,39 @@ class Protocol30Tests(unittest.TestCase):
             feed.assert_not_called(); meter.assert_called_once(); spectrum.assert_called_once(); reset.assert_called_once()
             e.set_decode_enabled(True); self.assertGreater(e.decode_generation,generation)
             e._input_callback(np.zeros((960,1),dtype=np.float32),960,None,None); feed.assert_called_once()
+
+    def test_audio_auto_uses_default_device_on_non_windows(self):
+        class FakeSoundDevice:
+            def __init__(self):
+                self.default = type('Default', (), {'device': (3, 4)})()
+
+            def query_hostapis(self):
+                return [dict(name='OSS', default_input_device=1, default_output_device=2)]
+
+        sd = FakeSoundDevice()
+        with patch('psrtty.audio_devices.sys.platform', 'freebsd13'):
+            self.assertEqual(resolve_device(sd, 'AUTO', 'input'), 3)
+            self.assertEqual(resolve_device(sd, 'AUTO', 'output'), 4)
+
+    def test_audio_device_labels_on_non_windows_include_backend_and_index(self):
+        from psrtty.audio_devices import enumerate_devices
+
+        class FakeSoundDevice:
+            def query_devices(self):
+                return [
+                    {'name': 'USB Audio CODEC', 'hostapi': 0, 'max_input_channels': 2, 'max_output_channels': 2},
+                    {'name': 'USB Audio CODEC', 'hostapi': 0, 'max_input_channels': 2, 'max_output_channels': 2},
+                ]
+
+            def query_hostapis(self):
+                return [dict(name='OSS')]
+
+        sd = FakeSoundDevice()
+        with patch('psrtty.audio_devices.sys.platform', 'freebsd13'):
+            rows = enumerate_devices(sd, 'input')
+        self.assertEqual(rows[0]['label'], 'USB Audio CODEC [OSS #0]')
+        self.assertEqual(rows[1]['label'], 'USB Audio CODEC [OSS #1]')
+        self.assertNotEqual(rows[0]['choice']['id'], rows[1]['choice']['id'])
 
 class UI30Tests(unittest.TestCase):
     setUpClass=classmethod(_Fixture.setUpClass.__func__)

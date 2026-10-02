@@ -1,5 +1,6 @@
 """Compact, opt-in receive-only window with independent A/B tuning."""
 from __future__ import annotations
+from ..i18n import tr
 
 import re
 import time
@@ -53,7 +54,7 @@ class SubSpectrum(QWidget):
         self.freqs = np.empty(0); self.power = np.empty(0)
         self.drag = None
         self.drag_origin = None
-        self.setToolTip('赤い線はA、青い線はB。各2本の線をドラッグして受信位置を動かします。')
+        self.setToolTip(tr('赤い線はA、青い線はB。各2本の線をドラッグして受信位置を動かします。'))
 
     def set_spectrum(self, freqs, power, main_center, width, shift, centers):
         self.freqs = freqs; self.power = power
@@ -136,7 +137,7 @@ class SubDecodeWindow(QDialog):
     def __init__(self, main):
         super().__init__(main,Qt.Window)
         self.main=main
-        self.setWindowTitle('PSRTTY サブデコ')
+        self.setWindowTitle(tr('PSRTTY サブデコ'))
         self.setMinimumSize(400,300);self.resize(480,400)
         self.worker=SubDecodeWorker(main.audio.sample_rate,
                                     lambda i,c: main.bridge.sub_char.emit(i,c))
@@ -151,7 +152,7 @@ class SubDecodeWindow(QDialog):
         root.addWidget(self.scope)
         options=QHBoxLayout();self.checks=[];self.offsets=[]
         for index in range(2):
-            check=QCheckBox(f'{"AB"[index]}：自動スイープ');check.setChecked(True)
+            check=QCheckBox(tr('{side}：自動スイープ').format(side="AB"[index]));check.setChecked(True)
             check.setStyleSheet(f'color:{COLORS[index]};font-weight:bold')
             options.addWidget(check);self.checks.append(check)
             label=QLabel();label.setStyleSheet(f'color:{COLORS[index]}')
@@ -214,7 +215,7 @@ class SubDecodeWindow(QDialog):
     def _label(self):
         center=(self.main.spectrum.mark_hz+self.main.spectrum.space_hz)/2
         for index in range(2):
-            self.offsets[index].setText(f'メインから{self.centers[index]-center:+.0f} Hz')
+            self.offsets[index].setText(tr('メインから{offset:+.0f} Hz').format(offset=self.centers[index]-center))
 
     def refresh(self):
         main=self.main

@@ -1,5 +1,6 @@
 """Optional pre-key line for an external amplifier or preamplifier."""
 from __future__ import annotations
+from .i18n import tr
 
 import time
 
@@ -14,14 +15,14 @@ def validate_external(config, radio_port=''):
         return
     port = str(config.get('com_port', '')).strip().upper()
     if not port or port == 'AUTO':
-        raise ValueError('外部接続のCOMポートを選択してください。')
+        raise ValueError(tr('外部接続のCOMポートを選択してください。'))
     if port == str(radio_port).strip().upper():
-        raise ValueError('外部接続には無線機と別のCOMポートを選択してください。')
+        raise ValueError(tr('外部接続には無線機と別のCOMポートを選択してください。'))
     if config.get('line') not in ('RTS', 'DTR'):
-        raise ValueError('外部接続の制御線をRTSまたはDTRから選択してください。')
+        raise ValueError(tr('外部接続の制御線をRTSまたはDTRから選択してください。'))
     delay = float(config.get('delay_seconds', 0))
     if not 0.1 <= delay <= 9.9:
-        raise ValueError('外部接続の先行時間は0.1～9.9秒です。')
+        raise ValueError(tr('外部接続の先行時間は0.1～9.9秒です。'))
 
 
 class ExternalPTT:
@@ -35,7 +36,7 @@ class ExternalPTT:
         if not self.config.get('enabled', False):
             return True
         if serial is None:
-            raise RuntimeError('外部接続にはpyserialが必要です。')
+            raise RuntimeError(tr('外部接続にはpyserialが必要です。'))
         line = self.config['line'].lower()
         active = not bool(self.config.get('reversed', False))
         try:

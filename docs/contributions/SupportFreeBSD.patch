@@ -1,0 +1,280 @@
+diff --git a/psrtty/audio_devices.py b/psrtty/audio_devices.py
+index 3f8d8b4..fee25b7 100644
+--- a/psrtty/audio_devices.py
++++ b/psrtty/audio_devices.py
+@@ -58,28 +58,58 @@ def enumerate_devices(sd, kind):
+             seen.add((kind, key))
+             choice = dict(backend='wasapi', id=key, kind=kind, name=name)
+         else:
+-            choice = dict(backend=api, id=name, kind=kind, name=name)
++            choice = dict(
++                backend=api,
++                id=f'{api}:{i}:{name}',
++                kind=kind,
++                name=name,
++                index=i,
++            )
+         result.append(dict(index=i, name=name, choice=choice))
+     counts = Counter(row['name'] for row in result)
+     for row in result:
+         row['label'] = row['name']
+-        if counts[row['name']] > 1:
+-            tag = hashlib.sha256(row['choice']['id'].encode()).hexdigest()[:6]
+-            row['label'] += f' [{tag}]'
++        if sys.platform == 'win32':
++            if counts[row['name']] > 1:
++                tag = hashlib.sha256(row['choice']['id'].encode()).hexdigest()[:6]
++                row['label'] += f' [{tag}]'
++        else:
++            row['label'] += f" [{row['choice']['backend']} #{row['index']}]"
+     return result
+ 
+ 
++def _default_device_index(sd, kind):
++    default = getattr(getattr(sd, 'default', None), 'device', None)
++    slot = 0 if kind == 'input' else 1
++    if isinstance(default, (tuple, list)) and len(default) > slot:
++        index = default[slot]
++        if isinstance(index, int) and index >= 0:
++            return index
++    try:
++        apis = sd.query_hostapis()
++    except Exception:
++        return None
++    for api in apis:
++        index = api.get(f'default_{kind}_device', -1)
++        if isinstance(index, int) and index >= 0:
++            return index
++    return None
++
++
+ def resolve_device(sd, selection, kind):
+     if selection in (None, '', 'AUTO'):
+-        if sys.platform != 'win32':
+-            return None
+-        apis = sd.query_hostapis()
+-        for api in apis:
+-            if api['name'] == 'Windows WASAPI':
+-                index = api[f'default_{kind}_device']
+-                if index >= 0 and wasapi_endpoint(sd, index)[1]:
+-                    return index
+-        raise ValueError('有効な既定の音声デバイスがありません')
++        if sys.platform == 'win32':
++            apis = sd.query_hostapis()
++            for api in apis:
++                if api['name'] == 'Windows WASAPI':
++                    index = api[f'default_{kind}_device']
++                    if index >= 0 and wasapi_endpoint(sd, index)[1]:
++                        return index
++            raise ValueError('有効な既定の音声デバイスがありません')
++        index = _default_device_index(sd, kind)
++        if index is not None:
++            return index
++        return None
+     if not isinstance(selection, dict):
+         # Old numeric IDs cannot identify a device after USB/driver changes.
+         if sys.platform == 'win32':
+diff --git a/psrtty/hamlib_radio.py b/psrtty/hamlib_radio.py
+index 3c8a19f..1fbad78 100644
+--- a/psrtty/hamlib_radio.py
++++ b/psrtty/hamlib_radio.py
+@@ -6,7 +6,9 @@ Never silently fall back to raw CAT when Hamlib cannot open or verify a rig.
+ from __future__ import annotations
+ 
+ import ctypes
++import ctypes.util
+ import os
++import sys
+ from pathlib import Path
+ 
+ from .civ import CIVController, CIVStatus
+@@ -28,21 +30,64 @@ HAMLIB_MODELS = {
+ VFO = 1 << 29  # RIG_VFO_CURR in Hamlib 4.7
+ 
+ 
++def _library_filename() -> str:
++    if sys.platform == 'win32':
++        return 'libhamlib-4.dll'
++    if sys.platform == 'darwin':
++        return 'libhamlib-4.dylib'
++    return 'libhamlib-4.so'
++
++
+ def library_path():
+-    return app_root() / 'lib' / 'hamlib' / 'libhamlib-4.dll'
++    return app_root() / 'lib' / 'hamlib' / _library_filename()
++
++
++def _library_candidates(path=None):
++    if path is not None:
++        yield path
++    yield library_path()
++    for name in ('hamlib-4', 'hamlib'):
++        found = ctypes.util.find_library(name)
++        if found:
++            yield found
++    if sys.platform == 'win32':
++        yield 'libhamlib-4.dll'
++    elif sys.platform == 'darwin':
++        yield 'libhamlib-4.dylib'
+ 
+ 
+ def load_library(path=None):
+-    path=Path(path or library_path()).resolve()
+-    if not path.is_file():
+-        raise FileNotFoundError(f'Hamlib DLLがありません: {path}')
+-    # Keep the handle: MinGW's dependent DLLs must resolve in the same folder.
+-    directory=os.add_dll_directory(str(path.parent)) if hasattr(os,'add_dll_directory') else None
+-    try:
+-        lib=ctypes.CDLL(str(path))
+-    except Exception:
+-        if directory:directory.close()
+-        raise
++    directory = None
++    lib = None
++    last_error = None
++    for candidate in _library_candidates(path):
++        try:
++            if isinstance(candidate, (str, os.PathLike)):
++                candidate_path = Path(candidate)
++                if candidate_path.is_file():
++                    load_target = candidate_path.resolve()
++                elif candidate_path.parent != Path('.') and candidate_path.suffix:
++                    continue
++                else:
++                    load_target = candidate
++            else:
++                load_target = candidate
++            if isinstance(load_target, Path):
++                # Keep the handle: MinGW's dependent DLLs must resolve in the same folder.
++                if sys.platform == 'win32' and hasattr(os, 'add_dll_directory'):
++                    directory = os.add_dll_directory(str(load_target.parent))
++                lib = ctypes.CDLL(str(load_target))
++            else:
++                lib = ctypes.CDLL(load_target)
++            break
++        except Exception as exc:
++            last_error = exc
++            if directory:
++                directory.close()
++                directory = None
++            lib = None
++    if lib is None:
++        raise FileNotFoundError(f'Hamlibライブラリが見つかりません: {last_error}')
+     signatures={
+         'rig_init':(ctypes.c_void_p,[ctypes.c_int]),
+         'rig_cleanup':(ctypes.c_int,[ctypes.c_void_p]),
+diff --git a/psrtty/ui/settings_dialog.py b/psrtty/ui/settings_dialog.py
+index 0812e60..1684657 100644
+--- a/psrtty/ui/settings_dialog.py
++++ b/psrtty/ui/settings_dialog.py
+@@ -464,7 +464,7 @@ class SettingsDialog(QDialog):
+         self.save_out_button = QPushButton('音量設定を保存'); self.save_out_button.clicked.connect(self._save_audio_out)
+         form.addRow('', self.save_out_button)
+ 
+-        note = QLabel(self.audio_error or '有効な音声デバイスを表示します。USB機器を追加した場合はPSRTTYを再起動してください。\n旧版で番号指定した機器は選び直してください。「自動」はWindowsの既定の機器を使用します。')
++        note = QLabel(self.audio_error or '有効な音声デバイスを表示します。USB機器を追加した場合はPSRTTYを再起動してください。\n旧版で番号指定した機器は選び直してください。「自動」は各OSの既定の機器を使用します。')
+         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
+         self.tabs.addTab(tab, 'Audio OUT')
+ 
+diff --git a/tests/test_hamlib_089.py b/tests/test_hamlib_089.py
+index 39b068b..c0583d5 100644
+--- a/tests/test_hamlib_089.py
++++ b/tests/test_hamlib_089.py
+@@ -1,7 +1,7 @@
+ import unittest
+ from unittest.mock import patch
+ 
+-from psrtty.hamlib_radio import HamlibController, HAMLIB_MODELS
++from psrtty.hamlib_radio import HamlibController, HAMLIB_MODELS, load_library
+ 
+ 
+ class FakeLibrary:
+@@ -22,6 +22,35 @@ class FakeLibrary:
+ 
+ 
+ class HamlibBridgeTest(unittest.TestCase):
++    def test_library_search_prefers_shared_library_on_non_windows(self):
++        class FakeFunction:
++            def __call__(self, *args, **kwargs):
++                return 0
++
++        class FakeLibrary:
++            def __init__(self):
++                self.rig_init = FakeFunction()
++                self.rig_cleanup = FakeFunction()
++                self.rig_open = FakeFunction()
++                self.rig_close = FakeFunction()
++                self.rig_token_lookup = FakeFunction()
++                self.rig_set_conf = FakeFunction()
++                self.rig_get_freq = FakeFunction()
++                self.rig_set_freq = FakeFunction()
++                self.rig_get_ptt = FakeFunction()
++                self.rig_set_ptt = FakeFunction()
++                self.rig_parse_mode = FakeFunction()
++                self.rig_get_mode = FakeFunction()
++                self.rig_set_mode = FakeFunction()
++
++        with patch('psrtty.hamlib_radio.sys.platform', 'freebsd13'), \
++             patch('psrtty.hamlib_radio.ctypes.util.find_library', return_value='libhamlib-4.so.4'), \
++             patch('psrtty.hamlib_radio.ctypes.CDLL', return_value=FakeLibrary()) as cdll:
++            lib, directory = load_library()
++        self.assertIsNone(directory)
++        self.assertEqual(cdll.call_args[0][0], 'libhamlib-4.so.4')
++        self.assertIsNotNone(lib)
++
+     def test_all_chosen_models_are_explicit(self):
+         self.assertEqual(len(HAMLIB_MODELS),10)
+         self.assertEqual(HAMLIB_MODELS['FTX-1'][0],1051)
+diff --git a/tests/test_v30.py b/tests/test_v30.py
+index a2b6a74..ce94e85 100644
+--- a/tests/test_v30.py
++++ b/tests/test_v30.py
+@@ -8,6 +8,7 @@ from tests.test_ui_v02 import UITests as _Fixture
+ from psrtty.civ import CIVController
+ from psrtty.yaesu import YaesuController
+ from psrtty.audio_engine import AudioEngine
++from psrtty.audio_devices import resolve_device
+ from psrtty.adif import QSORecord
+ from psrtty.ui.main_window import ReceiveCard
+ 
+@@ -72,6 +73,39 @@ class Protocol30Tests(unittest.TestCase):
+             e.set_decode_enabled(True); self.assertGreater(e.decode_generation,generation)
+             e._input_callback(np.zeros((960,1),dtype=np.float32),960,None,None); feed.assert_called_once()
+ 
++    def test_audio_auto_uses_default_device_on_non_windows(self):
++        class FakeSoundDevice:
++            def __init__(self):
++                self.default = type('Default', (), {'device': (3, 4)})()
++
++            def query_hostapis(self):
++                return [dict(name='OSS', default_input_device=1, default_output_device=2)]
++
++        sd = FakeSoundDevice()
++        with patch('psrtty.audio_devices.sys.platform', 'freebsd13'):
++            self.assertEqual(resolve_device(sd, 'AUTO', 'input'), 3)
++            self.assertEqual(resolve_device(sd, 'AUTO', 'output'), 4)
++
++    def test_audio_device_labels_on_non_windows_include_backend_and_index(self):
++        from psrtty.audio_devices import enumerate_devices
++
++        class FakeSoundDevice:
++            def query_devices(self):
++                return [
++                    {'name': 'USB Audio CODEC', 'hostapi': 0, 'max_input_channels': 2, 'max_output_channels': 2},
++                    {'name': 'USB Audio CODEC', 'hostapi': 0, 'max_input_channels': 2, 'max_output_channels': 2},
++                ]
++
++            def query_hostapis(self):
++                return [dict(name='OSS')]
++
++        sd = FakeSoundDevice()
++        with patch('psrtty.audio_devices.sys.platform', 'freebsd13'):
++            rows = enumerate_devices(sd, 'input')
++        self.assertEqual(rows[0]['label'], 'USB Audio CODEC [OSS #0]')
++        self.assertEqual(rows[1]['label'], 'USB Audio CODEC [OSS #1]')
++        self.assertNotEqual(rows[0]['choice']['id'], rows[1]['choice']['id'])
++
+ class UI30Tests(unittest.TestCase):
+     setUpClass=classmethod(_Fixture.setUpClass.__func__)
+     setUp=_Fixture.setUp; tearDown=_Fixture.tearDown; pump=_Fixture.pump
