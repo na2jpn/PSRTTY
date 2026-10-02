@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt, QDateTime, QUrl
 from PySide6.QtGui import QDesktopServices
 from PySide6.QtWidgets import (
-    QCheckBox, QDateTimeEdit, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
+    QCheckBox, QComboBox, QDateTimeEdit, QDialog, QFileDialog, QFormLayout, QHBoxLayout,
     QLabel, QLineEdit, QMessageBox, QPushButton, QScrollArea, QStackedWidget,
     QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget,
 )
@@ -36,6 +36,12 @@ class ADIFExportDialog(QDialog):
         root.addWidget(self.heading)
         self.pages = QStackedWidget()
         root.addWidget(self.pages, 1)
+        self.profile = QComboBox()
+        for label, value in ((tr('標準ADIF'), 'standard'), (tr('zLog一般（交換番号を備考にも保持）'), 'zlog'), ('zLog / JARL WW RTTY', 'zlog_jarl'), ('zLog / CQ WW RTTY', 'zlog_cqww')):
+            self.profile.addItem(label, value)
+        root.insertWidget(1, self.profile)
+        self.profile_note = QLabel(tr('zLog対応対象：3.0.4.0。CQ WW RTTYの州・地域は取り込み後に受信番号とマルチを確認してください。元の交換番号は備考に残します。'))
+        self.profile_note.setWordWrap(True); root.insertWidget(2, self.profile_note)
         self._period_page()
         self._band_page()
         self._qso_page()
@@ -202,7 +208,7 @@ class ADIFExportDialog(QDialog):
             path, _ = QFileDialog.getSaveFileName(self, tr('ADIFを保存'), name, 'ADIF (*.adi *.adif)')
             if not path: return
             try:
-                export_adif(Path(path), self.selected, protected=[q.source_path for q in self.records])
+                export_adif(Path(path), self.selected, protected=[q.source_path for q in self.records], profile=self.profile.currentData())
             except (OSError, ValueError) as exc:
                 self.message.setText(str(exc)); return
             self.saved_path = Path(path)

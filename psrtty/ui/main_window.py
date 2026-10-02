@@ -1,5 +1,6 @@
 from __future__ import annotations
 from ..i18n import tr
+from .. import __version__
 from ..timebase import JST, display_zone
 
 import os
@@ -89,6 +90,8 @@ class MainWindow(QMainWindow):
         configure(self.store.data['ui'].get('language', 'ja'))
         from ..printer import PrinterSpool
         self.printer=PrinterSpool(self.store.data.get('printer'))
+        from .integration_dialog import IntegrationController
+        self.integration = IntegrationController(self)
         self.printer_window=None
         self.print_tx=None
         self.transcript = TranscriptLogger()
@@ -137,7 +140,7 @@ class MainWindow(QMainWindow):
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
 
-        self.setWindowTitle("PSRTTY 1.06")
+        self.setWindowTitle(f"PSRTTY {__version__}")
         self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
@@ -218,6 +221,9 @@ class MainWindow(QMainWindow):
         sub_action=self._act(view, tr("サブデコ"), self._show_sub)
         sub_action.setToolTip(tr('A/Bの受信専用サブデコードウィンドウを表示します。送信・自動ログは行いません。'))
 
+        integration = mb.addMenu(tr('連携'))
+        self._act(integration, tr('HAMLOG連携設定'), self.integration.settings)
+        self._act(integration, tr('zLog令和版連携設定'), self._zlog_settings)
         language = mb.addMenu('Language')
         self.language_group = QActionGroup(self); self.language_group.setExclusive(True)
         for code, label in (('ja', '日本語'), ('en', 'English')):
@@ -233,7 +239,7 @@ class MainWindow(QMainWindow):
         self._act(helpm, tr("PSRTTYの更新履歴"), self._history)
         self._act(helpm, tr("PSRTTYについて"), self._about)
         # Keep Python wrappers alive as well as Qt's menu-bar ownership.
-        self.top_level_menus = (filem, edit, radio, view, language, helpm)
+        self.top_level_menus = (filem, edit, radio, view, integration, language, helpm)
 
     @staticmethod
     def _act(menu: QMenu, text: str, slot):
@@ -1006,6 +1012,7 @@ class MainWindow(QMainWindow):
         self._refresh_latest_qsos(); self.his_call.clear(); self.q_call.clear(); self.rcvd.clear(); self.call_locked=False; self._refresh_macros()
         if backup.get("every_enabled", False) and backup["pending_qsos"] >= max(1, int(backup.get("every_count", 30))):
             self._backup_logs()
+        self.integration.record(q)
         if settings_error is not None:
             QMessageBox.warning(self, tr('設定の保存'), tr('QSOはADIFへ保存済みです。再度追加する必要はありません。\nSENTなどの設定を保存できませんでした。\n{0}').format(settings_error))
 
@@ -1447,6 +1454,10 @@ class MainWindow(QMainWindow):
     def _open_log_dir(self): self._open_path(self.paths["logdata"])
     def _open_transcript(self): self._open_path(self.transcript.ensure_file())
     def _open_adif(self): self._open_path(self.adif.ensure_file())
+    def _zlog_settings(self):
+        from .integration_dialog import ZLogSettingsDialog
+        ZLogSettingsDialog(self).exec()
+
     def _export_adif(self):
         from .adif_export_dialog import ADIFExportDialog
         ADIFExportDialog(self.adif, self.store, self).exec()
@@ -1644,6 +1655,12 @@ class MainWindow(QMainWindow):
         self.printer_status.setToolTip(tr('出力OFF・待ち消去では送出済みの印刷は取り消せない場合があります。')+'\n'+state['detail']+'\n'+tr('送出済み：{sent}件／受付漏れ・送出不明：{skipped}件').format(sent=state['sent'],skipped=state['skipped']))
 
     def closeEvent(self,event):
+        if self.integration.busy:
+            event.ignore()
+            QTimer.singleShot(100, self.close)
+            return
+        if self.integration.dialog:
+            self.integration.dialog.close()
         self.center_timer.stop()
         self.track_timer.stop()
         self.q_datetime.timer.stop()

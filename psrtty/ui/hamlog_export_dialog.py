@@ -10,6 +10,7 @@ class HamlogExportDialog(ADIFExportDialog):
     def __init__(self, adif, store, parent=None):
         super().__init__(adif, store, parent)
         self.setWindowTitle(tr('HAMLOG-CSV出力'))
+        self.profile.hide(); self.profile_note.hide()
         for label in self.pages.widget(2).findChildren(QLabel):
             if 'ADIF' in label.text():
                 label.setText(tr('CSVに含める交信にチェックを入れてください。元のログは変更しません。'))

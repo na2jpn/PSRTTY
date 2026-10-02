@@ -1,17 +1,18 @@
-# PSRTTY Ver1.06 正本ソース
+# PSRTTY Ver1.07 正本ソース — 2026-10-03
 
-1.06の機能・修正を統合した全ソースです。このZIPだけで構成でき、過去の差分を適用する必要はありません。
+1.06正本に1.07とWindowsでのテスト文字コード修正・ウィンドウの版表示修正を統合した正本です。このZIPだけで構成でき、過去の差分の適用は不要です。
 
 Windowsでのビルド:
 
 ```powershell
-python -m pip install -r requirements.txt
-python -m unittest discover -v
 ./build-windows.ps1
 ```
 
-出力は `release/PSRTTY_1.06.zip` です。この全ソースZIPをアプリ内の更新画面には指定しないでください。Windows EXEはこの環境ではビルドしていません。
+Pythonと必要なWindows開発環境を用意してください。スクリプトが依存パッケージのインストール、テスト、PyInstallerによるビルドと配布ZIP作成を行います。出力は `release/PSRTTY_1.07.zip` です。この全ソースZIPをアプリ内更新画面に指定しないでください。
 
-既存の設定・Profile・マクロ・ログを維持する設計です。Languageの変更は再起動後に反映します。初期設定ガイド、更新履歴、マクロ編集、設定なども日英に対応しています。
+- HAMLOG連携は初期OFF。連携メニューで転送と保存方法を選びます。
+- zLog連携は選択ADIFの出力・取り込みです。対応版と交換番号の確認方法は初期設定ガイドに記載しています。
+- プリンター処理は1.06正本のままです。
+- 既存の設定・Profile・マクロ・ログを維持します。Languageの変更は再起動後に反映します。
 
-変更内容は `UPDATE_HISTORY.txt` と `VERSION_106.md`、今回の確認は `VALIDATION_CANONICAL_106.md` を参照してください。開発途中の記録は検証資料として保持しています。
+`VERSION_107.md` に変更点、`VALIDATION_CANONICAL_107.md` に再正本の確認結果、`VALIDATION_107.md` に初回実装の確認結果と未確認範囲を記載しています。旧版の開発記録は参考資料として保持しています。

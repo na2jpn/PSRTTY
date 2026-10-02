@@ -29,8 +29,9 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.06",
+    "version": "1.07",
     "schema_version": 1,
+    "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
     "station": {"qth": "", "jcc_jcg": "", "text": ""},
@@ -189,6 +190,9 @@ class ConfigStore:
 
         self._load_profiles(profile_records)
 
+        hamlog = self.data.get('hamlog')
+        if not isinstance(hamlog, dict): hamlog = {}
+        self.data['hamlog'] = {key: hamlog.get(key) is True for key in ('enabled', 'auto_save')}
         self.data['printer'] = normalize_settings(self.data.get('printer'))
         ui = self.data['ui']
         try: ui['decode_ignore_chars'] = max(0, min(10, int(ui.get('decode_ignore_chars', 0))))

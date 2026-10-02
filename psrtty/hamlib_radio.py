@@ -28,6 +28,10 @@ HAMLIB_MODELS = {
     'TS-890S': (2041, 'Kenwood TS-890S'),
     'TS-990S': (2039, 'Kenwood TS-990S'),
 }
+class LevelValue(ctypes.Union):
+    _fields_ = [('i', ctypes.c_int), ('f', ctypes.c_float), ('s', ctypes.c_char_p)]
+
+
 VFO = 1 << 29  # RIG_VFO_CURR in Hamlib 4.7
 
 
@@ -114,6 +118,9 @@ def load_library(path=None):
     for name,(restype,argtypes) in signatures.items():
         function=getattr(lib,name);function.restype=restype;function.argtypes=argtypes
     for name, (restype, argtypes) in {
+        'rig_parse_level': (ctypes.c_uint64, [ctypes.c_char_p]),
+        'rig_get_level': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.POINTER(LevelValue)]),
+        'rig_set_level': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, LevelValue]),
         'rig_parse_func': (ctypes.c_uint64, [ctypes.c_char_p]),
         'rig_get_func': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.POINTER(ctypes.c_int)]),
         'rig_set_func': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.c_int]),
@@ -251,7 +258,7 @@ class HamlibController(CIVController):
 
     def read_feature(self, name):
         with self._lock:
-            if not self._control_ready() or self.model not in ('FT-991 / FT-991A', 'FTX-1') or name not in ('NB', 'NR'):
+            if not self._control_ready() or name not in ('NB', 'NR'):
                 return None
             try:
                 flag = self.lib.rig_parse_func(name.encode('ascii'))
@@ -274,19 +281,44 @@ class HamlibController(CIVController):
 
     def read_filter(self):
         with self._lock:
-            if not self._control_ready() or self.model not in ('FT-991 / FT-991A', 'FTX-1'):
+            if not self._control_ready() or self.model in ('TS-890S', 'TS-990S'):
                 return None
             mode = ctypes.c_uint64(); width = ctypes.c_long()
             if self.lib.rig_get_mode(self.handle, VFO, ctypes.byref(mode), ctypes.byref(width)) != 0 or width.value <= 0:
                 return None
             data_modes = [self.lib.rig_parse_mode(m) for m in (b'PKTLSB', b'PKTUSB', b'RTTY', b'RTTYR')]
             ssb_modes = [self.lib.rig_parse_mode(m) for m in (b'LSB', b'USB')]
+            if self.model == 'TS-590SG':
+                if mode.value not in data_modes[:2] + ssb_modes:
+                    return None
+                # set_mode changes SH but get_mode returns SH-SL inconsistently.
+                # Read both supported cutoff levels; preserve SL when setting SH.
+                try:
+                    high_flag = self.lib.rig_parse_level(b'SLOPE_HIGH')
+                    low_flag = self.lib.rig_parse_level(b'SLOPE_LOW')
+                    high = LevelValue(); low = LevelValue()
+                    if (not high_flag or not low_flag
+                        or self.lib.rig_get_level(self.handle, VFO, high_flag, ctypes.byref(high)) != 0
+                        or self.lib.rig_get_level(self.handle, VFO, low_flag, ctypes.byref(low)) != 0
+                        or high.i < 1000 or low.i < 0 or low.i >= high.i):
+                        return None
+                except (AttributeError, OSError):
+                    return None
+                highs = [1000,1200,1400,1600,1800,2000,2200,2400,2600,2800,3000,3400,4000,5000]
+                return dict(kind='HAMLIB_SLOPE', mode=mode.value, value=high.i-low.i, low=low.i,
+                            options=[(v-low.i, f'{v-low.i} Hz') for v in highs if v > low.i], narrow=None)
             if mode.value in data_modes:
-                widths = ([50,100,150,200,250,300,350,400,450,500,800,1200,1400,1700,2000,2400,3000]
-                          if self.model == 'FT-991 / FT-991A' else [250,500,1200,1800,2400])
+                widths = [50,100,150,200,250,300,350,400,450,500,600,800,1200,1400,1700,2000,2400,3000,3200,3500,4000]
+                if self.model in ('FT-991 / FT-991A', 'FTDX3000'):
+                    widths = [v for v in widths if v != 600 and v <= (2400 if self.model == 'FTDX3000' else 3000)]
             elif mode.value in ssb_modes:
-                widths = ([600,850,1100,1350,1500,1650,1950,2100,2200,2300,2400,2500,2600,2700,2800,2900,3000,3200] if self.model == 'FT-991 / FT-991A'
-                          else [1200,1400,1600,1800,2000,2200,2400,2600,2800,3000])
+                if self.model in ('FT-991 / FT-991A', 'FTDX3000'):
+                    widths = [200,400,600,850,1100,1350,1500,1650,1800,1950,2100,2200,2300,2400,2500,2600,2700,2800,2900,3000,3200]
+                    if self.model == 'FTDX3000': widths += [3400,3600,3800,4000]
+                else:
+                    widths = [300,400,600,850,1100,1200,1500,1650,1800,1950,2100,2200,2300,2400,2500,2600,2700,2800,2900,3000,3200,3500,4000]
+                    if self.model == 'FTX-1':
+                        widths = [v for v in widths if v not in (2200,2300)] + [2250,2450]
             else:
                 return None
             widths = sorted(set(widths + [width.value]))
@@ -300,7 +332,13 @@ class HamlibController(CIVController):
             current = self.read_filter()
             if not current or current['mode'] != expected.get('mode') or value not in dict(current['options']):
                 return False
-            if self.lib.rig_set_mode(self.handle, VFO, current['mode'], value) != 0:
+            if current['kind'] == 'HAMLIB_SLOPE':
+                if current['low'] != expected.get('low'):
+                    return False
+                level = self.lib.rig_parse_level(b'SLOPE_HIGH')
+                if self.lib.rig_set_level(self.handle, VFO, level, LevelValue(i=value + current['low'])) != 0:
+                    return False
+            elif self.lib.rig_set_mode(self.handle, VFO, current['mode'], value) != 0:
                 return False
             actual = self.read_filter()
             return bool(actual and actual['mode'] == current['mode'] and actual['value'] == value)

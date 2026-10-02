@@ -10,7 +10,7 @@ from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files
 
 
 def package_release(root: Path):
-    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
+    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06', '1.07') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
         # The already-distributed 1.01 EXE expects this exact root path.
         # The new EXE removes this identical copy on first launch.
         shutil.copy2(root / 'docs' / 'DISTRIBUTION_TERMS.txt', root / 'DISTRIBUTION_TERMS.txt')
@@ -40,6 +40,10 @@ def build_distribution(executable: Path, output: Path):
             (root / source).mkdir(parents=True)
             for item in source.iterdir():
                 if item.is_file(): shutil.copy2(item, root / source / item.name)
+        for pattern in ('INTEGRATION_107_*.html', 'ZLOG_SAMPLE*.adi', 'ZLOG_SAMPLES_README.txt'):
+            for item in Path('docs').glob(pattern):
+                (root / 'docs').mkdir(exist_ok=True)
+                shutil.copy2(item, root / 'docs' / item.name)
         archive = package_release(root)
         target = output / archive.name
         fd, temp_name = tempfile.mkstemp(prefix='.psrtty-', suffix='.tmp', dir=output)

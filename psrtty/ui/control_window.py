@@ -154,7 +154,7 @@ class ControlWindow(QDialog):
                 b=QPushButton(band[0]); b.setCheckable(True)
                 b.clicked.connect(lambda checked=False,v=band:self.request_frequency(self.band_memory.get((self.band_profile,v[0]),v[3])))
                 self.band_grid.addWidget(b,i//6,i%6); self.band_buttons.append((band,b))
-        yaesu=model in ('FT-991 / FT-991A','FTX-1')
+        yaesu=model in HAMLIB_MODELS and model.startswith('FT')
         self.notch.setItemText(0,'DNF' if yaesu else tr('自動'))
         self.notch.setItemText(1,'NOTCH' if yaesu else tr('手動'))
         ready=self.ready()
@@ -191,7 +191,7 @@ class ControlWindow(QDialog):
         if not ready and not self.main.antenna_tuning: self.note.setText(tr('接続後、受信中に操作できます。送信中・Auto CQ中は停止します。'))
         self.observe_frequency(self.main.current_freq_hz)
     def refresh_filter(self, ready):
-        yaesu=self.band_profile in ('FT-991 / FT-991A','FTX-1')
+        yaesu=self.band_profile in HAMLIB_MODELS
         state=self.states.get('FILTER') if ready else None
         if not isinstance(state,dict): state=None
         enabled=ready and bool(state)
@@ -199,6 +199,7 @@ class ControlWindow(QDialog):
             button.setVisible(not yaesu); button.setEnabled(enabled)
             button.setChecked(bool(state and state.get('value')==i))
         for widget in (self.width_label,self.width,self.narrow): widget.setVisible(yaesu)
+        self.width_label.setText(tr('帯域幅'))
         options=state.get('options',[]) if state else []
         current=[(self.width.itemData(i),self.width.itemText(i)) for i in range(self.width.count())]
         if current!=options:
@@ -209,6 +210,9 @@ class ControlWindow(QDialog):
         value=state.get('narrow') if state else None
         self.narrow.setText('NARROW '+('ON' if value is True else 'OFF' if value is False else '—'))
         self.narrow.setChecked(value is True); self.narrow.setEnabled(enabled and value is not None)
+        if self.band_profile in ('TS-890S', 'TS-990S'):
+            self.filter_box.setToolTip(tr('Hamlib 4.7.2はこの機種の受信幅の取得・変更に非対応です。無線機本体で操作してください。'))
+            return
         self.filter_box.setToolTip(tr('無線機側の受信フィルター。状態未取得・非対応時は操作できません。'))
 
     def request_tuner(self):

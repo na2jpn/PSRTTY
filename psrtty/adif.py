@@ -120,7 +120,7 @@ def adif_record(qso: QSORecord) -> str:
     return " ".join(parts) + " <EOR>\r\n"
 
 
-def export_adif(path: Path, records: list[QSORecord], protected=()) -> None:
+def export_adif(path: Path, records: list[QSORecord], protected=(), profile='standard') -> None:
     """Write a selected set without modifying its source ADIF or existing files on failure."""
     path = Path(path)
     if path.suffix.lower() not in ('.adi', '.adif'):
@@ -129,7 +129,8 @@ def export_adif(path: Path, records: list[QSORecord], protected=()) -> None:
         raise ValueError('元のADIFログには上書きできません。別の保存先を選んでください。')
     if not records:
         raise ValueError('出力するQSOを1件以上選択してください。')
-    content = adif_header() + ''.join(adif_record(qso) for qso in records)
+    from .zlog_export import extra_fields
+    content = adif_header() + ''.join(adif_record(qso).replace('<EOR>', extra_fields(qso, profile) + '<EOR>') for qso in records)
     temp = None
     try:
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix='.psrtty-adif-', suffix='.tmp', delete=False) as stream:
