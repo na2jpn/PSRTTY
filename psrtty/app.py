@@ -13,6 +13,8 @@ from .ui.main_window import MainWindow
 
 
 def run() -> int:
+    from .app_identity import configure_app_identity, application_icon
+    configure_app_identity()
     app = QApplication(sys.argv)
     log_dir = app_root() / "logdata"
     try:
@@ -36,7 +38,7 @@ def run() -> int:
         return 1
     app.setApplicationName("PSRTTY")
     app.setApplicationVersion(__version__)
-    app.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
+    app.setWindowIcon(application_icon())
     if getattr(sys, "frozen", False):
         from .updater import retire_legacy_manifest, retire_compatibility_terms
         try:

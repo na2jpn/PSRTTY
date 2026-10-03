@@ -8,6 +8,7 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[('assets/psrtty.png', 'assets'),
+           ('assets/psrtty.ico', 'assets'),
            ('assets/amateur_radio_100.png', 'assets'),
            ('psrtty/data/contest_prefixes.json','psrtty/data'),
            ('psrtty/data/contest_prefixes_LICENSE.txt','psrtty/data'),

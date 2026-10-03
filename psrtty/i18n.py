@@ -169,6 +169,9 @@ TEXT.update(FIX4_TEXT)
 from .i18n_107 import TEXT as TEXT_107
 TEXT.update(TEXT_107)
 
+from .i18n_108 import TEXT as TEXT_108
+TEXT.update(TEXT_108)
+
 def configure(language):
     global LANGUAGE
     LANGUAGE = language if language in ('ja', 'en') else 'ja'

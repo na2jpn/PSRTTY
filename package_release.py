@@ -10,7 +10,7 @@ from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files
 
 
 def package_release(root: Path):
-    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06', '1.07') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
+    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06', '1.07', '1.08') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
         # The already-distributed 1.01 EXE expects this exact root path.
         # The new EXE removes this identical copy on first launch.
         shutil.copy2(root / 'docs' / 'DISTRIBUTION_TERMS.txt', root / 'DISTRIBUTION_TERMS.txt')

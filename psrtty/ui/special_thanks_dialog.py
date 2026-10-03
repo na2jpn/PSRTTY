@@ -2,12 +2,12 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox, QScrollArea, QWidget, QApplication
 from ..i18n import tr
 
-CALLSIGNS = ('JG1RFE','JH1DUK','JJ1JPE','JN1ATL','JG2AJK','JQ7FIU','7K2COL','7M2FTR')
+CALLSIGNS = ('JG1RFE','JH1DUK','JH1PGF','JJ1JPE','JN1ATL','JG2AJK','JQ7FIU','7K2COL','7M2FTR')
 
 class SpecialThanksDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(tr('スペシャルサンクス'))
+        self.setWindowTitle(tr('サンクス'))
         area = QApplication.primaryScreen().availableGeometry()
         self.resize(min(600, area.width()), min(600, area.height()))
         layout=QVBoxLayout(self)
@@ -24,7 +24,12 @@ class SpecialThanksDialog(QDialog):
         body.addWidget(self.names)
         body.addSpacing(20)
         self.closing_message = QLabel(tr('MMTTY、Turbo HAMLOG、zLogをはじめ、多くの関連するソフトウェアを開発された先駆者の方々に感謝します。'))
-        self.closing_message.setWordWrap(True); body.addWidget(self.closing_message); body.addStretch()
+        self.closing_message.setWordWrap(True); body.addWidget(self.closing_message)
+        body.addSpacing(24)
+        self.media_title = QLabel(tr('メディアサンクス'))
+        self.media_title.setFont(font); body.addWidget(self.media_title)
+        self.media_names = QLabel('hamlife.jp'); body.addWidget(self.media_names)
+        body.addStretch()
         buttons=QDialogButtonBox(QDialogButtonBox.Close)
         buttons.button(QDialogButtonBox.Close).setText(tr('閉じる'))
         buttons.rejected.connect(self.reject);layout.addWidget(buttons)

@@ -181,6 +181,7 @@ class CIVController:
         """Read selected VFO mode, DATA flag and filter as one CI-V tuple."""
         with self._lock:
             if not self._control_ready(): return None
+            if self.model == 'IC-7760': return self._read_7760_filter()
             # These models do not share the verified 26 00 mode/DATA tuple.
             if self.model in ("IC-7200", "IC-7410", "IC-7600", "IC-9100"): return None
             try:
@@ -199,12 +200,31 @@ class CIVController:
                 current=self.read_filter()
                 if not current or not expected or current['mode']!=expected['mode']: return False
                 mode,data=current['mode']
-                self.ser.reset_input_buffer(); self.ser.write(self._frame(0x26,0,mode,data,value))
-                raw=self._read_response(0x26, timeout=.3)
+                if self.model == 'IC-7760':
+                    payload = (0x1A,0x06,data,value) if data else (0x06,mode,value)
+                else: payload = (0x26,0,mode,data,value)
+                self.ser.reset_input_buffer(); self.ser.write(self._frame(*payload))
+                raw=self._read_response(timeout=.3)
                 if len(raw)<6 or raw[4]!=0xFB: return False
                 actual=self.read_filter()
                 return bool(actual and actual['mode']==current['mode'] and actual['value']==value)
             except Exception: return False
+
+    def _read_7760_filter(self):
+        # 26 00 addresses MAIN, not the selected side on this dual receiver.
+        # Use selected-side 04 and 1A 06 consistently with frequency/features.
+        try:
+            self.ser.reset_input_buffer(); self.ser.write(self._frame(0x04))
+            mode = self._read_response(0x04, timeout=.3)
+            self.ser.reset_input_buffer(); self.ser.write(self._frame(0x1A,0x06))
+            data = self._read_response(0x1A, timeout=.3)
+            if len(mode) != 8 or mode[4] != 0x04 or mode[6] not in (1,2,3): return None
+            if len(data) != 9 or data[4:6] != b'\x1a\x06' or data[6] not in (0,1,2,3): return None
+            value = data[7] if data[6] else mode[6]
+            if value not in (1,2,3): return None
+            return dict(kind='ICOM', mode=(mode[5],data[6]), value=value,
+                        options=[(i,f'FIL{i}') for i in (1,2,3)], narrow=None)
+        except Exception: return None
 
     FEATURES = {"NB": 0x22, "NR": 0x40, "AN": 0x41, "MN": 0x48}
 
@@ -380,7 +400,7 @@ class CIVController:
             if mode.endswith('-D'):return self.set_data_mode(mode)
             try:
                 sub=0x04 if self.model=='IC-7200' else 0x06
-                for payload in ((0x1A,sub,0x00,0x01),(0x06,0x00 if mode=='LSB' else 0x01)):
+                for payload in ((0x1A,sub,0x00,0x00 if self.model == 'IC-7760' else 0x01),(0x06,0x00 if mode=='LSB' else 0x01)):
                     self.ser.reset_input_buffer();self.ser.write(self._frame(*payload))
                     raw=self._read_response(timeout=0.5)
                     if len(raw)<6 or raw[4]!=0xFB:return False

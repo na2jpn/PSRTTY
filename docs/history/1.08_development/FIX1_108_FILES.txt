@@ -1,0 +1,15 @@
+CHANGELOG.md
+FIX1_108_FILES.txt
+FIX1_108_README.txt
+SHA256SUMS.txt
+START_HERE.md
+VERSION_108.md
+psrtty/i18n_108.py
+psrtty/secondary_audio.py
+psrtty/ui/guide.py
+psrtty/ui/guide_en.py
+psrtty/ui/secondary_audio_dialog.py
+psrtty/ui/settings_dialog.py
+psrtty/update_history.py
+psrtty/update_history_en.py
+tests/test_v108_fix1.py

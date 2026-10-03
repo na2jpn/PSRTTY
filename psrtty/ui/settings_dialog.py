@@ -81,6 +81,10 @@ class SettingsDialog(QDialog):
         self.delete_profile_button.clicked.connect(self._delete_profile)
         actions.addWidget(self.delete_profile_button)
         actions.addStretch(1)
+        self.secondary_button = QPushButton(tr('第二AudioOUTの設定'))
+        self.secondary_button.clicked.connect(self._open_secondary_audio)
+        self.secondary_button.hide()
+        actions.addWidget(self.secondary_button)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Save).setText(tr("保存"))
         buttons.button(QDialogButtonBox.Cancel).setText(tr("キャンセル"))
@@ -207,6 +211,8 @@ class SettingsDialog(QDialog):
             bar.setTabTextColor(index, QColor('#c6670b' if index == self.profile_tabs.currentIndex() else '#604b37'))
 
     def _update_inner_tab_colors(self, *_):
+        if hasattr(self, 'secondary_button'):
+            self.secondary_button.setVisible(self.tabs.tabText(self.tabs.currentIndex()) == 'Audio OUT')
         bar = self.tabs.tabBar()
         for index in range(self.tabs.count()):
             bar.setTabTextColor(index, QColor('#c6670b' if index == self.tabs.currentIndex() else '#604b37'))
@@ -447,7 +453,8 @@ class SettingsDialog(QDialog):
         row2 = QHBoxLayout(); row2.addWidget(self.tx_gain, 1); row2.addWidget(self.tx_label)
         form.addRow(tr("送信レベル"), row2)
         n4 = QLabel(tr('試験送信は実際にPTTをONにしてRTTY音を送出します。低いレベルから始め、無線機のALCが動作し始める手前に合わせてください。無線機が運用接続中ならそのまま使用できます。未接続なら無線機タブで接続テストを成功させてください。'))
-        n4.setWordWrap(True); n4.setObjectName("helpText"); form.addRow("", n4)
+        n4.setWordWrap(True); n4.setMinimumHeight(n4.fontMetrics().lineSpacing() * 6)
+        n4.setObjectName("helpText"); form.addRow("", n4)
         self.alc_meter = QProgressBar(); self.alc_meter.setRange(0,120); self.alc_meter.setValue(0)
         self.alc_meter.setFormat(tr('ALC：未取得'))
         form.addRow(tr('無線機ALC'), self.alc_meter)
@@ -468,6 +475,75 @@ class SettingsDialog(QDialog):
         note = QLabel(self.audio_error or tr('有効な音声デバイスを表示します。USB機器を追加した場合はPSRTTYを再起動してください。\n旧版で番号指定した機器は選び直してください。「自動」は各OSの既定の機器を使用します。'))
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
         self.tabs.addTab(tab, 'Audio OUT')
+
+    def _open_secondary_audio(self):
+        from .secondary_audio_dialog import SecondaryAudioDialog
+        if not self._confirm_primary_audio_save(): return
+        try:
+            primary = self._save_primary_before_secondary()
+            dialog = SecondaryAudioDialog(self.working['audio'].get('secondary'),
+                self._save_secondary_audio, self, primary_device=primary)
+        except Exception as exc:
+            QMessageBox.warning(self, tr('第二AudioOUTの設定'), str(exc))
+            return
+        dialog.exec()
+
+    def _confirm_primary_audio_save(self):
+        box = QMessageBox(self)
+        box.setWindowTitle(tr('第二AudioOUTの設定'))
+        box.setText(tr('第二AudioOUT設定を開くには、主AudioOUTの出力先と音量を保存する必要があります。保存して開きますか？'))
+        box.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
+        box.button(QMessageBox.Save).setText(tr('保存して開く'))
+        box.button(QMessageBox.Cancel).setText(tr('キャンセル'))
+        box.setDefaultButton(QMessageBox.Cancel)
+        return box.exec() == QMessageBox.Save
+
+    def _save_primary_before_secondary(self):
+        parent = self.parent()
+        if self.tx_testing or (parent and parent.audio._tx_active):
+            raise ValueError(tr('送信が止まってから保存してください。'))
+        if [item['name'] for item in self.working_profiles] != [item['name'] for item in self.store.data['profiles']]:
+            raise ValueError(tr('先に設定画面の［保存］でProfileの変更を保存し、設定画面を開き直してください。'))
+        values = dict(output_device=deepcopy(self.audio_out.currentData() or 'AUTO'), tx_gain=self.tx_gain.value()/100)
+        old = deepcopy(self.store.data)
+        try:
+            self.store.data['profiles'][self.profile_index]['audio'].update(deepcopy(values))
+            if self.profile_index == self.store.data['active_profile']:
+                self.store.data['audio'].update(deepcopy(values))
+            self.store.save()
+        except Exception:
+            self.store.data = old
+            raise
+        self.working['audio'].update(deepcopy(values))
+        self.working_profiles[self.profile_index]['audio'].update(deepcopy(values))
+        if parent and self.profile_index == self.store.data['active_profile']:
+            parent.audio.set_tx_gain(values['tx_gain'])
+        return values['output_device']
+
+    def _save_secondary_audio(self, values):
+        from ..secondary_audio import normalize_settings
+        parent = self.parent()
+        if self.tx_testing or (parent and parent.audio._tx_active):
+            raise ValueError(tr('送信が止まってから保存してください。'))
+        if [item['name'] for item in self.working_profiles] != [item['name'] for item in self.store.data['profiles']]:
+            raise ValueError(tr('先に設定画面の［保存］でProfileの変更を保存し、設定画面を開き直してください。'))
+        values = normalize_settings(values)
+        if values['enabled'] and values['device'] == self.audio_out.currentData():
+            raise ValueError(tr('第二AudioOUTには主AudioOUTと別の出力先を選択してください。'))
+        old = deepcopy(self.store.data)
+        try:
+            self.store.data['profiles'][self.profile_index]['audio']['secondary'] = deepcopy(values)
+            if self.profile_index == self.store.data['active_profile']:
+                self.store.data['audio']['secondary'] = deepcopy(values)
+            self.store.save()
+        except Exception:
+            self.store.data = old
+            raise
+        self.working['audio']['secondary'] = deepcopy(values)
+        self.working_profiles[self.profile_index]['audio']['secondary'] = deepcopy(values)
+        if parent and self.profile_index == self.store.data['active_profile']:
+            parent.audio.configure_secondary(values)
+            parent.audio.secondary_notice = ''
 
     def _build_advanced_tab(self):
         tab = QWidget()

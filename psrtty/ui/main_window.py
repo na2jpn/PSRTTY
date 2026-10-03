@@ -141,7 +141,8 @@ class MainWindow(QMainWindow):
         self._apply_audio_config()
 
         self.setWindowTitle(f"PSRTTY {__version__}")
-        self.setWindowIcon(QIcon(str(resource_path("assets/psrtty.png"))))
+        from ..app_identity import application_icon
+        self.setWindowIcon(application_icon())
         self.resize(1280, 800)
         self.setMinimumSize(320, 240)
         self._build_menu()
@@ -153,6 +154,12 @@ class MainWindow(QMainWindow):
         self.statusBar().addPermanentWidget(self.printer_status)
         self.printer_timer=QTimer(self);self.printer_timer.setInterval(250)
         self.printer_timer.timeout.connect(self._refresh_printer_status);self.printer_timer.start()
+        self.secondary_status = QLabel('')
+        self.secondary_status.setWordWrap(True)
+        self.secondary_status.setMaximumWidth(360)
+        self.secondary_status.hide()
+        self.statusBar().addPermanentWidget(self.secondary_status)
+        self.printer_timer.timeout.connect(self._refresh_secondary_status)
         self._refresh_printer_status()
         self._refresh_latest_qsos()
         self._set_radio_controls()
@@ -527,12 +534,18 @@ class MainWindow(QMainWindow):
         self.spectrum.set_width(d["advanced"]["spectrum_width_hz"]); self._update_tone_ui(); self._refresh_macros()
         self.audio.set_rx_gain(d["audio"]["rx_gain"])
 
+    def _refresh_secondary_status(self):
+        notice = self.audio.secondary_notice
+        self.secondary_status.setText(notice)
+        self.secondary_status.setVisible(bool(notice))
+
     def _apply_audio_config(self):
         a=self.store.data["advanced"]
         rx=self.store.data['ui'].get('rx_tones',[a['mark_hz'],a['space_hz']])
         self.audio.configure_decoder(a['rtty_baud'],rx[0],rx[1],a['invert'])
         self.audio.set_rx_gain(self.store.data["audio"]["rx_gain"])
         self.audio.set_tx_gain(self.store.data["audio"]["tx_gain"])
+        self.audio.configure_secondary(self.store.data['audio'].get('secondary'))
 
     def _refresh_profile_buttons(self, selected=None):
         while self.profile_buttons.count():
@@ -846,7 +859,7 @@ class MainWindow(QMainWindow):
         self.active_tx_id = token
         self.rx_idle_timer.stop(); self.rx_buffer = ''
         try:
-            ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg))
+            ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg), allow_secondary_only=offline and self.offline_tx.isChecked())
         except Exception as exc:
             ok, msg = False, f"{tr('送信開始失敗: ')}{exc}" 
         if ok:

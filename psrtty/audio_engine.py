@@ -46,6 +46,8 @@ class AudioEngine:
         self._tx_active = False
         self._tx_cancel = threading.Event()
         self._tx_thread = None
+        self.secondary_settings = {}
+        self.secondary_notice = ''
 
     @staticmethod
     def is_available() -> bool:
@@ -79,6 +81,10 @@ class AudioEngine:
     def set_tx_gain(self, gain: float) -> None:
         # The output worker samples this value for each block, including test TX.
         self.tx_gain = max(0.01, min(0.90, float(gain)))
+
+    def configure_secondary(self, settings):
+        from .secondary_audio import normalize_settings
+        self.secondary_settings = normalize_settings(settings)
 
     def start_input(self, device: str | int | None = None) -> tuple[bool, str]:
         if device == 'UNSET':
@@ -175,6 +181,7 @@ class AudioEngine:
         ptt_on: Callable[[], None] | None = None,
         ptt_off: Callable[[], None] | None = None,
         on_finished: Callable[[bool, str], None] | None = None,
+        allow_secondary_only: bool = False,
     ) -> tuple[bool, str]:
         if sd is None:
             return False, "sounddeviceがインストールされていません"
@@ -190,16 +197,23 @@ class AudioEngine:
             invert=invert,
             amplitude=1.0,
         )
+        if allow_secondary_only and self.secondary_settings.get('enabled'):
+            from .offline_audio import start_offline_dual
+            return start_offline_dual(self, sd, audio, output_device, on_finished)
         try:
             chosen = resolve_device(sd, output_device, 'output')
         except Exception as exc:
             return False, str(exc)
 
+        from copy import deepcopy
+        secondary_settings = deepcopy(self.secondary_settings)
+        self.secondary_notice = ''
         self._tx_active = True
         self._tx_cancel.clear()
 
         def worker():  # hardware calls are exercised with fake sounddevice in tests
             output = None
+            secondary = None
             success = False
             message = "送信中止"
             try:
@@ -215,6 +229,12 @@ class AudioEngine:
                     channels=1, dtype='float32', blocksize=960, latency='low',
                     **({'extra_settings': sd.WasapiSettings(auto_convert=True)} if sys.platform == 'win32' else {}))
                 output.start()
+                if secondary_settings.get('enabled'):
+                    from .secondary_audio import SecondaryOutput
+                    secondary = SecondaryOutput(sd, audio, secondary_settings, chosen,
+                        self.sample_rate,
+                        ({'extra_settings': sd.WasapiSettings(auto_convert=True)} if sys.platform == 'win32' else {}),
+                        lambda message: setattr(self, 'secondary_notice', message))
                 for offset in range(0, len(audio), 960):
                     if self._tx_cancel.is_set():
                         return
@@ -247,6 +267,10 @@ class AudioEngine:
                         except Exception as exc:
                             success = False
                             message = f'音声終了失敗: {exc}'
+                    if secondary is not None:
+                        if success:
+                            secondary.done.wait(0.15)
+                        secondary.close(drain=success and secondary.done.is_set())
                     self._tx_active = False
                     if on_finished:
                         on_finished(success, message)

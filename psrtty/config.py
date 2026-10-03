@@ -16,6 +16,7 @@ RIG_MODELS: dict[str, int] = {
     "IC-7100": 0x88,
     "IC-9700": 0xA2,
     "IC-7610": 0x98,
+    "IC-7760": 0xB2,
     "IC-7851": 0x8E,
     "IC-7200": 0x76,
     "IC-7410": 0x80,
@@ -29,7 +30,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.07",
+    "version": "1.08",
     "schema_version": 1,
     "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
@@ -57,6 +58,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "output_device": "AUTO",
         "rx_gain": 0.5,
         "tx_gain": 0.35,
+        "secondary": {"enabled": False, "device": "UNSET", "gain": 1.0},
         "sample_rate": 48000,
     },
     "advanced": {
@@ -189,6 +191,10 @@ class ConfigStore:
                 self.macros = deepcopy(DEFAULT_MACROS)
 
         self._load_profiles(profile_records)
+        from .secondary_audio import normalize_settings as normalize_secondary
+        for profile in self.data['profiles']:
+            profile['audio']['secondary'] = normalize_secondary(profile['audio'].get('secondary'))
+        self.data['audio']['secondary'] = deepcopy(self.data['profiles'][self.data['active_profile']]['audio']['secondary'])
 
         hamlog = self.data.get('hamlog')
         if not isinstance(hamlog, dict): hamlog = {}

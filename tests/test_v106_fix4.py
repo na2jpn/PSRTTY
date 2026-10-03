@@ -75,7 +75,7 @@ class Fix4Tests(unittest.TestCase):
             configure(language);about=AboutDialog(self.window)
             about.show();about.thanks_button.click();self.pump(.01)
             d=about.thanks_window
-            self.assertTrue(d.isVisible());self.assertEqual(d.windowTitle(),tr('スペシャルサンクス'))
+            self.assertTrue(d.isVisible());self.assertEqual(d.windowTitle(),tr('サンクス'))
             names=d.names.text().splitlines()
             self.assertEqual(names[0],'JS1YCP '+tr('秋葉原無線部'))
             self.assertEqual(names[1],'JA1YML '+tr('草加アマチュア無線クラブ'))

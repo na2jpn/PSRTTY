@@ -81,7 +81,8 @@ class AboutDialog(QDialog):
         self.resize(650, 650)
         root = QVBoxLayout(self)
         icon = QLabel(); icon.setAlignment(Qt.AlignCenter)
-        pix = QPixmap(str(resource_path("assets/psrtty.png")))
+        from ..app_identity import application_icon
+        pix = application_icon().pixmap(96, 96)
         if not pix.isNull(): icon.setPixmap(pix.scaled(96, 96, Qt.KeepAspectRatio, Qt.SmoothTransformation))
         root.addWidget(icon)
         scroll = QScrollArea(); scroll.setWidgetResizable(True)
@@ -100,7 +101,7 @@ class AboutDialog(QDialog):
         self.support_text.setWordWrap(True)
         row.addWidget(self.support_text, 1, Qt.AlignTop); lay.addLayout(row); lay.addStretch(1)
         scroll.setWidget(body); root.addWidget(scroll, 1)
-        self.thanks_button=QPushButton(tr('スペシャルサンクス'))
+        self.thanks_button=QPushButton(tr('サンクス'))
         self.thanks_button.clicked.connect(self._show_thanks)
         buttons=QHBoxLayout()
         buttons.addWidget(self.thanks_button);buttons.addStretch(1)
