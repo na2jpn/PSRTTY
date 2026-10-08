@@ -1,13 +1,16 @@
-# PSRTTY Ver1.06 引き継ぎ
+# PSRTTY 1.09 引継ぎ
 
-唯一の基準はこのフルソースです。Ver1.05 VerFIX正本から実装しました。ソースは1.06、ビルドスクリプト・About・ADIF版情報も1.06です。Windows配布用ZIPはbuild-windows.ps1で作成します。
+基準: PSRTTY_1.08_FULL_SOURCE.zip。全変更統合済み。build-windows.ps1でWindowsビルド。
+詳細仕様: docs/VER109_JA.md / VER109_EN.md。版・日英更新履歴: 1.09 / 2026-10-08。
+既存ログはADIFLogを継続使用。直入力の実際に音声へ渡した文字は送信終了時にraw transcript・TXカードへ記録し、プリンターは従来どおり正常送信完了した全文のみ既存のスプール経由で印刷。
+Windows・実無線機・実音声デバイスによる確認は未実施。VALIDATION_CANONICAL_109.mdの検証範囲を参照。
 
-1.06対象：画面外復帰（タイトルバー・外枠込み）、Hamlib FT-991/FTX-1の受信幅・DNR・NB、保存式Language、表示設定の単一チェック、Aboutの罫線＋左ロゴ／右文章、HAMLOG-CSV、FreeBSD対応パッチ。
+5つの常用別ウィンドウはQWidget親なし。self.mainとMainWindowの参照で管理し、メイン終了時に明示して閉じます。クロススコープの位置保存もself.main経由です。
 
-HAMLOG CSVは15列、CP932、CRLF、ヘッダーなし、JST時刻末尾J。送信RST→受信RST。Remarks1=SENT/RCVD、Remarks2=選択式MYCALL。未記録の所在地・QSL・DXは推測せず空欄。期間→自局CALL→バンド→対象交信選択の既存操作を使用します。
 
-英語表示は主要メニュー・操作画面を対象とし、長文ガイド・更新履歴・配布条件は日本語原文を保持しています。実機試験とWindows EXEビルドは未実施です。FTX-1のNARROW操作は未対応状態で維持し、Hamlibの幅指定で制御します。
+RXゲージとAudio INの色・基準を統一しました。灰は表示なし、水色はLow、緑はGood（30～79%）、黄はHigh（80～89%）、赤はOver!（90%以上）を同系色でゲージ横に表示します。表示の細かな揺れと境界付近のちらつきを抑え、音声入力・デコード処理は変更しません。
+Main RX and Audio IN share five level colors and matching labels: gray shows no text, light blue Low, green Good (30–79%), yellow High (80–89%) and red Over! (90% or more). Display smoothing and band confirmation reduce flicker without changing audio input or decoding.
+検証: docs/VALIDATION_109_FIX3.md
 
-既存設定・マクロ・ログを配布物で上書きしない方針を維持します。FreeBSD提案パッチ原文をdocs/contributionsに保管しています。
-
-FIX1：MainWindowでトップレベルメニューを保持。test_v106は連続取得を分割し、GC後のメニュー有効性も検証。版番号は1.06。
+2026-10-08: 1.09の修正を統合した正本です。差分の追加適用は不要です。RXゲージの説明は初期設定ガイド「波形の高さと入力音量」にも掲載。正本化検証: docs/VALIDATION_109_CANONICAL.md。
+Canonical 1.09 source includes all corrections; do not apply earlier patches. See docs/VALIDATION_109_CANONICAL.md.

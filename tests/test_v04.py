@@ -64,7 +64,7 @@ class Radio04Tests(unittest.TestCase):
     def test_factory_uses_curated_hamlib_models(self):
         self.assertEqual(len(YAESU_MODELS), 2)
         self.assertTrue(all(x.endswith('（試験用）') for x in YAESU_MODELS.values()))
-        self.assertEqual(len(HAMLIB_MODELS),10)
+        self.assertEqual(len(HAMLIB_MODELS),13)
         self.assertIsInstance(create_controller(dict(model='FTX-1', ptt='CAT',com_port='COM7',cat_baud='38400')), HamlibController)
         with self.assertRaises(ValueError): create_controller(dict(model='その他Yaesu', ptt='CAT'))
         with self.assertRaises(ValueError): create_controller(dict(model='FTX-1', ptt='RTS'))

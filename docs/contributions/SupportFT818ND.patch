@@ -1,0 +1,96 @@
+diff --git a/docs/INTEGRATION_107_EN.html b/docs/INTEGRATION_107_EN.html
+index c537893..3319feb 100644
+--- a/docs/INTEGRATION_107_EN.html
++++ b/docs/INTEGRATION_107_EN.html
+@@ -7,4 +7,4 @@
+ <h3>zLog target: 3.0.4.0 (ZLOG3040)</h3><p>Integration → zLog Reiwa integration settings opens ADIF export. Selected QSOs are transferred by file, without live radio/log control. File → ADIF export opens the same export wizard.</p><ol><li>In zLog, select the matching contest, station CALL and time settings. ADIF times are UTC; zLog converts them according to its contest settings.</li><li>Select the export format, period, station CALL, bands and QSOs, then save.</li><li>Import the ADIF file in zLog and check count, time, band, mode, both RSTs, both exchanges and multipliers. Avoid importing the same file twice.</li></ol>
+ <table><tr><th>Format</th><th>Exchange mapping</th></tr><tr><td>Standard ADIF</td><td>STX_STRING/SRX_STRING and numeric STX/SRX, as before.</td></tr><tr><td>General zLog</td><td>Also retains original SENT/RCVD and station CALL in COMMENT.</td></tr><tr><td>JARL WW RTTY</td><td>Received age also goes into AGE. Enter one or two digits.</td></tr><tr><td>CQ WW RTTY</td><td>Received zone goes into CQZ and state/province into STATE, e.g. 05 MA. Zone must be 01–40.</td></tr></table>
+ <p><b>The target zLog ADIF importer does not include state/province in the CQ WW RTTY received exchange.</b>After import, use the original RCVD in the note to correct affected exchanges and multipliers. Numeric fields may lose leading zeroes in their display; the original text is retained in string fields and notes. Check contest configuration and exchanges before submitting a contest log.</p>
+-<h3>Radio controls</h3><p>NB and NR read/write are enabled through Hamlib for all listed Yaesu/Kenwood models, with state readback. Yaesu uses the DNR label. FT-991/FT-991A, FTX-1, FT-710, FTDX10, FTDX101D/MP and FTDX3000 offer mode-specific receive widths. TS-590SG DATA/SSB width is adjusted by changing high cut while preserving low cut.</p><p>Hamlib 4.7.2 does not implement receive bandwidth control for TS-890S/TS-990S; use the radio controls for width. NB/NR remain available. Controls are disabled during TX or when connection/state retrieval fails.</p>
+\ No newline at end of file
++<h3>Radio controls</h3><p>The Hamlib radio selection also includes Yaesu FT-817 (FT-817ND) and FT-818ND. NB and NR read/write are enabled through Hamlib for all listed Yaesu/Kenwood models, with state readback. Yaesu uses the DNR label. FT-991/FT-991A, FTX-1, FT-710, FTDX10, FTDX101D/MP and FTDX3000 offer mode-specific receive widths. TS-590SG DATA/SSB width is adjusted by changing high cut while preserving low cut.</p><p>Hamlib 4.7.2 does not implement receive bandwidth control for TS-890S/TS-990S; use the radio controls for width. NB/NR remain available. Controls are disabled during TX or when connection/state retrieval fails.</p>
+\ No newline at end of file
+diff --git a/docs/INTEGRATION_107_JA.html b/docs/INTEGRATION_107_JA.html
+index b70e5bd..bb9e9de 100644
+--- a/docs/INTEGRATION_107_JA.html
++++ b/docs/INTEGRATION_107_JA.html
+@@ -8,4 +8,4 @@
+ <ol><li>zLog側で対象コンテスト・運用自局CALL・時刻設定を合わせます。ADIFの日時はUTCです。zLogはコンテストの設定に従って表示時刻へ変換します。</li><li>出力形式を選び、期間・運用自局CALL・バンド・対象交信を絞って保存します。</li><li>zLogでADIFを読み込み、件数・日時・バンド・モード・送受信RST・送受信番号・マルチを確認します。同じファイルを繰り返し読み込まないでください。</li></ol>
+ <table><tr><th>形式</th><th>交換番号の扱い</th></tr><tr><td>標準ADIF</td><td>従来と同じ。STX_STRING／SRX_STRING、数値ならSTX／SRX。</td></tr><tr><td>zLog一般</td><td>標準項目に加え、元のSENT・RCVDと自局CALLを備考にも保持。</td></tr><tr><td>JARL WW RTTY</td><td>受信年齢をAGEにも出力。年齢は1～2桁で指定。</td></tr><tr><td>CQ WW RTTY</td><td>受信ZoneをCQZ、州・地域をSTATEへ出力。例：05 MA。Zoneは01～40。</td></tr></table>
+ <p><b>CQ WW RTTYの州・地域は、対象zLogのADIF読み込みでは受信番号に入りません。</b>備考の元のRCVDを見て、該当局の受信番号とマルチを取り込み後に修正してください。先頭ゼロも数値項目の表示では省略される場合がありますが、文字列項目と備考に元の番号を残します。出力だけで提出用ログが完成したとは扱わず、コンテストの設定と番号を確認してください。</p>
+-<h3>無線機コントロール</h3><p>対応表のYaesu・Kenwood全機種で、HamlibからNB・NRを取得し、受信中に変更できます。YaesuはDNRと表示します。変更後に読み返して状態を確認します。FT-991/FT-991A、FTX-1、FT-710、FTDX10、FTDX101D/MP、FTDX3000はモード別の受信幅を選べます。TS-590SGのDATA/SSBは低域カットを維持し、高域カットを変更して幅を調整します。</p><p>Hamlib 4.7.2はTS-890S・TS-990Sの受信幅変更を実装していないため、この2機種の幅は本体で操作してください。NB・NRは使用できます。接続・状態取得が失敗した場合や送信中は操作を無効にします。</p>
+\ No newline at end of file
++<h3>無線機コントロール</h3><p>Hamlibの無線機選択肢にはYaesu FT-817（FT-817ND）とFT-818NDもあります。対応表のYaesu・Kenwood全機種で、HamlibからNB・NRを取得し、受信中に変更できます。YaesuはDNRと表示します。変更後に読み返して状態を確認します。FT-991/FT-991A、FTX-1、FT-710、FTDX10、FTDX101D/MP、FTDX3000はモード別の受信幅を選べます。TS-590SGのDATA/SSBは低域カットを維持し、高域カットを変更して幅を調整します。</p><p>Hamlib 4.7.2はTS-890S・TS-990Sの受信幅変更を実装していないため、この2機種の幅は本体で操作してください。NB・NRは使用できます。接続・状態取得が失敗した場合や送信中は操作を無効にします。</p>
+\ No newline at end of file
+diff --git a/psrtty/hamlib_radio.py b/psrtty/hamlib_radio.py
+index 0bf6981..f541f87 100644
+--- a/psrtty/hamlib_radio.py
++++ b/psrtty/hamlib_radio.py
+@@ -18,6 +18,8 @@ from .paths import app_root
+ HAMLIB_VERSION = '4.7.2'
+ HAMLIB_MODELS = {
+     'FT-991 / FT-991A': (1035, 'Yaesu FT-991 / FT-991A'),
++    'FT-817 / FT-817ND': (1020, 'Yaesu FT-817 / FT-817ND'),
++    'FT-818ND': (1041, 'Yaesu FT-818ND'),
+     'FTX-1': (1051, 'Yaesu FTX-1 Field / Optima'),
+     'FT-710': (1049, 'Yaesu FT-710'),
+     'FTDX10': (1042, 'Yaesu FTDX10'),
+diff --git a/psrtty/ui/guide.py b/psrtty/ui/guide.py
+index 7213e75..bfac00c 100644
+--- a/psrtty/ui/guide.py
++++ b/psrtty/ui/guide.py
+@@ -62,7 +62,7 @@ PAGES=[
+ ('Cabrillo出力','''<h2>ADIFファイル出力</h2><p><b>ファイル → ADIFファイル出力</b>で、開始・終了日時（選択したJST／UTC）と運用自局コールサインを指定します。該当するバンドを1つ以上選び、交信一覧で出力する行を1件以上チェックします。件数と条件を確認して別のADIFファイルへ保存します。元のログは変更しません。</p>
+ <h2>Cabrilloファイル出力</h2><p><b>ファイル → Cabrilloファイル出力</b>で汎用・JARL World Wide RTTY・CQ WW RTTY DXを選択します。CQ WWでは運用地（日本／米国・カナダ／その他）、開催年と期間（UTC）、提出する自局CALLを指定します。対象期間の交信がなければ先へ進めません。交信を1件以上選び、必要なら出力用の値を修正します。異なる自局CALLが混じる場合は赤字で警告しますが、そのまま進められます。</p><p>続いて必須項目、任意項目を入力し、内容と件数を確認して保存します。CQ WWの文字は半角英数字・記号で入力し、氏名・住所はローマ字にしてください。自局CQゾーンは選択した交信のSENTから読み取って表示するので確認します。米国・カナダ以外の運用地はLOCATIONにDX、米国・カナダは州・地域略号を指定します。申告得点は任意で、自動計算しません。CQ WWの空欄の任意ヘッダーも項目名を残します。</p><p>保存したCabrilloファイルは画面に表示するCQ WW RTTY公式提出フォームから送信してください。PSRTTYから自動送信しません。日時はUTC、RTTYはRY、文字はASCII、改行はCRLFで出力します。元ADIFには書き戻しません。JARLでは参加部門、最大出力、運用地を選択して暫定得点を計算します。同一局との交信はバンドごとに1回、同じ大陸は2点、異なる大陸は3点です。判定できない局とJD1などは運用地を手動指定して再計算します。得点とマルチを確認し、必要なら登録クラブ番号を選択し、提出に伴う宣誓を確認します。</p><p>汎用形式は大会識別名とQSO項目の並びを指定できます。提出先の条件を確認してください。編集した出力用データとチェックは元ログを変更しません。</p>'''),
+ ('機種別補足','''<h2>ICOM</h2><p>Ver0.77追加：IC-7200 / IC-7410 / IC-7600 / IC-9100（資料確認済み・実機未確認）。USB音声入出力は別途選択してください。DATA時の変調入力を無線機側でUSBに設定します。IC-7600はD1を使用するため、DATA1の変調入力をUSBに設定します。IC-9100は運用するMAIN側を本体で選択してください。これら４機種のフィルター切替は無線機本体で行います。</p><p>無線機本体のCI-Vアドレスと一致させます。IC-7300MK2をIC-7300のアドレスで運用している場合なども、手入力した設定をそのまま使用できます。</p>
+-<h2>Yaesu・Kenwood（Hamlib接続）</h2><p>Yaesu FT-991/A、FTX-1、FT-710、FTDX10、FTDX101D・FTDX101MP、FTDX3000、Kenwood TS-590SG、TS-890S、TS-990Sを選択できます。Hamlibの版とライセンスは「PSRTTYについて」に表示します。CATのCOMポートと速度を指定して接続テストを行ってください。YaesuはEnhanced COM、DATA入力はUSB、CAT RTSはDISABLE（OFF）を確認します。FTX-1はCAT対応ファームウェアが必要です。</p>
++<h2>Yaesu・Kenwood（Hamlib接続）</h2><p>Yaesu FT-817（FT-817ND）、FT-818ND、FT-991/A、FTX-1、FT-710、FTDX10、FTDX101D・FTDX101MP、FTDX3000、Kenwood TS-590SG、TS-890S、TS-990Sを選択できます。Hamlibの版とライセンスは「PSRTTYについて」に表示します。CATのCOMポートと速度を指定して接続テストを行ってください。YaesuはEnhanced COM、DATA入力はUSB、CAT RTSはDISABLE（OFF）を確認します。FTX-1はCAT対応ファームウェアが必要です。</p>
+ <h3>モード切替</h3><p>コントロール画面のアンテナTUNEの上から、無線機のモードを切り替えます。ICOMはLSB-D／USB-D／LSB／USB、Yaesuは機種のDATA表示、KenwoodはLSB-DATA／USB-DATA／LSB／USBを表示します。TS-990SはD1～D3も選べます。送信中は変更できません。接続時のDATAモード自動切替は接続時だけ働き、ここでの一時的なモード変更は保存しません。</p><h3>接続テスト</h3><p>成功後のテスト接続は約10秒で終了します。継続運用は［接続］を押してください。テスト音の送信中は送信が終わってからテスト接続を終了します。</p><h3>接続ボタン</h3><p>画面左上の［未接続］で接続、青い［接続］で切断します。接続中は連打できません。機種とCOMポートはボタンにマウスを重ねると確認できます。</p><h3>接続の応答確認</h3><p>時間経過だけでは切断しません。周波数の応答取得に3回連続で失敗したときに切断します。途中で応答が戻れば接続を維持します。切断理由と日時はステータス表示・接続表示のツールチップ・運用記録に残します。音声入力は継続します。</p><h3>起動とバージョンアップ</h3><p>起動時にログフォルダーへ一時ファイルを作成・書き込み・削除して確認します。作成や書き込みができない場合は対象パスと理由を表示し、メイン画面を開かず終了します。</p><p>同じフォルダーのPSRTTYは二重起動できません。起動済みならその画面を呼び戻します。</p><p><b>ヘルプ → PSRTTYのバージョンアップ</b>で配布ZIPを選択します。設定・ログをバックアップして更新し、再起動します。開発用のPATCH.zipは指定できません。版が大きく離れて画面内更新できない場合は、PSRTTYを閉じ、新版のバイナリー配布ZIPの中身を既存フォルダーへ上書きしてください。</p>''')]
+ 
+ PAGES.append(("時刻・プリンター", '<h2>時刻表記（JST／UTC）</h2><p>表示 → 時刻表記でJST／UTCを切り替えます。初期値はJST、選択は保存されます。PCのタイムゾーンに依存せず、PCの時計から変換します。現在のQSO・受信送信カード・最新QSO・QSOログの表示を切り替えます。手動日時も同じ交信時点を保って変換し、入力が不正なら切替を止めます。ADIFはUTC、生ログTXTとHAMLOG CSVの保存形式はJSTを維持します。出力画面にUTCなどを明示した項目はその表記に従います。</p>\n<h2>RTTYプリンター</h2><p>ファイル → RTTYプリンターに設定、テスト印刷、印刷対象、出力ON/OFF、印刷待ちを消去があります。起動時は必ずOFFです。対象の初期値は受信のみ（RX）。メインだけを対象とし、サブデコは印刷しません。RXは受信カードが確定した時、TXは正常送信完了時に印刷待ちへ追加します。中断したTX全文は印刷しません。</p><p>「指定文字数以下は印刷しない」は初期ON・1文字。本文の前後の空白・改行を除いて判定し、画面とログは変更しません。時刻の印刷は初期ONで、受付時のJST／UTCを記録します。待ち行列に入った後の時刻表記は変更しません。</p><p>USBシリアルのCOMと速度を指定してください（初期115200 bps、8N1）。ASCII、改行LF、初期32文字幅、0.5秒間隔で送ります。無線機・外部制御と同じCOMは使用できません。無線機のCOM自動探索も避け、明示指定してください。対応ファームではACK待ちを有効にでき、各行のOK＋改行を待ちます。通常モードは実印字完了を確認できないため、実機に合う送出間隔で確認してください。</p><p>待ち上限は初期500件。上限や通信エラーでは受付を止め、未送出の待ちを保持してステータス欄へ表示します。受信・送信・ログ保存は続き、ダイアログや音で割り込みません。再開は出力をON。送出途中のエラーは結果不明として自動再送しません。OFF・待ち消去・終了では未送出分を取り消します。送出済みの印刷は取り消せない場合があります。</p>'))
+diff --git a/psrtty/ui/guide_en.py b/psrtty/ui/guide_en.py
+index 90b5bc2..a90455b 100644
+--- a/psrtty/ui/guide_en.py
++++ b/psrtty/ui/guide_en.py
+@@ -78,7 +78,7 @@ PAGES_EN = [
+ <p>The generic format allows a contest identifier and QSO field order. Check the recipient's requirements. Edited export values and selections do not modify source logs.</p>'''),
+ ('Radio notes', '''<h2>ICOM</h2><p>Added in Ver0.77: IC-7200 / IC-7410 / IC-7600 / IC-9100 (documentation reviewed, hardware not tested). Select USB audio input and output separately. Set DATA modulation input to USB on the radio. IC-7600 uses D1, so set DATA1 input to USB. On IC-9100, select the operating MAIN side on the radio. Change filters on the radio for these four models.</p>
+ <p>Match the radio CI-V address. Manual settings are retained, including an IC-7300MK2 operated with the IC-7300 address.</p>
+-<h2>Yaesu / Kenwood (Hamlib)</h2><p>Supported selections include Yaesu FT-991/A, FTX-1, FT-710, FTDX10, FTDX101D/MP, FTDX3000 and Kenwood TS-590SG, TS-890S, TS-990S. About PSRTTY shows the Hamlib version and license. Specify CAT port and speed, then test the connection. For Yaesu, use Enhanced COM, USB DATA input and CAT RTS DISABLE (OFF). FTX-1 requires firmware supporting CAT.</p>
++<h2>Yaesu / Kenwood (Hamlib)</h2><p>Supported selections include Yaesu FT-817 (FT-817ND), FT-818ND, FT-991/A, FTX-1, FT-710, FTDX10, FTDX101D/MP, FTDX3000 and Kenwood TS-590SG, TS-890S, TS-990S. About PSRTTY shows the Hamlib version and license. Specify CAT port and speed, then test the connection. For Yaesu, use Enhanced COM, USB DATA input and CAT RTS DISABLE (OFF). FTX-1 requires firmware supporting CAT.</p>
+ <h3>Mode selection</h3><p>Select the radio mode above Antenna TUNE in Control. ICOM offers LSB-D / USB-D / LSB / USB; Yaesu shows model-specific DATA modes; Kenwood shows LSB-DATA / USB-DATA / LSB / USB. TS-990S also offers D1–D3. Modes cannot change during TX. Automatic DATA selection runs only on connection; temporary changes here are not saved.</p>
+ <h3>Connection test</h3><p>A successful test connection ends after about 10 seconds. Press Connect for continued operation. If a test tone is transmitting, the test connection waits until transmission ends.</p>
+ <h3>Connection button</h3><p>Press Disconnected at the upper left to connect, or the blue Connect button to disconnect. Repeated clicks are blocked while connecting. Hover to see the model and COM port.</p>
+@@ -94,4 +94,3 @@ PAGES_EN[-1]=(PAGES_EN[-1][0], PAGES_EN[-1][1]+'<h2>Hide short received messages
+ PAGES_EN.append(('HAMLOG / integrations', '<h2>HAMLOG and other integrations</h2>\n<h3>HAMLOG target: Ver5.48</h3><p>Uses the Turbo HAMLOG/Win public API introduced in Ver5.27c. On Windows, start one HAMLOG instance and open its QSO input window. Run both programs with the same privilege level.</p>\n<ol><li>Open <b>Integration → HAMLOG integration settings</b>. Check the connection; the responding window title is displayed.</li><li>Enable transfer when logging. This defaults to OFF. The default save mode fills HAMLOG input fields only; save the QSO in HAMLOG yourself. Alternatively, choose to request saving after transfer. Save these settings; they are shared by all profiles.</li><li>After PSRTTY saves a QSO to ADIF, it transfers it to HAMLOG. Manual logging and TU73 auto logging use the same path. PSRTTY increments the sent serial only once.</li></ol>\n<p>CALL, JST date/time, sent/received RST, frequency and RTTY mode are transferred. SENT and RCVD are retained in Remarks1; the station CALL is in Remarks2. Contest exchanges are not inferred as JCC/JCG codes. HAMLOG QSL, Code, GL, Name and QTH settings/lookup results are retained.</p>\n<h3>CALL / Name / QTH lookup</h3><p>Lookup in the settings window enters a CALL in HAMLOG’s empty input window, invokes HAMLOG’s Enter processing and displays Name/QTH. Results depend on HAMLOG lookup settings and stored records and may be empty. Logging that same CALL fills the draft created by lookup. If the draft was edited in HAMLOG, automatic transfer is stopped to protect it. Save or clear the draft before proceeding.</p>\n<h3>Saving and transfer failures</h3><p>In input-only mode, save the QSO in HAMLOG before recording the next QSO. Other QSO drafts are never overwritten. Automatic saving reads back and checks the transfer before invoking HAMLOG’s Save API. You can check the result in HAMLOG’s input window and log.</p><p>Failures show a dialog with the reason and suggested action. The PSRTTY ADIF record is already saved: do not add that QSO again. Interrupted transfers are journaled and not retried automatically. Check HAMLOG and manually enter only missing QSOs, or use File → HAMLOG CSV export. Records, edits and deletions in HAMLOG do not synchronize back to PSRTTY.</p>\n<h3>zLog target: 3.0.4.0 (ZLOG3040)</h3><p>Integration → zLog Reiwa integration settings opens ADIF export. Selected QSOs are transferred by file, without live radio/log control. File → ADIF export opens the same export wizard.</p><ol><li>In zLog, select the matching contest, station CALL and time settings. ADIF times are UTC; zLog converts them according to its contest settings.</li><li>Select the export format, period, station CALL, bands and QSOs, then save.</li><li>Import the ADIF file in zLog and check count, time, band, mode, both RSTs, both exchanges and multipliers. Avoid importing the same file twice.</li></ol>\n<table><tr><th>Format</th><th>Exchange mapping</th></tr><tr><td>Standard ADIF</td><td>STX_STRING/SRX_STRING and numeric STX/SRX, as before.</td></tr><tr><td>General zLog</td><td>Also retains original SENT/RCVD and station CALL in COMMENT.</td></tr><tr><td>JARL WW RTTY</td><td>Received age also goes into AGE. Enter one or two digits.</td></tr><tr><td>CQ WW RTTY</td><td>Received zone goes into CQZ and state/province into STATE, e.g. 05 MA. Zone must be 01–40.</td></tr></table>\n<p><b>The target zLog ADIF importer does not include state/province in the CQ WW RTTY received exchange.</b>After import, use the original RCVD in the note to correct affected exchanges and multipliers. Numeric fields may lose leading zeroes in their display; the original text is retained in string fields and notes. Check contest configuration and exchanges before submitting a contest log.</p>\n<h3>Radio controls</h3><p>NB and NR read/write are enabled through Hamlib for all listed Yaesu/Kenwood models, with state readback. Yaesu uses the DNR label. FT-991/FT-991A, FTX-1, FT-710, FTDX10, FTDX101D/MP and FTDX3000 offer mode-specific receive widths. TS-590SG DATA/SSB width is adjusted by changing high cut while preserving low cut.</p><p>Hamlib 4.7.2 does not implement receive bandwidth control for TS-890S/TS-990S; use the radio controls for width. NB/NR remain available. Controls are disabled during TX or when connection/state retrieval fails.</p>'))
+ 
+ PAGES_EN[0] = (PAGES_EN[0][0], PAGES_EN[0][1] + '\n<h3>IC-7760 (Ver1.08)</h3><p>Default CI-V address: B2. Select the USB CI-V COM port and set DATA1 modulation input to USB on the radio. LSB-D/USB-D selects DATA1. Controls apply to the selected receiver; check the transmit side on the radio.</p>\n<h3>Secondary Audio OUT</h3><p>Open Secondary Audio OUT settings to the left of Save on the Audio OUT tab. Confirm and save the primary device and volume before opening. Cancel or save failure leaves the window closed. The primary device, including Auto, is excluded from the secondary list. Enable it (default OFF), select a different device from the primary output, choose volume and Save. Close discards unsaved changes. Settings are stored per profile.</p><p>The same TX waveform is sent for monitoring or other uses, with independent volume from 0–200% (default 100%). Above 100% the slider turns red and audio may distort. This window has no PTT or test controls. Stopping TX also stops the secondary output. While disconnected, enabling both disconnected TX and secondary Audio OUT allows playback through either available output. If neither works, a reason is displayed. Connected radio transmission still requires the primary output. On errors, check the selected device and connection as indicated in the status area.</p>')
+-
+diff --git a/tests/test_hamlib_089.py b/tests/test_hamlib_089.py
+index c0583d5..b38fa4b 100644
+--- a/tests/test_hamlib_089.py
++++ b/tests/test_hamlib_089.py
+@@ -52,7 +52,9 @@ class HamlibBridgeTest(unittest.TestCase):
+         self.assertIsNotNone(lib)
+ 
+     def test_all_chosen_models_are_explicit(self):
+-        self.assertEqual(len(HAMLIB_MODELS),10)
++        self.assertEqual(len(HAMLIB_MODELS),12)
++        self.assertEqual(HAMLIB_MODELS['FT-817 / FT-817ND'], (1020, 'Yaesu FT-817 / FT-817ND'))
++        self.assertEqual(HAMLIB_MODELS['FT-818ND'], (1041, 'Yaesu FT-818ND'))
+         self.assertEqual(HAMLIB_MODELS['FTX-1'][0],1051)
+         self.assertEqual(HAMLIB_MODELS['TS-990S'][0],2039)
+ 
+diff --git a/tests/test_v04.py b/tests/test_v04.py
+index c66c7d1..9d77356 100644
+--- a/tests/test_v04.py
++++ b/tests/test_v04.py
+@@ -64,7 +64,7 @@ class Radio04Tests(unittest.TestCase):
+     def test_factory_uses_curated_hamlib_models(self):
+         self.assertEqual(len(YAESU_MODELS), 2)
+         self.assertTrue(all(x.endswith('（試験用）') for x in YAESU_MODELS.values()))
+-        self.assertEqual(len(HAMLIB_MODELS),10)
++        self.assertEqual(len(HAMLIB_MODELS),12)
+         self.assertIsInstance(create_controller(dict(model='FTX-1', ptt='CAT',com_port='COM7',cat_baud='38400')), HamlibController)
+         with self.assertRaises(ValueError): create_controller(dict(model='その他Yaesu', ptt='CAT'))
+         with self.assertRaises(ValueError): create_controller(dict(model='FTX-1', ptt='RTS'))

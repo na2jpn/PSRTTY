@@ -20,6 +20,9 @@ def validate_radio(values):
             raise ValueError(tr('ストップビットは1または2です。'))
     elif model in RIG_MODELS:
         radio_address(values)
+        from .radio_support import ICOM_EXTERNAL_PTT
+        if model in ICOM_EXTERNAL_PTT and values.get('ptt') != '外部接続':
+            raise ValueError(tr('この機種のPTT方式は「外部接続」を選択してください。'))
     else:
         raise ValueError(tr('無線機を選択してください。'))
 

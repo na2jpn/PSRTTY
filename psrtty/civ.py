@@ -3,6 +3,7 @@ from .i18n import tr
 
 import threading
 import time
+from .radio_support import LEGACY_FREQUENCY
 from dataclasses import dataclass
 
 try:
@@ -168,7 +169,7 @@ class CIVController:
                 if len(raw) < 7 or raw[4] != 0x03:
                     return None
                 payload = raw[5:-1]
-                if len(payload) not in (5, 6):
+                if len(payload) not in ((4, 5, 6) if self.model in LEGACY_FREQUENCY else (5, 6)):
                     return None
                 # IC-905 uses six BCD bytes in the 10 GHz band.
                 freq = decode_bcd_frequency(payload)
@@ -284,6 +285,9 @@ class CIVController:
                 return None
 
     def read_transmitting(self):
+        from .radio_support import ICOM_EXTERNAL_PTT
+        if self.model in ICOM_EXTERNAL_PTT:
+            return bool(getattr(self, "external_transmitting", False)) if self._control_ready() else None
         with self._lock:
             if not self._control_ready(): return None
             self.ser.reset_input_buffer(); self.ser.write(self._frame(0x1C, 0))
@@ -298,7 +302,9 @@ class CIVController:
                 return False
             try:
                 if self.read_transmitting() is not False: return False
-                digits = f"{hz:012d}" if hz >= 10000000000 else f"{hz:010d}"
+                from .radio_support import LEGACY_FREQUENCY
+                if self.model in LEGACY_FREQUENCY and hz >= 100000000: return False
+                digits = f"{hz:08d}" if self.model in LEGACY_FREQUENCY else (f"{hz:012d}" if hz >= 10000000000 else f"{hz:010d}")
                 bcd = bytes(int(digits[i:i+2], 16) for i in range(len(digits)-2, -1, -2))
                 self.ser.reset_input_buffer(); self.ser.write(self._frame(0x05, *bcd))
                 raw = self._read_response(0x05, timeout=.3)
@@ -319,6 +325,8 @@ class CIVController:
                 return False
 
     def set_ptt(self, on: bool) -> bool:
+        from .radio_support import ICOM_EXTERNAL_PTT
+        if self.model in ICOM_EXTERNAL_PTT: return False
         with self._lock:
             if not self.ser or not self.status.connected:
                 return False

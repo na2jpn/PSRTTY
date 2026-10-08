@@ -1,3 +1,24 @@
+2026-10-08　Ver1.09
+・FT-817／FT-817ND、FT-818ND、FT-857／FT-857DをHamlibの選択肢に追加しました。直接USB接続ではない機種のCAT・音声接続を案内します。
+・CI-Vによる周波数取得・制御ができる旧ICOM機を追加し、直接USB接続、外部CI-V／音声接続、外部PTTも必要な接続を区別します。
+・外部接続に無線機PTT用途を追加しました。従来の外部機器先行切替設定は引き継ぎます。
+・ダイレクト送信画面を追加しました。最大2行、入力後の訂正猶予、入力時TX、送信済み表示、再送、クリア／停止に対応します。
+・手動送信にダイレクト・クリア・1TXを配置し、送信中は1TXがSTOPへ変わります。
+・Ctrl＋F12／Shift＋F12でダイレクト画面を開閉します。F11／F12は画面の状態に応じてフォーカス移動、TX／STOP、再送を行います。
+・初期設定ガイドの下にショートカットキーガイドを追加しました。表示したまま操作できます。
+・受信中のMARK・LTRS・NULアイドルで行を分割せず、改行または信号途切れで確定するようにしました。送信開始時にLTRSを送ります。
+・日英の案内と交信記録を整備し、既存の設定・プロファイル・ADIFログを引き継ぎます。
+・ダイレクト送信・クロススコープ・コントロール・サブデコ・ショートカットキーガイドを独立したウィンドウにし、メイン画面を選ぶと裏へ回るよう改善しました。裏でも送受信・表示更新を継続し、呼び出し操作で前へ戻せます。
+・RXゲージとAudio INの色・基準を統一しました。灰は表示なし、水色はLow、緑はGood（30～79%）、黄はHigh（80～89%）、赤はOver!（90%以上）を同系色でゲージ横に表示します。表示の細かな揺れと境界付近のちらつきを抑え、音声入力・デコード処理は変更しません。初期設定ガイドの「波形の高さと入力音量」にもRXゲージの見方と調整方法を掲載しました。
+
+2026-10-04　Ver1.08
+・IC-7760を無線機の選択肢に追加しました。CI-V初期アドレスはB2です。周波数、LSB-D／USB-D（DATA1）、PTT、FIL1～3、NB／NR／NOTCH、ALC、アンテナTUNEに対応し、DATA2／3時もフィルターの取得・変更に対応します。DATA1の変調入力をUSBに設定してください。
+・Audio OUT設定に「第二AudioOUTの設定」を追加しました。開く前に主AudioOUTの出力先と音量を確認して保存し、保存した主出力先（自動選択を含む）は第二出力の候補から除外します。主出力と同じ送信音を別の機器に出力でき、プロファイルごとに有効／無効、出力先、独立した音量を保存します。初期状態は無効です。「未接続でも送信可」がONで第二AudioOUTが有効な場合は、両方の出力先を個別に確認し、片方でも使えれば音声を出力します。両方が使えない場合は理由を案内します。
+・第二AudioOUTの音量は0～200％（初期100％）で、100％を超えるとゲージが赤くなります。専用画面には「保存」「閉じる」を配置し、PTT操作・テストは設けていません。第二出力の不具合は状態欄で案内し、主送信を継続します。
+・「～について」のボタン名を「サンクス」に変更しました。スペシャルサンクスにJH1PGF、メディアサンクスにhamlife.jpを追加し、スクロール表示と従来の感謝文を維持しました。
+・画面用PNGの読み込みエラーでアイコンが表示されない問題を修正しました。Windowsのアプリ識別設定を追加し、複数サイズのアイコンを実行時にも同梱・使用するよう改善しました。
+・新しい設定・案内・ガイド・更新履歴の英語表示に対応しました。
+
 2026-10-03　Ver1.07
 ・「表示」と「Language」の間に「連携」メニューを追加しました。HAMLOG連携設定とzLog令和版連携設定を開けます。
 ・Turbo HAMLOG/Win Ver5.48を対象に、PSRTTYの記録後に交信を転送する機能を追加しました。手動記録・TU73自動記録で共通です。入力欄への転送のみ、または転送後の保存指示を選べます。
@@ -165,3 +186,195 @@
 ・PSRTTYの初期版。ICOMのCI-VとUSB Audioを使うRTTY送受信を実装しました。
 ・45.45 baud／170 Hzの復調、スペクトラム、AUTO TUNE、受信・送信カード、コンテスト用マクロを搭載しました。
 ・QSOをADIFへ、受信・送信の記録を日別の生ログへ保存できるようにしました。
+
+
+English
+
+2026-10-08  Ver1.09
+・Added FT-817/FT-817ND, FT-818ND and FT-857/FT-857D to Hamlib selection, with CAT/audio guidance for radios without direct USB.
+・Added older ICOM radios with CI-V frequency reading/control. Distinguishes direct USB, external CI-V/audio and radios also requiring external PTT.
+・Added radio PTT as an external-interface role while preserving existing pre-key profiles.
+・Added Direct TX: up to two lines, a correction delay, TX while typing, sent-text colors, replay and clear/stop.
+・Manual TX now has Direct, Clear and 1TX. During transmission 1TX changes to STOP.
+・Ctrl+F12 / Shift+F12 toggle Direct TX. F11/F12 focus it or control TX/STOP and replay according to the active window.
+・Added a modeless keyboard shortcut guide below Initial setup guide.
+・MARK/LTRS/NUL idle no longer splits received lines. A newline or sustained signal loss finalizes the line. TX starts with LTRS.
+・Updated Japanese/English guidance and contact records while retaining settings, profiles and ADIF logs.
+・Made Direct TX, Cross scope, Control, Sub decode and the keyboard shortcut guide independent windows. Selecting the main window can bring it in front while TX, reception and display updates continue. Open/recall controls bring the utility window forward.
+・Added five RX meter colors (gray, light blue, green, yellow and red), shared with Audio IN. A short bilingual notice near the RX meter appears when decoded text continues at a low receive level.
+
+2026-10-04  Ver1.08
+・Added IC-7760 with default CI-V address B2. Supports frequency, LSB-D/USB-D (DATA1), PTT, FIL1–3, NB/NR/NOTCH, ALC and antenna TUNE. Filter read/write also preserves DATA2/3. Set DATA1 modulation input to USB on the radio.
+・Added Secondary Audio OUT settings. Before opening, confirm and save the primary output device and volume. Its device, including an automatically selected default, is excluded from the secondary list. Send the same TX waveform to a separate output with independently saved device, enable switch and volume per profile. Disabled by default. With disconnected TX allowed and secondary Audio OUT enabled, each output is tried independently; playback proceeds if either works. If neither is usable, the reason is shown.
+・Secondary volume ranges from 0–200% (default 100%); the slider turns red above 100%. The dedicated window provides Save and Close without PTT or test controls. Secondary-output errors appear in the status area while primary transmission continues.
+・Renamed the About button to Thanks. Added JH1PGF to Special Thanks and hamlife.jp under Media Thanks, preserving scrolling and existing acknowledgments.
+・Fixed missing icons caused by an unreadable runtime PNG. Added explicit Windows application identity and bundled a multi-size icon for runtime use to improve taskbar icon handling.
+・Added English labels, guidance, setup instructions and release history for these changes.
+
+2026-10-03  Ver1.07
+・Added Integration between View and Language, with HAMLOG and zLog Reiwa integration settings.
+・Added QSO transfer to Turbo HAMLOG/Win Ver5.48 after successful PSRTTY logging, for both manual and TU73 auto logging. Choose input-only transfer or a save request after transfer.
+・Added HAMLOG connection checking and CALL / Name / QTH lookup. Transfer errors retain the local ADIF record and show recovery guidance. Existing drafts are protected; uncertain transfers are not retried automatically.
+・Added General zLog, JARL WW RTTY and CQ WW RTTY ADIF exports targeting zLog 3.0.4.0. Original exchanges are also retained in notes. CQ WW RTTY state/province exchanges and multipliers require checking and correction after import.
+・Added a bilingual HAMLOG / integrations setup-guide tab, including target versions and operating instructions.
+・Extended Hamlib NB/NR read/write to all listed Yaesu and Kenwood models, with state readback. Yaesu uses the DNR label.
+・Added receive width control for FT-710, FTDX10, FTDX101D/MP and FTDX3000; corrected FT-991/FT-991A and FTX-1 choices to model-specific tables. TS-590SG DATA/SSB width adjustment preserves low cut. TS-890S/TS-990S bandwidth is not implemented in Hamlib 4.7.2 and must be controlled on the radio.
+・Made Special Thanks scrollable and added JQ7FIU and thanks to the developers of MMTTY, Turbo HAMLOG, zLog and related software.
+
+2026-10-02　Ver1.06
+・Main and auxiliary control windows now fit within the available screen area, including title bars and frames, even on small screens.
+・Added receive filter width, DNR and NB read/control for Hamlib-connected FT-991/FT-991A and FTX-1. Controls stay inactive when unavailable, unsupported or transmitting.
+・Added Japanese / English to the Language menu. The saved selection applies after restarting. English is also available for the setup guide, release history, macro editor, settings, explanations and status messages.
+・Spectrum span, receive-card font size and recent-QSO count now check only the current setting.
+・Added JST / UTC time display to the View menu. JST is the default and the selection is saved. Displayed and manually entered times switch while preserving the same QSO instant. ADIF remains in UTC; raw TXT logs and HAMLOG CSV remain in JST.
+・Added a short-message filter to the receive controls. Received messages at or below the selected character count are excluded from the main list and automatic extraction. Select 0–10; the default of 0 disables filtering. Raw logging and the printer's short-message filter are independent. The control order is Squelch → Decode → short-message filter.
+・Added RTTY Printer to the File menu for automatic printing of main RX, TX or RX+TX text. Includes USB serial settings, test printing and clearing pending jobs. Printing is disabled at startup, the default target is RX, and ignoring messages of one character or less is enabled by default.
+・Print pacing and acknowledgment waiting for compatible firmware are configurable. When the queue reaches its limit or communication fails, new jobs are paused and the status area reports the problem without interrupting QSO operation. Compatibility with the physical printer still needs to be checked.
+・The printer menu shows Enable or Disable according to its current state. Status shows the print target and pending count when enabled, or a stopped state on errors; normal disabled status is hidden. A separator divides settings from actions such as test printing.
+・Updated the CQ Zone guidance: Check the CQ Zone of your actual operating location and set it in the sent exchange. Japan is zone 25.
+・Added a centennial logo, support message and anniversary dates to About PSRTTY. Special Thanks is at the bottom left and Close at the bottom right. A separate window thanks contributing clubs and stations in Japanese or English.
+・Added HAMLOG CSV export: 15 fields, no header, CP932, JST times ending in J. Exchanges go in Remarks1; station CALL optionally goes in Remarks2.
+・Improved the stability of menu operations on Windows.
+・Improved non-Windows Hamlib shared-library discovery and audio-device selection based on the contributed FreeBSD patch. Windows bundled-DLL selection and WASAPI identification are preserved.
+
+2026-09-29　Ver1.05
+・Added up to 6 profiles. Older settings migrate to Profile1; radio, audio and station information are saved per profile.
+・Settings can copy, rename and delete profiles. Names allow up to 10 letters, digits, hyphens and slashes. The first and active profiles cannot be deleted.
+・Top-right main-window buttons switch profiles. Switching disconnects the radio and, if previously connected, attempts the new connection. Failure keeps the selected profile and displays Disconnected.
+・Improved A/B receive-row colors and added click-to-capture of an identified station callsign into the main CALL field. Added profile instructions to the setup guide.
+
+2026-09-28　Ver1.04
+・Added AUTO TRACK to the main window and made Clear on frequency change initially ON.
+・Added a separate receive-only A/B sub decoder with automatic sweep, manual tuning and contest-category notices. Main decoding has priority.
+・Adjusted cross-scope lines and A/B displays to make reception and tuning easier to distinguish.
+・Improved C tuning to show the offset between the signal and configured position in Hz.
+・Control, Cross scope and Sub decoder now open at suitable sizes within the screen.
+・Added database country / continent information to JARL WW RTTY scoring and improved manual overwrite-update guidance.
+
+2026-09-28　Ver1.03
+・Control and Cross scope can now be opened from View.
+・Successful test connections end after about 10 seconds and explain how to connect for operation. Active test transmissions finish first.
+・Added Yaesu FTDX101D, FTDX101MP and FTDX3000 to model selection.
+・Added model-specific mode selection to Control. Kenwood TS-990S supports D1–D3 selection.
+・Mode selection now uses direct buttons and works during radio-state polling. Fixed TUNE and other blinking indicators and model detection.
+・Clarified unavailable controls, COM selection for multiple ICOM radios, and external-control inversion.
+
+2026-09-27　Ver1.02
+・Moved External control before Advanced in Settings. Moved the inversion checkbox to the bottom, separated from explanatory text, and separated inverted-signal guidance.
+・Simplified Yaesu / Kenwood model selection and settings guidance.
+・Added a BAND column using MHz-band numbers such as 21 to recent QSOs.
+・After disconnecting, the last received frequency remains gray and supplies frequency / band for logging while disconnected. If never received, these remain blank.
+
+2026-09-27　Ver1.01
+・Updates from 0.88 or earlier now require extracting the release ZIP over the existing folder. Future in-app updates use versionup data to verify added files.
+・Added JARL World Wide RTTY Cabrillo category, maximum power, operating location, points / multipliers, manual assignment of unidentified stations, registered club and declaration review.
+・Added external-device RTS / DTR switching before PTT on a separate COM port, with enable, polarity and lead-time settings.
+・Added experimental Hamlib 4.7.2 CAT support for Yaesu FT-991/A, FTX-1, FT-710, FTDX10 and Kenwood TS-590SG, TS-890S, TS-990S. Hardware verification varies by model.
+・About PSRTTY now shows Hamlib version and license; Windows distribution can include its DLL and corresponding source.
+
+2026-09-26　Ver0.88
+・When saving settings disconnects an active radio, a dialog explains that disconnection applies the settings.
+・Changed the history Close button to Japanese in the Japanese UI.
+・Added Export ADIF to File. Select period, station CALL, bands and QSOs without modifying source logs.
+・Improved the CQ WW RTTY Cabrillo workflow: location / period, QSOs, required / optional information, then review. Mixed station callsigns produce a warning.
+・CQ WW RTTY Cabrillo fields follow the official ADIF converter and retain empty optional header names. Points / multipliers are not calculated automatically; the official upload form is shown after saving. JARL format was rechecked in 1.01.
+
+2026-09-27　Ver0.87
+・ICOM Antenna TUNE can be tested with external ATUs and verifies radio-state changes. Confirmed on IC-7300 / IC-7300MK2.
+・Split Audio settings into Audio IN and Audio OUT, allowing level adjustment before saving. Added a blue Good RX meter.
+・Added RTTY test tone / PTT level adjustment using an operating connection or successful test connection, with a 10-second countdown, automatic stop, green ALC guide when readable and radio-meter guidance otherwise.
+・Set the initial pre-signal RX level to 50%, preserving saved levels. Added Initial 50% and avoided treating no / weak signal as a definite red error.
+・Added RX / TX level adjustment steps to the initial setup guide.
+
+2026-09-27　Ver0.86
+・Moved C tuning slightly away from the Cross scope button.
+・Moved previously worked bands from Recent QSOs to Current QSO.
+・Renamed SQ in the decode area to SQ (squelch).
+・Added PSRTTY version history to Help, newest first.
+
+2026-09-26　Ver0.85
+・Added CQ only to automatic callsign capture, initially ON. Ambiguous text with multiple callsigns does not arbitrarily change CALL.
+・Added an option to clear CALL and the received exchange after a frequency change of at least 20 Hz from CALL capture / entry. Initially OFF.
+・Shows previously worked bands for the entered station, distinguishing the current band.
+・Added Short QSO (English RTTY) and updated standard CQ WW RTTY / JARL World Wide RTTY macros. Existing edited macros are not automatically changed.
+・Added C tuning beside Cross scope, showing received-audio offset from the configured center by color and number. Weak or unidentifiable signals show a dash.
+・Opening or cancelling Settings preserves the radio connection and reception.
+・Added Antenna TUNE for supported internal tuners: IC-7300, IC-7300MK2, FT-991/FT-991A and FTX-1. Hardware verification was not yet performed at this release.
+
+2026-09-25　Ver0.84
+・Applying a macro template now also applies the default SENT value and Fixed setting.
+・Localized Save / Cancel in the Japanese macro editor. Saved settings also update the main window.
+
+2026-09-25  Ver0.83 (first public release)
+・Cross scope shows the latest and previous MARK / SPACE traces. Previous traces fade and disappear within 0.7 seconds.
+・Old trails clear on tuning changes, stopped audio input or hiding the display.
+
+2026-09-25　Ver0.82
+・Adjusted tuned cross-scope traces to thin ellipses, showing shape changes when mistuned.
+・Prevented trails extending without new audio. Display changes only; decoding and TX behavior are unchanged.
+
+2026-09-25　Ver0.81
+・Added a separate Cross scope window for MARK / SPACE reception, toggled by a button.
+・Closing Cross scope preserves main-window spectrum span and radio connection.
+
+2026-09-25　Ver0.79
+・Changed some spectrum horizontal-line colors for clarity.
+・Added waveform-height / Display gain guidance to the setup guide.
+
+2026-09-24　Ver0.78
+・Standardized displayed and manually entered times to JST, with ADIF QSO times stored in UTC.
+・Monthly ADIF uses UTC months. Date edits moving a QSO between months back up both source and destination first.
+・Improved YAESU DNR, DNF and NOTCH state displays.
+
+2026-09-24　Ver0.77
+・Added IC-7200, IC-7410, IC-7600 and IC-9100. Available controls depend on the model.
+・Adjusted Cabrillo date / time field placement.
+
+2026-09-24　Ver0.76
+・Improved Cabrillo date / time selection, year display and contest-period guidance.
+・Date / frequency input errors now use field colors, explanations and status messages.
+
+2026-09-24　Ver0.75
+・Added Cabrillo contest export with QSO selection, submission information and review.
+・Submission exchanges and X-QSO are export-only and are not written to source ADIF.
+
+2026-09-24　Ver0.74
+・ADIF is now stored by month. Older daily ADIF remains readable without automatic conversion or deletion.
+・Added manual, QSO-count and exit backups, saving ADIF and raw transcripts to ZIP.
+・Startup checks whether the log destination is writable and reports problems.
+
+2026-09-24　Ver0.73
+・Added the CQ WW RTTY macro template. Select, Apply and Save to configure the sent exchange.
+・With the CQ WW template applied, received zone and state / province abbreviations can be captured in RCVD.
+・Added JARL and CQ WW sent-exchange guidance to the macro editor.
+
+2026-09-24　Ver0.72
+・Successful TU 73 audio-test transmissions while disconnected can now auto-log when the required conditions are met.
+・Unknown frequency is not guessed: ADIF frequency and band remain empty.
+・Set default SQ to 4, preserving saved settings.
+
+2026-09-24　Ver0.71
+・Macro / manual text containing TU 73 can now auto-log after successful TX completion.
+・Date / time is always visible, with Manual date / time to pause and resume automatic updating.
+・Set default SQ to 3, preserving saved settings.
+
+2026-09-24  Ver0.11–0.70 (development summary)
+・Expanded radio controls for frequency, jog, NB / NR / NOTCH and supported FILTER controls. Added single-instance handling and bringing the existing window forward.
+・Added spectrum position, shift, Center and Display gain adjustment, plus Decode ON/OFF and SQ.
+・Improved RX / TX cards and recent QSOs, adding count selection, two columns, sequential numbers and total log count.
+・Added QSO editing / deletion with ADIF backup before edits.
+・Prevented receive noise from changing QSO fields during TX; improved STOP audio termination and PTT release.
+・Added automatic logging after successful TU 73 TX, manual date / time and SQ adjustment.
+
+2026-09-24  Ver0.02–0.10 (early development summary)
+・Made radio connection / frequency polling asynchronous and improved connection tests and TX failures. Automatic LSB-D selection on connection starts ON.
+・Grouped frequency, bands, jog, NB / NR / NOTCH in Control.
+・Expanded macros to F1–F9 and added JARL World Wide RTTY / normal-QSO templates, Auto CQ and Fixed SENT.
+・Added General settings, station QTH / JCC/JCG / free text, QSO date / time entry and disconnected audio testing.
+・Added Windows release ZIPs, updates preserving settings, and saving / restoring window position and size.
+・Added IC-7300MK2, IC-905 and experimental FT-991/FT-991A / FTX-1 support.
+
+2026-09-24　Ver0.01
+・Initial PSRTTY version: RTTY reception / transmission using ICOM CI-V and USB Audio.
+・Included 45.45-baud / 170-Hz decoding, spectrum, AUTO TUNE, RX / TX cards and contest macros.
+・Added QSO saving to ADIF and RX / TX records to daily raw transcripts.

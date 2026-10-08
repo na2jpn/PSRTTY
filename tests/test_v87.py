@@ -43,9 +43,9 @@ class UI87Tests(unittest.TestCase):
         preset=next(b for b in dlg.findChildren(QPushButton) if b.text()=='暫定50%')
         preset.click()
         self.assertEqual(dlg.rx_gain.value(),50)
-        self.window.level.setValue(6);dlg._refresh_rx_meter()
-        self.assertIn('無信号',dlg.rx_meter.format())
-        self.assertIn('#a59d92',dlg.rx_meter.styleSheet())
+        self.window.level.setValue(6);self.window.rx_display.band=1;dlg._refresh_rx_meter()
+        self.assertEqual(dlg.rx_state.text(),'Low')
+        self.assertIn('#73cbe8',dlg.rx_meter.styleSheet())
         dlg.reject()
 
     def test_rx_live_preview_and_cancel_restore(self):

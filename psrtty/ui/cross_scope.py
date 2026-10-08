@@ -170,7 +170,10 @@ class ScopeCanvas(QWidget):
 
 class CrossScopeWindow(QDialog):
     def __init__(self, audio, parent=None):
-        super().__init__(parent)
+        super().__init__(None, Qt.Window)
+        self.main = parent
+        from .window_state import independent_tool_window
+        independent_tool_window(self, parent)
         self.audio = audio
         self.afterglow = ScopeAfterglow()
         self.cloud_stamp = None
@@ -203,9 +206,9 @@ class CrossScopeWindow(QDialog):
         super().showEvent(event)
 
     def hideEvent(self, event):
-        if self.parent() is not None and hasattr(self.parent(),'store'):
+        if self.main is not None and hasattr(self.main,'store'):
             from .window_state import save_window
-            self.parent().store.data['ui']['scope_window']=save_window(self)
+            self.main.store.data['ui']['scope_window']=save_window(self)
         self.timer.stop()
         self.fade_timer.stop()
         self.afterglow.clear()

@@ -20,6 +20,8 @@ def validate_external(config, radio_port=''):
         raise ValueError(tr('外部接続には無線機と別のCOMポートを選択してください。'))
     if config.get('line') not in ('RTS', 'DTR'):
         raise ValueError(tr('外部接続の制御線をRTSまたはDTRから選択してください。'))
+    if config.get('role', 'prekey') not in ('prekey', 'ptt'):
+        raise ValueError(tr('外部接続の用途を確認してください。'))
     delay = float(config.get('delay_seconds', 0))
     if not 0.1 <= delay <= 9.9:
         raise ValueError(tr('外部接続の先行時間は0.1～9.9秒です。'))
@@ -47,7 +49,7 @@ class ExternalPTT:
             device.port = self.config['com_port']
             device.open()
             setattr(device, line, active)
-            duration = float(self.config['delay_seconds'])
+            duration = 0 if self.config.get('role') == 'ptt' else float(self.config['delay_seconds'])
             if self.cancel is not None:
                 if self.cancel.wait(duration):
                     self.after_ptt()

@@ -1,5 +1,5 @@
 """Logical-pixel window placement, bounded by the available monitor area."""
-from PySide6.QtCore import QRect
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QGuiApplication
 import sys
 
@@ -81,3 +81,17 @@ def place_tool_window(window, main, default_size, minimum_size, saved=None):
         x = min(area.right()-width+1,max(area.left(),main_rect.right()-width//2))
     y = min(area.bottom()-height+1,max(area.top(),main_rect.top()))
     window.setGeometry(x,y,width,height)
+
+
+def independent_tool_window(window, main=None):
+    """Keep utility windows independent in native stacking, with PSRTTY styling.
+
+    Construct with no QWidget parent. A QWidget parent becomes a Windows owner
+    even with Qt.Window, forcing the tool above the main window. MainWindow
+    retains references and explicitly closes the tools during shutdown.
+    """
+    window.setWindowModality(Qt.NonModal)
+    if main is not None:
+        window.setFont(main.font())
+        window.setStyleSheet(main.styleSheet())
+        window.setWindowIcon(main.windowIcon())

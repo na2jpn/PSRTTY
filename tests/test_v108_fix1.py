@@ -28,8 +28,10 @@ class ChoicesTests(unittest.TestCase):
         from psrtty.update_history import HISTORY_TEXT
         from psrtty.update_history_en import HISTORY_TEXT_EN
         for text in (HISTORY_TEXT,HISTORY_TEXT_EN):
-            self.assertIn('2026-10-04',text.splitlines()[0]);self.assertIn('Ver1.08',text.splitlines()[0])
-            self.assertIn('2026-10-03',text.split('\n\n',1)[1].splitlines()[0])
+            section=next(block for block in text.split('\n\n') if 'Ver1.08' in block.splitlines()[0])
+            self.assertIn('2026-10-04',section.splitlines()[0])
+            previous=next(block for block in text.split('\n\n') if 'Ver1.07' in block.splitlines()[0])
+            self.assertIn('2026-10-03',previous.splitlines()[0])
             self.assertNotIn('FIX1',text.split('\n\n',1)[0])
 
 class UI108Fix1Tests(unittest.TestCase):

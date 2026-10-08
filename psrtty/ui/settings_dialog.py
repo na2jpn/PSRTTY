@@ -253,7 +253,15 @@ class SettingsDialog(QDialog):
         tab = QWidget(); form = QFormLayout(tab)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.rig = QComboBox(); self.rig.addItem(tr('選択してください'), '')
-        for model in RIG_MODELS: self.rig.addItem(tr(model), model)
+        from ..radio_support import ICOM_EXTERNAL_AUDIO, ICOM_EXTERNAL_PTT
+        groups=[(tr('ICOM：直接USB接続'), [m for m in RIG_MODELS if m not in ICOM_EXTERNAL_AUDIO and m not in ICOM_EXTERNAL_PTT and m != 'その他ICOM']),
+                (tr('ICOM：外部CI-V／音声接続'), list(ICOM_EXTERNAL_AUDIO)),
+                (tr('ICOM：外部PTTも必要'), list(ICOM_EXTERNAL_PTT))]
+        for heading,models in groups:
+            self.rig.addItem(heading, '')
+            self.rig.model().item(self.rig.count()-1).setEnabled(False)
+            for model in models:self.rig.addItem(model,model)
+        self.rig.addItem(tr('その他ICOM'),'その他ICOM')
         for model, (_,label) in HAMLIB_MODELS.items(): self.rig.addItem(label, model)
         self._select_data(self.rig, self.working['radio']['model'])
         form.addRow(tr('無線機'), self.rig)
@@ -298,9 +306,16 @@ class SettingsDialog(QDialog):
     def _build_external_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
         values = self.working['external']
-        self.external_enabled = QCheckBox(tr('外部機器の先行切替を有効にする'))
+        self.external_enabled = QCheckBox(tr('外部接続を有効にする'))
         self.external_enabled.setChecked(bool(values['enabled']))
         form.addRow(self.external_enabled)
+        self.external_role = QComboBox()
+        self.external_role.addItem(tr('外部機器の先行切替'), 'prekey')
+        self.external_role.addItem(tr('無線機のPTT制御'), 'ptt')
+        self._select_data(self.external_role, values.get('role', 'prekey'))
+        form.addRow(tr('外部接続の用途'), self.external_role)
+        ptt_note = QLabel(tr('PTT用に使用する場合は有効にし、用途を「無線機のPTT制御」、無線機タブのPTT方式を「外部接続」にします。CI-V用とは別のCOMポートのRTS/DTRでPTTを操作します。先行切替時間はこの用途では使用しません。'))
+        ptt_note.setWordWrap(True); form.addRow(ptt_note)
         self.external_port = QComboBox()
         self.external_port.addItem(tr('選択してください'), '')
         for port, label in CIVController.port_choices():
@@ -335,7 +350,7 @@ class SettingsDialog(QDialog):
         self.tabs.addTab(tab, tr('外部接続'))
 
     def _external_values(self):
-        return dict(enabled=self.external_enabled.isChecked(),
+        return dict(role=self.external_role.currentData(), enabled=self.external_enabled.isChecked(),
                     com_port=self.external_port.currentData() or '',
                     line=self.external_line.currentText(), reversed=self.external_reverse.isChecked(),
                     delay_seconds=self.external_delay.value())
@@ -348,12 +363,17 @@ class SettingsDialog(QDialog):
         for widget in (self.address_label, self.civ_addr, self.address_note): widget.setVisible(not yaesu)
         for widget in (self.stopbits_label, self.stopbits): widget.setVisible(False)
         self.cat_note.setVisible(yaesu)
+        from ..radio_support import LEGACY_MODE, connection_note, ICOM_EXTERNAL_PTT
+        if not initial and model in LEGACY_MODE: self.auto_mode.setChecked(False)
         if not initial and not yaesu:
             addr = RIG_MODELS.get(model, 0)
             self.civ_addr.setCurrentText(f'{addr:02X}' if addr else '')
-        self.ptt.clear(); self.ptt.addItems(['CAT'] if yaesu else ['CI-V', 'RTS', 'DTR'])
+        self.ptt.clear(); self.ptt.addItems(['CAT'] if yaesu else (['外部接続'] if model in ICOM_EXTERNAL_PTT else ['CI-V', 'RTS', 'DTR', '外部接続']))
         saved = self.working['radio']
         if initial: self.ptt.setCurrentText(saved.get('ptt', 'CAT' if yaesu else 'CI-V'))
+        for index in range(self.ptt.count()):
+            if self.ptt.itemText(index) == '外部接続':
+                self.ptt.setItemData(index, '外部接続'); self.ptt.setItemText(index, tr('外部接続'))
         self.baud.clear(); self.baud.addItem(tr('自動'), 'AUTO')
         speeds = [115200, 38400, 19200, 9600, 4800] if yaesu else [115200, 57600, 38400, 19200, 9600, 4800]
         for speed in speeds: self.baud.addItem(str(speed), str(speed))
@@ -362,6 +382,10 @@ class SettingsDialog(QDialog):
         bits = saved.get('cat_stopbits') if initial else None
         self._select_data(self.stopbits, bits or (1 if model == 'FTX-1' else 2))
         self.port_note.setText(tr('Hamlib制御はCOMポートとCAT速度を指定してください。YaesuのUSB接続ではEnhanced COMが一般的です。') if yaesu else tr('通常は「自動」でCI-V応答を確認して接続します。複数の無線機を使用する場合は、接続先のCOMポートを指定してください。'))
+        if connection_note(model):
+            self.port_note.setText(connection_note(model))
+        self.port_note.setStyleSheet("color:#075aa6;" if model in ICOM_EXTERNAL_PTT else "")
+        self.cat_note.setText(tr("USB接続の場合は無線機のDATA入力をUSBに設定します。それ以外はCAT設定と音声入力を無線機のマニュアルで確認してください。ALCは取得できなければ本体で確認してください。"))
         self._mode_caption()
 
     def _mode_caption(self, *_):
@@ -412,11 +436,13 @@ class SettingsDialog(QDialog):
         row = QHBoxLayout(); row.addWidget(self.rx_gain, 1); row.addWidget(self.rx_label); row.addWidget(preset)
         form.addRow(tr("受信レベル"), row)
         self.rx_meter = QProgressBar(); self.rx_meter.setRange(0,100)
-        self.rx_meter.setFormat(tr('%v%　音声レベルの目安'))
-        form.addRow(tr('RXメーター'), self.rx_meter)
-        self.rx_good = QLabel(tr('青：Good（40～70%）／音が小さいか無信号なら灰色／強すぎる音は注意色'))
+        self.rx_meter.setFormat('%v%')
+        self.rx_state = QLabel(''); self.rx_state.setFixedWidth(42)
+        meter_row = QHBoxLayout(); meter_row.addWidget(self.rx_meter, 1); meter_row.addWidget(self.rx_state)
+        form.addRow(tr('RXメーター'), meter_row)
+        self.rx_good = QLabel(tr('灰：表示なし／水色：Low／緑：Good（30～79%）／黄：High（80～89%）／赤：Over!（90%以上）'))
         form.addRow('', self.rx_good)
-        n2 = QLabel(tr('受信音を聞く前は暫定50%を使用できます。RTTY信号を受信できたら、RXメーターが青いGoodの範囲に入るよう再調整してください。Goodは音声レベルの目安で、復調成功を保証しません。無信号・弱い信号は音量だけでは区別できないため、低い表示を設定不良と判定しません。受信文字も確認してください。'))
+        n2 = QLabel(tr('受信音を聞く前は暫定50%を使用できます。RTTY信号を受信できたら、RXメーターが緑のGoodの範囲に入るよう再調整してください。Goodは音声レベルの目安で、復調成功を保証しません。無信号・弱い信号は音量だけでは区別できないため、低い表示を設定不良と判定しません。受信文字も確認してください。'))
         n2.setWordWrap(True); n2.setObjectName("helpText"); form.addRow("", n2)
         save_in = QPushButton(tr('音量設定を保存')); save_in.clicked.connect(self._save_audio_in)
         form.addRow('', save_in)
@@ -608,7 +634,7 @@ class SettingsDialog(QDialog):
         values = dict(self.working['radio'])
         yaesu = self.rig.currentData() in HAMLIB_MODELS
         values.update(model=self.rig.currentData() or '', civ_address=self.civ_addr.currentText().strip().upper(),
-                      com_port=self.com.currentData() or 'AUTO', ptt=self.ptt.currentText(),
+                      com_port=self.com.currentData() or 'AUTO', ptt=self.ptt.currentData() or self.ptt.currentText(),
                       auto_data_mode=self.auto_mode.isChecked())
         values['cat_baud' if yaesu else 'civ_baud'] = self.baud.currentData() or 'AUTO'
         if yaesu: values['cat_stopbits'] = self.stopbits.currentData()
@@ -651,9 +677,14 @@ class SettingsDialog(QDialog):
         parent = self.parent()
         value = parent.level.value() if parent and hasattr(parent, 'level') else 0
         self.rx_meter.setValue(value)
-        color = '#3769c3' if 40 <= value <= 70 else '#a59d92' if value < 25 else '#c96d13' if value <= 85 else '#c0392b'
-        self.rx_meter.setStyleSheet(f'QProgressBar::chunk {{ background: {color}; }}')
-        self.rx_meter.setFormat(f'{value}%　' + (tr('Good（音声レベルの目安）') if 40 <= value <= 70 else tr('音が小さいか無信号') if value < 25 else tr('信号受信中に調整')))
+        from ..rx_level import level_band, LABELS, COLORS, TEXT_COLORS
+        display=getattr(parent, 'rx_display', None)
+        band=display.band if display is not None else level_band(value)
+        self.rx_meter.setStyleSheet(f'QProgressBar::chunk {{ background: {COLORS[band]}; }}')
+        self.rx_meter.setFormat(f'{value}%')
+        self.rx_state.setText(LABELS[band])
+        self.rx_state.setStyleSheet(f'color: {TEXT_COLORS[band]}; font-weight: bold;')
+        self.rx_state.setToolTip(tr('RX色：ほぼなし＝灰／低い＝水色／目安＝緑／やや高い＝黄／高すぎ＝赤。受信レベルの目安で、デコード成功の保証ではありません。'))
 
     def _save_audio_in(self):
         parent=self.parent()
@@ -750,7 +781,8 @@ class SettingsDialog(QDialog):
         ctl=self.test_controller
         mode=self.verified_values['ptt']
         ptt={'CI-V':ctl.set_ptt,'CAT':ctl.set_ptt,'RTS':ctl.set_rts,'DTR':ctl.set_dtr}.get(mode)
-        if not ptt:
+        if not ptt and mode != '外部接続':
+
             self.tx_test_note.setText(tr('PTT方式を確認してください。')); return
         adv=self.working['advanced']
         # RY alternation exercises both mark and space. The worker is cut off at 10 s.
@@ -759,11 +791,12 @@ class SettingsDialog(QDialog):
             sequencer=ExternalPTT(self._external_values(), ctl.status.port, parent.audio._tx_cancel)
         except ValueError as exc:
             self.tx_test_note.setText(str(exc)); return
-        def on():
-            return bool(self.test_controller is ctl and ctl.status.connected and sequencer.before_ptt() and ptt(True))
-        def off():
-            try: return ptt(False)
-            finally: sequencer.after_ptt()
+        from ..tx_keying import keying_callbacks
+        try:
+            on, off = keying_callbacks(ctl, mode, sequencer,
+                lambda: self.test_controller is ctl and ctl.status.connected)
+        except ValueError as exc:
+            self.tx_test_note.setText(str(exc)); return
         ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
             adv['mark_hz'],adv['space_hz'],adv['invert'],self.tx_gain.value()/100,
             on, off, lambda success,note:self.tx_test_finished.emit(success,note))
@@ -929,6 +962,9 @@ class SettingsDialog(QDialog):
             QMessageBox.warning(self, tr("設定"), str(exc)); return
         try:
             validate_external(self._external_values(), values['com_port'])
+            external=self._external_values()
+            if values['ptt'] == '外部接続' and (not external['enabled'] or external['role'] != 'ptt'):
+                raise ValueError(tr('外部接続でPTT制御を有効にしてください。'))
         except ValueError as exc:
             QMessageBox.warning(self, tr("外部接続"), str(exc)); return
         call_edited = self.basic_call_changed()

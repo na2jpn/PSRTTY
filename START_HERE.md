@@ -1,24 +1,22 @@
-# PSRTTY Ver1.08 正本ソース
+# PSRTTY Ver1.09 全ソース
 
-1.08の変更と追加修正をすべて統合した全ソースです。差分ZIPの追加適用は不要です。
-版表示は1.08、日英更新履歴の日付は2026-10-04です。
+基準はPSRTTY_1.08_FULL_SOURCE.zip。1.09の変更を統合済みです。過去の差分ZIPの追加適用は不要です。
+版表示1.09、更新履歴日付2026-10-08（日本時間）。
 
-## ビルド
+Windowsで build-windows.ps1 を実行してください。全テスト後、EXEとrelease/PSRTTY_1.09.zipを生成します。
+このソースZIPはアプリ内ZIP更新用ではありません。
 
-Windowsで展開し、build-windows.ps1を実行してください。
-依存パッケージの準備と全テスト後、EXEおよびrelease/PSRTTY_1.08.zipを生成します。
-この全ソースZIP自体はアプリ内のZIP更新へ渡さないでください。
+変更内容はUPDATE_HISTORY.txt、詳細はdocs/VER109_JA.md / VER109_EN.md、検証はVALIDATION_CANONICAL_109.mdを参照してください。
+config・logdata・varには利用者の設定・交信履歴を同梱していません。既存の設定・プロファイル・ログを削除せず引き継いでください。
+アイコンは正常なICOを継続使用しています。
 
-## 含まれる変更
+独立ウィンドウへの修正を統合済みです。追加検証はdocs/VALIDATION_109_FIX1.mdを参照してください。
+Window independence corrections are integrated; see docs/VALIDATION_109_FIX1.md.
 
-- IC-7760対応。
-- 第二AudioOUT、独立した0～200％音量、100％超の赤いゲージ。
-- 第二設定を開く前に主AudioOUTの出力先・音量を保存。主出力先を第二候補から除外。
-- 未接続時の送信許可ON・第二出力有効なら、片方でも使える出力先で再生。
-- サンクスの更新（JH1PGF、メディアサンクスhamlife.jp）。
-- アイコン修正とWindowsアプリ識別設定。
-- 日本語・英語の表示、ガイド、更新履歴。
 
-config・logdata・varは空です。運用中の設定・ログ・マクロは同梱していません。
-過去の差分適用手順はdocs/history/1.08_developmentに保存しています。今回の正本には適用不要です。
-検証記録はVALIDATION_CANONICAL_108.mdを参照してください。
+RXゲージとAudio INの色・基準を統一しました。灰は表示なし、水色はLow、緑はGood（30～79%）、黄はHigh（80～89%）、赤はOver!（90%以上）を同系色でゲージ横に表示します。表示の細かな揺れと境界付近のちらつきを抑え、音声入力・デコード処理は変更しません。
+Main RX and Audio IN share five level colors and matching labels: gray shows no text, light blue Low, green Good (30–79%), yellow High (80–89%) and red Over! (90% or more). Display smoothing and band confirmation reduce flicker without changing audio input or decoding.
+検証: docs/VALIDATION_109_FIX3.md
+
+2026-10-08: 1.09の修正を統合した正本です。差分の追加適用は不要です。RXゲージの説明は初期設定ガイド「波形の高さと入力音量」にも掲載。正本化検証: docs/VALIDATION_109_CANONICAL.md。
+Canonical 1.09 source includes all corrections; do not apply earlier patches. See docs/VALIDATION_109_CANONICAL.md.

@@ -52,7 +52,7 @@ class HamlibBridgeTest(unittest.TestCase):
         self.assertIsNotNone(lib)
 
     def test_all_chosen_models_are_explicit(self):
-        self.assertEqual(len(HAMLIB_MODELS),10)
+        self.assertEqual(len(HAMLIB_MODELS),13)
         self.assertEqual(HAMLIB_MODELS['FTX-1'][0],1051)
         self.assertEqual(HAMLIB_MODELS['TS-990S'][0],2039)
 

@@ -51,6 +51,7 @@ class AudioBridge(QObject):
     level = Signal(float)
     spectrum = Signal(object, object)
     sub_char = Signal(int, str)
+    direct_progress = Signal(int, int, int, str)
 
 
 class ReceiveCard(QFrame):
@@ -110,6 +111,9 @@ class MainWindow(QMainWindow):
         self.qso_revision = 0
         self.control_window = None
         self.sub_window = None
+        self.direct_window = None
+        self.shortcut_window = None
+        self.live_session = None
         self.tx_sequence = 0
         self.active_tx_id = None
         self.pending_manual = None
@@ -129,6 +133,9 @@ class MainWindow(QMainWindow):
         self.call_frequency = None
         self.rx_buffer = ""
         self.last_spectrum: tuple[np.ndarray, np.ndarray] | None = None
+        from ..rx_level import LowLevelNotice, LevelDisplay
+        self.rx_level_hint = LowLevelNotice()
+        self.rx_display = LevelDisplay()
 
         self.bridge = AudioBridge()
         self.bridge.tx_finished.connect(lambda token, ok, msg: self._tx_finished(ok, msg, token))
@@ -136,6 +143,7 @@ class MainWindow(QMainWindow):
         self.bridge.level.connect(self._rx_level)
         self.bridge.spectrum.connect(self._spectrum_data)
         self.bridge.sub_char.connect(self._sub_char)
+        self.bridge.direct_progress.connect(self._direct_progress)
         sr = int(self.store.data["audio"]["sample_rate"])
         self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
         self._apply_audio_config()
@@ -160,11 +168,12 @@ class MainWindow(QMainWindow):
         self.secondary_status.hide()
         self.statusBar().addPermanentWidget(self.secondary_status)
         self.printer_timer.timeout.connect(self._refresh_secondary_status)
+        self.printer_timer.timeout.connect(self._refresh_rx_level_notice)
         self._refresh_printer_status()
         self._refresh_latest_qsos()
         self._set_radio_controls()
 
-        self.rx_idle_timer = QTimer(self); self.rx_idle_timer.setSingleShot(True); self.rx_idle_timer.setInterval(750); self.rx_idle_timer.timeout.connect(self._finalize_rx_card)
+        self.rx_idle_timer = QTimer(self); self.rx_idle_timer.setSingleShot(True); self.rx_idle_timer.setInterval(250); self.rx_idle_timer.timeout.connect(self._check_rx_idle)
         self.poll_timer = QTimer(self); self.poll_timer.setInterval(1200); self.poll_timer.timeout.connect(self._poll_radio)
         self.track_timer = QTimer(self); self.track_timer.setInterval(450)
         self.track_timer.timeout.connect(self._auto_track_tick); self.track_timer.start()
@@ -240,6 +249,7 @@ class MainWindow(QMainWindow):
 
         helpm = mb.addMenu(tr("ヘルプ"))
         self._act(helpm, tr("初期設定ガイド"), self._guide_initial)
+        self._act(helpm, tr("ショートカットキーガイド"), self._guide_shortcuts)
         self._act(helpm, tr("起動コマンドフラグについて"), self._guide_flags)
         self.update_action = self._act(helpm, tr("PSRTTYのバージョンアップ"), self._upgrade_zip)
         helpm.addSeparator()
@@ -318,14 +328,22 @@ class MainWindow(QMainWindow):
         controls.addWidget(self.tone_label); controls.addStretch(1)
         controls.addWidget(QLabel("RX"))
         self.level = QProgressBar(); self.level.setRange(0,100); self.level.setTextVisible(False)
-        self.level.setFixedSize(85, 20); self.level.setToolTip(tr("USB Audioの受信音声レベル"))
+        self.level.setFixedSize(85, 20); self.level.setToolTip(tr('RX色：ほぼなし＝灰／低い＝水色／目安＝緑／やや高い＝黄／高すぎ＝赤。受信レベルの目安で、デコード成功の保証ではありません。'))
+        from ..rx_level import level_color
+        self.level.setValue(0)
+        self.level.setStyleSheet(f'QProgressBar::chunk {{ background: {level_color(0)}; }}')
         controls.addWidget(self.level)
+        self.rx_level_notice = QLabel('')
+        self.rx_level_notice.setFixedWidth(42)
+        self.rx_level_notice.setToolTip(self.level.toolTip())
+        controls.addWidget(self.rx_level_notice)
         controls.addWidget(QLabel(tr('表示感度')))
         self.spectrum_gain=QSlider(Qt.Horizontal); self.spectrum_gain.setRange(-30,40); self.spectrum_gain.setFixedWidth(90)
         self.spectrum_gain.setValue(int(self.store.data['ui'].get('spectrum_gain_db',0)))
         self.spectrum.set_gain(self.spectrum_gain.value()); self.spectrum_gain.valueChanged.connect(self._spectrum_gain_changed)
         self.spectrum_gain.setToolTip(tr('波形の表示だけを調整します。受信音量・デコードには影響しません。'))
         controls.addWidget(self.spectrum_gain); sv.addLayout(controls)
+
         controls=QHBoxLayout(); controls.addWidget(QLabel(tr('シフト幅')))
         self.shift_edit=QLineEdit(str(self.store.data['advanced']['shift_hz'])); self.shift_edit.setFixedWidth(86)
         self.shift_edit.setMaxLength(12); self.shift_edit.editingFinished.connect(self._shift_changed)
@@ -480,9 +498,13 @@ class MainWindow(QMainWindow):
 
         tx_box=QGroupBox(tr("手動送信"))
         tv=QVBoxLayout(tx_box); self.manual_tx=QLineEdit(); self.manual_tx.setPlaceholderText(tr("自由送信テキスト"))
-        tv.addWidget(self.manual_tx); rr=QHBoxLayout(); send=QPushButton("TX"); self.send_button=send; send.clicked.connect(self._send_manual); stop=QPushButton("STOP"); stop.setObjectName("stopButton"); stop.clicked.connect(self._stop_tx)
-        send.setToolTip(tr('入力した文章をRTTYで送信します。')); stop.setToolTip(tr('現在の送信を停止します。'))
-        rr.addWidget(send); rr.addWidget(stop); tv.addLayout(rr); right.addWidget(tx_box)
+        tv.addWidget(self.manual_tx); rr=QHBoxLayout()
+        direct=QPushButton(tr('ダイレクト')); direct.clicked.connect(self._open_direct)
+        clear=QPushButton(tr('クリア')); clear.clicked.connect(self._clear_manual)
+        send=QPushButton('1TX'); self.send_button=send; send.clicked.connect(self._manual_button)
+        send.setToolTip(tr('入力した文章をRTTYで送信します。'))
+        direct.setToolTip(tr('ダイレクト送信（Ctrl+F12／Shift+F12）'))
+        rr.addWidget(direct); rr.addWidget(clear); rr.addWidget(send); tv.addLayout(rr); right.addWidget(tx_box)
         for field in [self.q_call, self.my_call, self.rst_s, self.rst_r, self.sent, self.rcvd]:
             field.textChanged.connect(self._refresh_macros)
         self.sent.textChanged.connect(self._remember_qso_options)
@@ -526,6 +548,11 @@ class MainWindow(QMainWindow):
         for i in range(9):
             s=QShortcut(QKeySequence(f"F{i+1}"), self); s.activated.connect(lambda idx=i: self._send_macro(idx)); self.shortcuts.append(s)
         esc=QShortcut(QKeySequence("Esc"), self); esc.activated.connect(self._stop_tx); self.shortcuts.append(esc)
+        for sequence, action in [('Ctrl+F12', self._toggle_direct), ('Shift+F12', self._toggle_direct),
+                                 ('F11', lambda: self._direct_key(11)), ('F12', lambda: self._direct_key(12))]:
+            shortcut=QShortcut(QKeySequence(sequence), self)
+            shortcut.setContext(Qt.ApplicationShortcut); shortcut.setAutoRepeat(False)
+            shortcut.activated.connect(action); self.shortcuts.append(shortcut)
 
     def _load_config_to_ui(self):
         d=self.store.data
@@ -604,6 +631,7 @@ class MainWindow(QMainWindow):
             tr('Profileは切り替わりました。無線機は未接続です') + (f'：{reason}' if reason else ''), 10000)
 
     def _restart_audio_input(self):
+        self.rx_level_hint.reset(); self.rx_display.reset(); self._rx_level(0)
         self.audio_input_requested = True
         if self.audio_input_busy: return
         self.audio_input_busy = True
@@ -622,7 +650,7 @@ class MainWindow(QMainWindow):
             self.audio_status.setText(tr('Audio IN: 入力中') if ok else (tr('Audio IN: 未設定') if selection == 'UNSET' else tr('Audio IN: 入力できません')))
             self.audio_status.setToolTip(message)
             if not ok:
-                self.level.setValue(0)
+                self._rx_level(0)
                 self.last_spectrum = None
                 self.spectrum.set_data(np.array([]), np.array([]))
                 if selection != 'UNSET': self.statusBar().showMessage(message, 10000)
@@ -674,6 +702,7 @@ class MainWindow(QMainWindow):
 
     def _set_decode_enabled(self, enabled):
         self.audio.set_decode_enabled(enabled)
+        self.rx_level_hint.reset(); self._refresh_rx_level_notice()
         self.rx_idle_timer.stop(); self.rx_buffer=''
 
     def _rx_char(self, ch):
@@ -681,13 +710,21 @@ class MainWindow(QMainWindow):
         if isinstance(ch, tuple):
             generation, ch=ch
             if generation != self.audio.decode_generation: return
+        if ch.strip(): self.rx_level_hint.decoded(time.monotonic())
         if self.sub_window and self.sub_window.isVisible():self.sub_window.main_char(ch)
         if ch in "\r\n":
             if self.rx_buffer.strip(): self._finalize_rx_card()
             return
+        self.rx_last_char_time=time.monotonic()
         self.rx_buffer += ch
         if len(self.rx_buffer)>300: self._finalize_rx_card()
         else: self.rx_idle_timer.start()
+
+    def _check_rx_idle(self):
+        if not self.rx_buffer:return
+        last=max(getattr(self,'rx_last_char_time',0.),self.audio.decoder.last_signal_time)
+        if time.monotonic()-last < 1.5:self.rx_idle_timer.start()
+        else:self._finalize_rx_card()
 
     def _finalize_rx_card(self):
         text=" ".join(self.rx_buffer.split()); self.rx_buffer=""
@@ -773,6 +810,7 @@ class MainWindow(QMainWindow):
 
     def _set_radio_controls(self):
         ready = self._connected()
+        self.send_button.setText("STOP" if self.active_tx_id is not None else "1TX")
         self.rig_status.setText(tr('接続中…') if self.connecting else (tr('接続') if ready else tr('未接続')))
         self.rig_status.setEnabled(not self.connecting)
         self.rig_status.setStyleSheet('background: #a9def5; color: #075aa6;' if ready else 'background: #e1e9ee; color: #a34e00;')
@@ -795,6 +833,41 @@ class MainWindow(QMainWindow):
             self._stop_tx()
             self.statusBar().showMessage(tr('{key} は空です').format(key=m.get('key')), 3000); return
         self._manual_request(text, macro=m.get("completes_qso") is True)
+
+    def _clear_manual(self):
+        self._stop_tx(); self.manual_tx.clear()
+
+    def _manual_button(self):
+        if self.active_tx_id is not None: self._stop_tx()
+        else: self._send_manual()
+
+    def _open_direct(self):
+        from .direct_tx import DirectTxWindow
+        if self.direct_window is None: self.direct_window=DirectTxWindow(self)
+        place_tool_window(self.direct_window,self,(720,220),(340,180),self.store.data['ui'].get('direct_window'))
+        self.direct_window.focus_input()
+
+    def _toggle_direct(self):
+        if self.direct_window and self.direct_window.isVisible():self.direct_window.close()
+        else:self._open_direct()
+
+    def _direct_key(self, key):
+        window=self.direct_window
+        if not window or not window.isVisible():return
+        if QApplication.activeWindow() is self:
+            window.focus_input();return
+        if QApplication.activeWindow() is not window:return
+        if key==11:window.toggle()
+        else:window.replay()
+
+    def _direct_progress(self, token, epoch, count, ch):
+        if token==self.active_tx_id and self.direct_window:self.direct_window.progress(epoch,count,ch)
+
+    def _guide_shortcuts(self):
+        from .shortcut_guide import ShortcutGuide
+        if self.shortcut_window is None:self.shortcut_window=ShortcutGuide(self)
+        place_tool_window(self.shortcut_window,self,(700,480),(340,240),self.store.data['ui'].get('shortcut_window'))
+        self.shortcut_window.show();self.shortcut_window.raise_();self.shortcut_window.activateWindow()
 
     def _send_manual(self):
         text = self.manual_tx.text().strip()
@@ -825,7 +898,7 @@ class MainWindow(QMainWindow):
         queued, self.pending_manual = self.pending_manual, None
         self._manual_request(*queued)
 
-    def _send_text(self, text):
+    def _send_text(self, text, live_session=None):
         if not self._manual_tx_allowed():
             self.statusBar().showMessage(tr("無線機を接続してから送信してください"), 3000)
             return False
@@ -848,25 +921,37 @@ class MainWindow(QMainWindow):
         except ValueError as exc:
             self.statusBar().showMessage(str(exc), 4000)
             return False
-        def on():
-            if offline: return not self.closing
-            return bool(ptt and self.radio is ctl and self._connected() and sequencer.before_ptt() and ptt(True))
-        def off():
-            try: return True if offline else (ptt(False) if ptt else False)
-            finally: sequencer.after_ptt()
+        try:
+            if offline:
+                on, off = lambda: not self.closing, lambda: True
+            else:
+                from ..tx_keying import keying_callbacks
+                on, off = keying_callbacks(ctl, mode, sequencer, lambda: self.radio is ctl and self._connected() and not self.closing)
+        except ValueError as exc:
+            self.statusBar().showMessage(str(exc),6000); return False
         self.tx_sequence += 1
         token = self.tx_sequence
         self.active_tx_id = token
+        self.rx_level_hint.reset(); self._refresh_rx_level_notice()
         self.rx_idle_timer.stop(); self.rx_buffer = ''
         try:
-            ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg), allow_secondary_only=offline and self.offline_tx.isChecked())
+            if live_session is None:
+                ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg), allow_secondary_only=offline and self.offline_tx.isChecked())
+            else:
+                self._cancel_auto_cq()
+                from ..live_tx import start_live
+                from ..audio_engine import sd
+                self.live_session=live_session
+                ok,msg=start_live(self.audio,sd,live_session,au['output_device'],a,au['tx_gain'],on,off,
+                    lambda ok,msg:self.bridge.tx_finished.emit(token,ok,msg),
+                    lambda epoch,count,ch:self.bridge.direct_progress.emit(token,epoch,count,ch),offline=offline)
         except Exception as exc:
             ok, msg = False, f"{tr('送信開始失敗: ')}{exc}" 
-        if ok:
+        if ok and live_session is None:
             self.print_tx=(token,text,datetime.now(timezone.utc),self.store.data['ui'].get('time_zone','JST'),self.printer.generation) if self.printer.snapshot()['enabled'] else None
             self.pending_auto_log = None
             self.transcript.append("TX " + text); self._add_card(text,"TX")
-        if not ok: self.active_tx_id = None
+        if not ok: self.active_tx_id = None; self.live_session = None
         self._set_radio_controls()
         self.statusBar().showMessage(msg,4000)
         return ok
@@ -882,6 +967,13 @@ class MainWindow(QMainWindow):
         self.audio.set_decode_enabled(self.decode_enabled.isChecked())
         self.rx_idle_timer.stop(); self.rx_buffer = ''
         finished_id, self.active_tx_id = self.active_tx_id, None
+        if self.live_session is not None:
+            text=''.join(self.live_session.records)
+            if text:
+                self.transcript.append('TX '+text); self._add_card(text,'TX')
+                if success: self.printer.submit('TX',text,zone=self.store.data['ui'].get('time_zone','JST'))
+            self.live_session=None
+            if self.direct_window:self.direct_window.finished()
         print_tx,self.print_tx=self.print_tx,None
         if success and print_tx and print_tx[0]==finished_id and print_tx[4]==self.printer.generation:
             self.printer.submit('TX',print_tx[1],print_tx[2],print_tx[3])
@@ -968,6 +1060,8 @@ class MainWindow(QMainWindow):
         self._cancel_auto_cq()
         self.pending_manual = None
         self.pending_auto_log = None
+        if self.direct_window:
+            self.direct_window.timer.stop(); self.direct_window.suppressed=True
         self.audio.stop_tx()
         self.statusBar().showMessage(tr("送信停止"),2500)
 
@@ -1207,6 +1301,7 @@ class MainWindow(QMainWindow):
                               self.store.data['ui'].get('scope_window'))
             self.scope_window.show()
             self.scope_window.raise_()
+            self.scope_window.activateWindow()
         elif self.scope_window is not None:
             self.store.data['ui']['scope_window']=save_window(self.scope_window)
             self.scope_window.hide()
@@ -1243,7 +1338,23 @@ class MainWindow(QMainWindow):
     def _sub_char(self,index,ch):
         if self.sub_window and self.sub_window.isVisible():self.sub_window.sub_char(index,ch)
 
-    def _rx_level(self,v): self.level.setValue(int(max(0,min(1,float(v)))*100))
+    def _rx_level(self, v):
+        now=time.monotonic();self.rx_level_hint.level(v,now)
+        self.level.setValue(self.rx_display.update(v,now))
+        self._paint_rx_level()
+
+    def _paint_rx_level(self):
+        from ..rx_level import LABELS, COLORS, TEXT_COLORS
+        band=self.rx_display.band
+        self.level.setStyleSheet(f'QProgressBar::chunk {{ background: {COLORS[band]}; }}')
+        self.rx_level_notice.setText(LABELS[band])
+        self.rx_level_notice.setStyleSheet(f'color: {TEXT_COLORS[band]}; font-weight: bold;')
+
+    def _refresh_rx_level_notice(self):
+        last=self.rx_level_hint.last_level
+        if last is None or time.monotonic()-last > .75:
+            self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
+
     def _spectrum_data(self,f,p): self.last_spectrum=(np.asarray(f),np.asarray(p)); self.spectrum.set_data(self.last_spectrum[0],self.last_spectrum[1])
 
     def _auto_track_tick(self):
@@ -1535,6 +1646,8 @@ class MainWindow(QMainWindow):
             if QMessageBox.question(self, tr("バージョンアップ"), tr('Ver{0} → Ver{1}\n設定・ログ・varのデータを保持し、更新前バックアップを作成します。\n信頼できる配布元のZIPであることを確認してください。\nPSRTTYを終了して更新し、自動で再起動しますか？').format(__version__, info['version'])) != QMessageBox.Yes:
                 return
             self.disconnect_radio()
+            if self.direct_window: self.direct_window.close()
+            if self.shortcut_window: self.shortcut_window.close()
             if self.settings_window: self.settings_window.close()
             self.setEnabled(False)
             def prepared(stage, err):
@@ -1691,6 +1804,8 @@ class MainWindow(QMainWindow):
             if self.control_window:
                 self.store.data['ui']['control_window']=save_window(self.control_window)
                 self.control_window.close()
+            if self.direct_window: self.direct_window.close()
+            if self.shortcut_window: self.shortcut_window.close()
             if self.settings_window: self.settings_window.close()
             self.cq_count.normalize(); self.cq_interval.normalize(); self._remember_cq_options()
             self.store.data["ui"]["auto_get_call"] = self.auto_get.isChecked()

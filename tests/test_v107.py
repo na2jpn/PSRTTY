@@ -157,6 +157,10 @@ class Radio107Tests(unittest.TestCase):
     def test_nb_nr_all_listed_models_and_tx_guard(self):
         for model in HAMLIB_MODELS:
             ctl = self.ctl(model)
+            if model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):
+                for name in ('NB','NR'):
+                    self.assertIsNone(ctl.read_feature(name)); self.assertFalse(ctl.set_feature(name,True))
+                continue
             for name in ('NB','NR'):
                 self.assertIs(ctl.read_feature(name), False, model)
                 self.assertTrue(ctl.set_feature(name, True), model)
@@ -166,6 +170,8 @@ class Radio107Tests(unittest.TestCase):
         for model in HAMLIB_MODELS:
             if not model.startswith('FT'): continue
             ctl = self.ctl(model); state = ctl.read_filter()
+            if model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):
+                self.assertIsNone(state);self.assertFalse(ctl.set_filter(1200, state));continue
             self.assertTrue(ctl.set_filter(1200, state), model)
             if model in ('FT-710','FTDX10','FTDX101D','FTDX101MP','FTX-1'):
                 self.assertIn((4000,'4000 Hz'), state['options'])
@@ -219,7 +225,7 @@ class UI107Tests(unittest.TestCase):
             d = HamlogSettingsDialog(self.window.integration, self.window)
             self.assertFalse(d.enabled.isChecked()); self.assertFalse(d.save_mode.currentData())
             self.assertEqual(d.windowTitle(), tr('HAMLOG連携設定'))
-            g = GuideWindow(self.window); self.assertIn('HAMLOG',g.tabs.tabText(g.tabs.count()-1))
+            g = GuideWindow(self.window); self.assertTrue(any('HAMLOG' in g.tabs.tabText(i) for i in range(g.tabs.count())))
             thanks = SpecialThanksDialog(self.window); thanks.resize(420,260); thanks.show(); self.pump(.02)
             self.assertGreater(thanks.scroll.verticalScrollBar().maximum(), 0)
             self.assertIn('JG2AJK\nJQ7FIU\n7K2COL', thanks.names.text())

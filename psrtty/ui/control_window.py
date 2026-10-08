@@ -24,6 +24,14 @@ BANDS = [('1.8',1800000,2000000,1908000),('3.5',3500000,4000000,3520000),
  ('5.6G',5650000000,5850000000,5760100000),('10G',10000000000,10500000000,10450100000)]
 
 def model_bands(model):
+    if model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D','IC-706MkIIG','IC-7000'):return BANDS[:12]
+    if model in ('IC-706','IC-706MkII','IC-746','IC-7400 / IC-746PRO'):return BANDS[:11]
+    if model in ('IC-910 / IC-910H','IC-970'):return BANDS[10:13]
+    if model in ('IC-820H','IC-821H'):return BANDS[10:12]
+    if model in ('IC-271','IC-275'):return BANDS[10:11]
+    if model in ('IC-471','IC-475'):return BANDS[11:12]
+    if model=='IC-1275':return BANDS[12:13]
+    if model in ('IC-375','IC-575'):return []
     if model == 'IC-905': return BANDS[10:]
     if model == 'IC-9700': return BANDS[10:13]
     if model in ('IC-705','IC-7100','FT-991 / FT-991A','FTX-1'): return BANDS[:12]
@@ -73,7 +81,9 @@ class JogDial(QWidget):
 
 class ControlWindow(QDialog):
     def __init__(self,main):
-        super().__init__(main,Qt.Window); self.main=main
+        super().__init__(None,Qt.Window); self.main=main
+        from .window_state import independent_tool_window
+        independent_tool_window(self, main)
         self.setWindowTitle(tr('PSRTTY コントロール')); self.setModal(False); self.resize(480,630)
         self.busy=False; self.pending=None; self.target=None; self.feature_pending=None
         self.mode_pending=None; self.mode_profile=None; self.mode_observed=None; self.tuner_pending=False
@@ -121,7 +131,7 @@ class ControlWindow(QDialog):
         self.antenna_tune.setToolTip(tr('無線機へTUNE操作を送ります。外部ATUを含め動作可否は無線機側で判定します。'))
         self.antenna_tune.clicked.connect(self.request_tuner); root.addWidget(self.antenna_tune)
         self.note=QLabel(); self.note.setWordWrap(True); root.addWidget(self.note)
-        self.setStyleSheet('QPushButton:checked { background: #ed8b19; color: white; border: 2px solid #9b4c00; }')
+        self.setStyleSheet(self.styleSheet() + 'QPushButton:checked { background: #ed8b19; color: white; border: 2px solid #9b4c00; }')
         self.timer=QTimer(self); self.timer.setInterval(100); self.timer.timeout.connect(self.tick); self.timer.start(); self.refresh_enabled()
     def set_wheel_reverse(self, checked):
         self.dial.wheel_reverse=checked; self.dial.wheel_remainder=0.
@@ -274,6 +284,10 @@ class ControlWindow(QDialog):
     def request_frequency(self,hz):
         if not self.ready(): return
         maximum=15000000000 if self.band_profile in ('IC-905','その他ICOM') else 1500000000 if self.band_profile=='IC-9700' else 470000001 if len(model_bands(self.band_profile))>10 else 60000000
+        from ..radio_support import ICOM_EXTERNAL_AUDIO, ICOM_EXTERNAL_PTT, CAT_CABLE_MODELS
+        if self.band_profile in (set(ICOM_EXTERNAL_AUDIO) | set(ICOM_EXTERNAL_PTT) | CAT_CABLE_MODELS):
+            bands=model_bands(self.band_profile)
+            maximum=max([b[2] for b in bands],default=220000000 if self.band_profile=='IC-375' else 60000000)+1
         if not 100000<=hz<maximum:
             self.note.setText(tr('機種の周波数範囲を確認してください。')); return
         self.pending=self.target=hz; self.note.setText(f"{tr('設定待ち: ')}{hz / 1000000.0:.6f} MHz")

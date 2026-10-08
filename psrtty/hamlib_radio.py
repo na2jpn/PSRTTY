@@ -17,6 +17,9 @@ from .paths import app_root
 
 HAMLIB_VERSION = '4.7.2'
 HAMLIB_MODELS = {
+    'FT-817 / FT-817ND': (1020, 'Yaesu FT-817 / FT-817ND'),
+    'FT-818ND': (1041, 'Yaesu FT-818ND'),
+    'FT-857 / FT-857D': (1022, 'Yaesu FT-857 / FT-857D'),
     'FT-991 / FT-991A': (1035, 'Yaesu FT-991 / FT-991A'),
     'FTX-1': (1051, 'Yaesu FTX-1 Field / Optima'),
     'FT-710': (1049, 'Yaesu FT-710'),
@@ -154,6 +157,9 @@ class HamlibController(CIVController):
                 if not self.handle:raise RuntimeError(tr('Hamlibが機種を認識できませんでした。'))
                 self._configure('rig_pathname',port)
                 self._configure('serial_speed',int(baud))
+                if self.model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):
+                    self._configure('stop_bits',2)
+                    self._configure('serial_handshake','None')
                 if self.lib.rig_open(self.handle)!=0:raise RuntimeError(tr('Hamlibが無線機に接続できませんでした。'))
                 freq=self.read_frequency()
                 if not freq:raise RuntimeError(tr('Hamlibから周波数を取得できませんでした。'))
@@ -257,6 +263,7 @@ class HamlibController(CIVController):
         return bool(self.handle and self.lib and self.status.connected and not self.cancel.is_set())
 
     def read_feature(self, name):
+        if self.model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):return None
         with self._lock:
             if not self._control_ready() or name not in ('NB', 'NR'):
                 return None
@@ -281,7 +288,7 @@ class HamlibController(CIVController):
 
     def read_filter(self):
         with self._lock:
-            if not self._control_ready() or self.model in ('TS-890S', 'TS-990S'):
+            if not self._control_ready() or self.model in ('TS-890S', 'TS-990S', 'FT-817 / FT-817ND', 'FT-818ND', 'FT-857 / FT-857D'):
                 return None
             mode = ctypes.c_uint64(); width = ctypes.c_long()
             if self.lib.rig_get_mode(self.handle, VFO, ctypes.byref(mode), ctypes.byref(width)) != 0 or width.value <= 0:

@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 
 import numpy as np
+import time
 
 from .rtty_codec import ITA2Decoder
 
@@ -32,6 +33,7 @@ class RTTYDecoder:
         self.on_char = on_char or (lambda _c: None)
         self.sq_level = 4
         self._quality = 0.0
+        self.last_signal_time = 0.0
         self._frame_quality = []
         self.window_ms = 10.0
         self.window_n = max(64, int(sample_rate * self.window_ms / 1000.0))
@@ -68,6 +70,7 @@ class RTTYDecoder:
         self._ita2.reset()
         self._ignore_until = 0.0
         self._frame_quality = []
+        self.last_signal_time = 0.0
 
     def _rebuild_basis(self) -> None:
         n = np.arange(self.window_n, dtype=np.float64)
@@ -99,6 +102,8 @@ class RTTYDecoder:
             seg = self._buf[: self.window_n]
             self._buf = self._buf[self.hop_n :]
             logic, confidence = self._logic(seg)
+            if logic == 1 and self._quality >= .5 and confidence >= .8:
+                self.last_signal_time = time.monotonic()
             center_t = self._time + self.window_n / self.sample_rate / 2.0
             self._time += dt
             self._consume_logic(logic, confidence, center_t)
@@ -134,6 +139,7 @@ class RTTYDecoder:
             # Validate stop MARK before changing ITA2 shift state or emitting text.
             if logic == 1 and sum(self._frame_quality)/len(self._frame_quality) >= threshold:
                 code = sum((bit & 1) << i for i, bit in enumerate(self._bits))
+                self.last_signal_time = time.monotonic()
                 char = self._ita2.decode_code(code)
                 if char:
                     self.on_char(char)

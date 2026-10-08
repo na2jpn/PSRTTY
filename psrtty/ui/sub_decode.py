@@ -135,8 +135,10 @@ class SubSpectrum(QWidget):
 
 class SubDecodeWindow(QDialog):
     def __init__(self, main):
-        super().__init__(main,Qt.Window)
+        super().__init__(None,Qt.Window)
         self.main=main
+        from .window_state import independent_tool_window
+        independent_tool_window(self, main)
         self.setWindowTitle(tr('PSRTTY サブデコ'))
         self.setMinimumSize(400,300);self.resize(480,400)
         self.worker=SubDecodeWorker(main.audio.sample_rate,

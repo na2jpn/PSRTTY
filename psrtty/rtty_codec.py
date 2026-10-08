@@ -79,7 +79,7 @@ def encode_text_audio(
     amplitude: float = 0.35,
 ) -> np.ndarray:
     """Generate AFSK RTTY (ITA2, 1 start, 5 data, 1.5 stop bits)."""
-    codes = encode_ita2_codes(text + "\r\n")
+    codes = [LTRS_SHIFT] + encode_ita2_codes(text + "\r\n")
     phase = 0.0
     chunks: list[np.ndarray] = []
     sample_error = 0.0

@@ -1,4 +1,4 @@
-PSRTTY 1.01
+PSRTTY 1.09
 
 Copyright (c) 2026 H.Tanaka (JH1HST)
 Originally developed by H.Tanaka (JH1HST)
