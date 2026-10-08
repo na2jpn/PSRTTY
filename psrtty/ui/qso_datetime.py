@@ -14,12 +14,12 @@ class QSODatetime(QWidget):
         self.zone_name=zone if zone in ("JST","UTC") else "JST"
         self.zone=display_zone(self.zone_name)
         row=QHBoxLayout(self); row.setContentsMargins(0,0,0,0); row.setSpacing(4)
-        self.date=QLineEdit(); self.time=QLineEdit(); self.manual=QCheckBox(tr('日時手動'))
+        self.date=QLineEdit(); self.time=QLineEdit(); self.manual=QCheckBox(tr('ui.226cd94a60d1b77b'))
         font=self.time.font();font.setFamily(QFontDatabase.systemFont(QFontDatabase.FixedFont).family());self.time.setFont(font)
         for field,hint in ((self.date,'YYYY-MM-DD'),(self.time,'HH:MM')):
             field.setPlaceholderText(hint)
             field.setFixedWidth(field.fontMetrics().horizontalAdvance(hint)+18)
-            field.setToolTip(tr('PCの時計を使用します。日時手動をONにすると更新を止めて編集できます。'))
+            field.setToolTip(tr('ui.58dad7d6a8ea8afd'))
             row.addWidget(field)
             field.textChanged.connect(self._edited)
         self.zone_label=QLabel(self.zone_name);row.addWidget(self.zone_label)

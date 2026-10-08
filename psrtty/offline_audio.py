@@ -23,7 +23,7 @@ def start_offline_dual(engine, sd, audio, primary_device, on_finished):
         try:
             if engine._tx_cancel.is_set(): return
             if selection == 'UNSET' or (is_secondary and selection is None):
-                raise ValueError(tr('未設定'))
+                raise ValueError(tr('ui.6213305916949e4c'))
             chosen = resolve_device(sd, selection, 'output')
             identity = chosen
             if identity is None:
@@ -61,7 +61,7 @@ def start_offline_dual(engine, sd, audio, primary_device, on_finished):
             with lock:
                 completed.append(success)
                 if errors:
-                    engine.secondary_notice = tr('未接続時の音声出力：使えない出力先があります。') + ' ' + ' / '.join(errors)
+                    engine.secondary_notice = tr('ui.1fe5b33acae217ed') + ' ' + ' / '.join(errors)
 
     def worker():
         jobs = []
@@ -73,7 +73,7 @@ def start_offline_dual(engine, sd, audio, primary_device, on_finished):
                 thread.start(); jobs.append(thread)
             for thread in jobs: thread.join()
             success = any(completed) and not engine._tx_cancel.is_set()
-            message = tr('送信完了') if success else tr('送信中止') if engine._tx_cancel.is_set() else tr('両方のAudioOUTを使用できません。出力先と接続を確認してください。') + ' ' + ' / '.join(errors)
+            message = tr('ui.fe0cbba02e8d4de7') if success else tr('ui.63e1879b6cfd6a0e') if engine._tx_cancel.is_set() else tr('ui.b3f72d7f6629a8ff') + ' ' + ' / '.join(errors)
         except Exception as exc:
             engine._tx_cancel.set()
             for thread in jobs: thread.join()
@@ -84,4 +84,4 @@ def start_offline_dual(engine, sd, audio, primary_device, on_finished):
 
     engine._tx_thread = threading.Thread(target=worker, daemon=True)
     engine._tx_thread.start()
-    return True, tr('送信開始')
+    return True, tr('ui.18e846a7e87b6ef5')

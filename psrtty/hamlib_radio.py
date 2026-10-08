@@ -71,7 +71,7 @@ def _library_candidates(path=None):
 
 def load_library(path=None):
     if sys.platform == 'win32' and not Path(path or library_path()).resolve().is_file():
-        raise FileNotFoundError(tr('Hamlib DLLがありません: {path}').format(path=Path(path or library_path()).resolve()))
+        raise FileNotFoundError(tr('ui.c094d50df160d30e').format(path=Path(path or library_path()).resolve()))
     directory = None
     lib = None
     last_error = None
@@ -102,7 +102,7 @@ def load_library(path=None):
                 directory = None
             lib = None
     if lib is None:
-        raise FileNotFoundError(tr('Hamlibライブラリが見つかりません: {error}').format(error=last_error))
+        raise FileNotFoundError(tr('ui.088c2a06f0368f17').format(error=last_error))
     signatures={
         'rig_init':(ctypes.c_void_p,[ctypes.c_int]),
         'rig_cleanup':(ctypes.c_int,[ctypes.c_void_p]),
@@ -136,33 +136,33 @@ def load_library(path=None):
 
 class HamlibController(CIVController):
     def __init__(self, model):
-        if model not in HAMLIB_MODELS:raise ValueError(tr('Hamlibの選択機種ではありません。'))
+        if model not in HAMLIB_MODELS:raise ValueError(tr('ui.0e1b2eddb0064736'))
         super().__init__(0,model=model)
         self.handle=None;self.lib=None;self.dll_directory=None
 
     def _configure(self, name, value):
         token=self.lib.rig_token_lookup(self.handle,name.encode('ascii'))
         if token<=0 or self.lib.rig_set_conf(self.handle,token,str(value).encode('ascii'))!=0:
-            raise RuntimeError(tr('Hamlib設定 {name} を受け付けませんでした。').format(name=name))
+            raise RuntimeError(tr('ui.3b63f1d8c2e309c9').format(name=name))
 
     def connect(self,port='AUTO',baud='AUTO',timeout=8.0):
         with self._lock:
             self.disconnect();self.cancel.clear()
             if str(port).upper()=='AUTO' or str(baud).upper()=='AUTO':
-                self.status=CIVStatus(message=tr('HamlibではCOMポートとCAT速度を明示して接続テストしてください。'))
+                self.status=CIVStatus(message=tr('ui.8a80fb6572bef5af'))
                 return self.status
             try:
                 self.lib,self.dll_directory=load_library()
                 self.handle=self.lib.rig_init(HAMLIB_MODELS[self.model][0])
-                if not self.handle:raise RuntimeError(tr('Hamlibが機種を認識できませんでした。'))
+                if not self.handle:raise RuntimeError(tr('ui.7e5e540d968b10d3'))
                 self._configure('rig_pathname',port)
                 self._configure('serial_speed',int(baud))
                 if self.model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):
                     self._configure('stop_bits',2)
                     self._configure('serial_handshake','None')
-                if self.lib.rig_open(self.handle)!=0:raise RuntimeError(tr('Hamlibが無線機に接続できませんでした。'))
+                if self.lib.rig_open(self.handle)!=0:raise RuntimeError(tr('ui.ed1d3a7ce55eadc9'))
                 freq=self.read_frequency()
-                if not freq:raise RuntimeError(tr('Hamlibから周波数を取得できませんでした。'))
+                if not freq:raise RuntimeError(tr('ui.a634f8b30c1ea3a3'))
                 self.status=CIVStatus(True,str(port),int(baud),freq,'Hamlib接続')
             except Exception as exc:
                 self.disconnect();self.status.message=str(exc)

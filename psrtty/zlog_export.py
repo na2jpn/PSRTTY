@@ -13,22 +13,22 @@ PROFILES = ('standard', 'zlog', 'zlog_jarl', 'zlog_cqww')
 
 def extra_fields(qso, profile):
     if profile not in PROFILES:
-        raise ValueError(tr('ADIF出力形式が不正です。'))
+        raise ValueError(tr('ui.3eeecc9c99918063'))
     if profile == 'standard':
         return ''
     for value in (qso.call, qso.sent, qso.rcvd, qso.station_callsign):
         if any(char in value for char in '\r\n<>'):
-            raise ValueError(tr('zLog出力のCALL・交換番号に改行や < > は使用できません。'))
+            raise ValueError(tr('ui.d16c8cbba2424a73'))
     fields = []
     if profile == 'zlog_jarl':
         if not re.fullmatch(r'[0-9]{1,2}', qso.rcvd):
-            raise ValueError(tr('{call}: JARL WW RTTYの受信番号は年齢の1～2桁で指定してください。').format(call=qso.call))
+            raise ValueError(tr('ui.b835d2fd8b3898b9').format(call=qso.call))
         fields.append(_field('AGE', str(int(qso.rcvd))))
         fields.append(_field('CONTEST_ID', 'JARL-WW-RTTY'))
     elif profile == 'zlog_cqww':
         match = re.fullmatch(r'([0-9]{1,2})(?:\s+([A-Za-z]{2}))?', qso.rcvd.strip())
         if not match or not 1 <= int(match[1]) <= 40:
-            raise ValueError(tr('{call}: CQ WW RTTYの受信番号は01～40、または「05 MA」のように指定してください。').format(call=qso.call))
+            raise ValueError(tr('ui.da174dffa0cde353').format(call=qso.call))
         fields.append(_field('CQZ', str(int(match[1]))))
         if match[2]: fields.append(_field('STATE', match[2].upper()))
         fields.append(_field('CONTEST_ID', 'CQ-WW-RTTY'))

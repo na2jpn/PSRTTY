@@ -298,6 +298,6 @@ class Update04Tests(unittest.TestCase):
             for name,data in saved.items():
                 self.assertEqual((root/name).read_bytes(),data); self.assertEqual((backup/name).read_bytes(),data)
             retire_compatibility_terms(root)  # The new EXE does this at first launch.
-            self.assertEqual({x.name for x in root.iterdir()},{'psrtty.exe','config','logdata','var','lib','docs'})
+            self.assertEqual({x.name for x in root.iterdir()},{'psrtty.exe','config','logdata','var','lib','docs','language'})
             for current in (__version__,'1.99'):
                 with self.assertRaises(ValueError): inspect_zip(archive,current)

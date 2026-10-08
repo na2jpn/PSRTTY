@@ -1,0 +1,34 @@
+Base: PSRTTY_1.09_CANONICAL_FULL_SOURCE.zip
+SHA256: de1f4f007608ab42b1c0b522dde34a92b9453b150984aa02b8a8073315151a1b
+Version: 1.10 screen-review build
+
+CHANGELOG.md
+HANDOFF.md
+SHA256SUMS.txt
+START_HERE.md
+UPDATE_HISTORY.txt
+VERSION_110.md
+build-windows.ps1
+docs/ENGLISH_REFERENCE_110.json
+docs/SCREEN_REVIEW_110.md
+docs/TEST_RESULTS_110.txt
+docs/VALIDATION_110.md
+docs/VER110_EN.md
+docs/VER110_JA.md
+package_release.py
+psrtty/__init__.py
+psrtty/alc_display.py
+psrtty/config.py
+psrtty/i18n.py
+psrtty/i18n_110.py
+psrtty/locale110_short.json
+psrtty/ui/about_dialog.py
+psrtty/ui/guide.py
+psrtty/ui/guide_110.py
+psrtty/ui/history_dialog.py
+psrtty/ui/main_window.py
+psrtty/ui/settings_dialog.py
+psrtty/update_history.py
+psrtty/update_history_en.py
+psrtty.spec
+tests/test_v110.py

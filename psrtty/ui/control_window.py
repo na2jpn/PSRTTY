@@ -42,7 +42,7 @@ class JogDial(QWidget):
     steps=Signal(int)
     def __init__(self,parent=None):
         super().__init__(parent); self.setFixedSize(174,174)
-        self.setToolTip(tr('円周に沿ってドラッグ：時計回り＋、反時計回り－。ホイールは標準で手前＋、奥－'))
+        self.setToolTip(tr('ui.82e90ba4827adc1e'))
         self.last=None; self.remainder=0.; self.wheel_remainder=0.; self.angle=0.; self.wheel_reverse=False
     def paintEvent(self,event):
         p=QPainter(self); p.setRenderHint(QPainter.Antialiasing); p.translate(self.rect().center())
@@ -84,15 +84,15 @@ class ControlWindow(QDialog):
         super().__init__(None,Qt.Window); self.main=main
         from .window_state import independent_tool_window
         independent_tool_window(self, main)
-        self.setWindowTitle(tr('PSRTTY コントロール')); self.setModal(False); self.resize(480,630)
+        self.setWindowTitle(tr('ui.845348469dbec848')); self.setModal(False); self.resize(480,630)
         self.busy=False; self.pending=None; self.target=None; self.feature_pending=None
         self.mode_pending=None; self.mode_profile=None; self.mode_observed=None; self.tuner_pending=False
         self.states={}; self.last_poll=0.; self.controller=None; self.band_memory={}; self.band_profile=None
         root=QVBoxLayout(self); self.frequency=QLabel('---.------ MHz'); self.frequency.setObjectName('freqLabel'); root.addWidget(self.frequency)
-        row=QHBoxLayout(); self.entry=QLineEdit(); self.entry.setPlaceholderText(tr('周波数 MHz'))
-        self.apply=QPushButton(tr('設定')); self.apply.clicked.connect(self.apply_frequency); self.entry.returnPressed.connect(self.apply_frequency)
+        row=QHBoxLayout(); self.entry=QLineEdit(); self.entry.setPlaceholderText(tr('ui.2c648cc8670af874'))
+        self.apply=QPushButton(tr('ui.0d8619aae051ae34')); self.apply.clicked.connect(self.apply_frequency); self.entry.returnPressed.connect(self.apply_frequency)
         row.addWidget(self.entry,1); row.addWidget(QLabel('MHz')); row.addWidget(self.apply); root.addLayout(row)
-        root.addWidget(QLabel(tr('バンド：MHz（GはGHz）')))
+        root.addWidget(QLabel(tr('ui.e521d4bdd014c0ce')))
         self.band_grid=QGridLayout(); root.addLayout(self.band_grid); self.band_buttons=[]
         row=QHBoxLayout(); row.addStretch(1)
         self.minus=QPushButton('－'); self.minus.clicked.connect(lambda:self.nudge(-1)); row.addWidget(self.minus)
@@ -102,7 +102,7 @@ class ControlWindow(QDialog):
         for title,n in [('1 Hz',1),('10 Hz',10),('100 Hz',100),('1 kHz',1000),('10 kHz',10000)]: self.step.addItem(title,n)
         self.step.setCurrentIndex(1)
         row.addWidget(self.step); row.addStretch(1)
-        self.reverse=QCheckBox(tr('ホイール反転')); self.reverse.setChecked(bool(main.store.data['ui'].get('wheel_reverse',False)))
+        self.reverse=QCheckBox(tr('ui.f1b260cdb584c9ff')); self.reverse.setChecked(bool(main.store.data['ui'].get('wheel_reverse',False)))
         self.dial.wheel_reverse=self.reverse.isChecked(); self.reverse.toggled.connect(self.set_wheel_reverse)
         row.addWidget(self.reverse); root.addLayout(row)
         row=QHBoxLayout(); self.buttons={}
@@ -111,7 +111,7 @@ class ControlWindow(QDialog):
             b.clicked.connect(lambda checked=False,n=name:self.toggle_feature(n)); 
             if name!='NOTCH': row.addWidget(b)
         notch_box=QGroupBox('NOTCH'); notch_row=QHBoxLayout(notch_box); notch_row.addWidget(self.buttons['NOTCH'])
-        self.notch=QComboBox(); self.notch.addItem(tr('自動'),'AN'); self.notch.addItem(tr('手動'),'MN')
+        self.notch=QComboBox(); self.notch.addItem(tr('ui.36147b7e34df7ac8'),'AN'); self.notch.addItem(tr('ui.e794646f29f66a94'),'MN')
         self.notch.currentIndexChanged.connect(self.refresh_enabled); notch_row.addWidget(self.notch); row.addWidget(notch_box); root.addLayout(row)
         self.filter_box=QGroupBox('FILTER'); filter_row=QHBoxLayout(self.filter_box)
         self.filter_buttons=[]
@@ -125,10 +125,10 @@ class ControlWindow(QDialog):
         self.narrow=QPushButton('NARROW —'); self.narrow.setCheckable(True)
         self.narrow.clicked.connect(self.request_narrow); filter_row.addWidget(self.narrow)
         root.addWidget(self.filter_box)
-        self.mode_box=QGroupBox(tr('モード')); self.mode_grid=QGridLayout(self.mode_box)
+        self.mode_box=QGroupBox(tr('ui.99d01e5c2b5fd389')); self.mode_grid=QGridLayout(self.mode_box)
         self.mode_buttons={}; root.addWidget(self.mode_box)
-        self.antenna_tune=QPushButton(tr('アンテナTUNE'))
-        self.antenna_tune.setToolTip(tr('無線機へTUNE操作を送ります。外部ATUを含め動作可否は無線機側で判定します。'))
+        self.antenna_tune=QPushButton(tr('ui.36d4e73423bd87e9'))
+        self.antenna_tune.setToolTip(tr('ui.06385c5460ef2435'))
         self.antenna_tune.clicked.connect(self.request_tuner); root.addWidget(self.antenna_tune)
         self.note=QLabel(); self.note.setWordWrap(True); root.addWidget(self.note)
         self.setStyleSheet(self.styleSheet() + 'QPushButton:checked { background: #ed8b19; color: white; border: 2px solid #9b4c00; }')
@@ -165,8 +165,8 @@ class ControlWindow(QDialog):
                 b.clicked.connect(lambda checked=False,v=band:self.request_frequency(self.band_memory.get((self.band_profile,v[0]),v[3])))
                 self.band_grid.addWidget(b,i//6,i%6); self.band_buttons.append((band,b))
         yaesu=model in HAMLIB_MODELS and model.startswith('FT')
-        self.notch.setItemText(0,'DNF' if yaesu else tr('自動'))
-        self.notch.setItemText(1,'NOTCH' if yaesu else tr('手動'))
+        self.notch.setItemText(0,'DNF' if yaesu else tr('ui.36147b7e34df7ac8'))
+        self.notch.setItemText(1,'NOTCH' if yaesu else tr('ui.e794646f29f66a94'))
         ready=self.ready()
         if self.controller is not self.main.radio:
             self.controller=self.main.radio; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
@@ -191,14 +191,14 @@ class ControlWindow(QDialog):
             key=self.notch.currentData() if name=='NOTCH' else name; value=self.states.get(key) if ready else None
             b.setText((('' if name=='NOTCH' else ('DNR' if yaesu and name=='NR' else name))+' '+('ON' if value is True else 'OFF' if value is False else '—')).strip())
             b.setChecked(value is True); b.setEnabled(ready and value is not None)
-            b.setToolTip(tr('状態未取得／この機種・モードでは非対応。無線機本体で操作してください。') if value is None else (tr('自動ノッチ') if key=='AN' else tr('手動ノッチ') if key=='MN' else name))
+            b.setToolTip(tr('ui.6d42957d5804b8b9') if value is None else (tr('ui.e8e30a6a07a873b0') if key=='AN' else tr('ui.bb082732e24bece4') if key=='MN' else name))
         hz=self.main.current_freq_hz
         icom=type(self.main.radio) is CIVController
         self.antenna_tune.setEnabled(ready and not self.main.antenna_tuning
                                      and (self.states.get('TUNER') != 2 if icom else
                                           self.states.get('TUNER') in (0,1) and bool(hz and 1800000<=hz<=54000000)))
         self.refresh_filter(ready)
-        if not ready and not self.main.antenna_tuning: self.note.setText(tr('接続後、受信中に操作できます。送信中・Auto CQ中は停止します。'))
+        if not ready and not self.main.antenna_tuning: self.note.setText(tr('ui.39a12d42fe510ae2'))
         self.observe_frequency(self.main.current_freq_hz)
     def refresh_filter(self, ready):
         yaesu=self.band_profile in HAMLIB_MODELS
@@ -209,7 +209,7 @@ class ControlWindow(QDialog):
             button.setVisible(not yaesu); button.setEnabled(enabled)
             button.setChecked(bool(state and state.get('value')==i))
         for widget in (self.width_label,self.width,self.narrow): widget.setVisible(yaesu)
-        self.width_label.setText(tr('帯域幅'))
+        self.width_label.setText(tr('ui.95868f694e17263a'))
         options=state.get('options',[]) if state else []
         current=[(self.width.itemData(i),self.width.itemText(i)) for i in range(self.width.count())]
         if current!=options:
@@ -221,18 +221,18 @@ class ControlWindow(QDialog):
         self.narrow.setText('NARROW '+('ON' if value is True else 'OFF' if value is False else '—'))
         self.narrow.setChecked(value is True); self.narrow.setEnabled(enabled and value is not None)
         if self.band_profile in ('TS-890S', 'TS-990S'):
-            self.filter_box.setToolTip(tr('Hamlib 4.7.2はこの機種の受信幅の取得・変更に非対応です。無線機本体で操作してください。'))
+            self.filter_box.setToolTip(tr('ui.c66c234e2612aca7'))
             return
-        self.filter_box.setToolTip(tr('無線機側の受信フィルター。状態未取得・非対応時は操作できません。'))
+        self.filter_box.setToolTip(tr('ui.3d309c7f5a79d659'))
 
     def request_tuner(self):
         if not self.antenna_tune.isEnabled() or not self.ready(): return
         if self.busy:
-            self.tuner_pending=True;self.note.setText(tr('アンテナチューニング待ち…'));return
+            self.tuner_pending=True;self.note.setText(tr('ui.eec3cb581b101afa'));return
         ctl=self.main.radio; generation=self.main.connection_generation
         self.tuner_cancel=threading.Event()
         self.main.antenna_tuning=True; self.busy=True
-        self.main._set_radio_controls(); self.note.setText(tr('アンテナチューニング中…'))
+        self.main._set_radio_controls(); self.note.setText(tr('ui.2a12d708b06594dd'))
         def work():
             completed=False
             try:
@@ -247,9 +247,9 @@ class ControlWindow(QDialog):
                         completed=state==1
                         return completed
                     if icom and not active and time.monotonic()-started>=5:
-                        raise RuntimeError(tr('TUNEの動作を確認できません。無線機・ATUの状態を確認してください。'))
+                        raise RuntimeError(tr('ui.1821e9b13d42641e'))
                     if time.monotonic()>deadline:
-                        raise RuntimeError(tr('チューン完了を確認できません。無線機の状態を確認してください。'))
+                        raise RuntimeError(tr('ui.e6bb676bdf822e31'))
                 return False
             finally:
                 if not completed: ctl.stop_tuner()
@@ -258,7 +258,7 @@ class ControlWindow(QDialog):
             if generation!=self.main.connection_generation or self.main.radio is not ctl: return
             self.main.antenna_tuning=False; self.states.pop('TUNER',None)
             self.main._set_radio_controls()
-            self.note.setText(str(error) if error else tr('アンテナチューニング完了') if result else tr('TUNE完了を確認できませんでした。無線機・ATUを確認してください。'))
+            self.note.setText(tr(str(error)) if error else tr('ui.8e2bfd41466d8f6b') if result else tr('ui.81897b9ac633b8ef'))
         self.job=BackgroundJob(self,work,done)
 
     def request_filter(self, value):
@@ -279,7 +279,7 @@ class ControlWindow(QDialog):
             if not value.is_finite() or value!=value.to_integral_value(): raise ValueError()
             hz=int(value)
         except (InvalidOperation,ValueError,OverflowError):
-            self.note.setText(tr('MHzを数値で入力してください（小数点以下6桁まで）。')); return
+            self.note.setText(tr('ui.db2b6b64c0d82af8')); return
         self.entry.setModified(False); self.request_frequency(hz)
     def request_frequency(self,hz):
         if not self.ready(): return
@@ -289,8 +289,8 @@ class ControlWindow(QDialog):
             bands=model_bands(self.band_profile)
             maximum=max([b[2] for b in bands],default=220000000 if self.band_profile=='IC-375' else 60000000)+1
         if not 100000<=hz<maximum:
-            self.note.setText(tr('機種の周波数範囲を確認してください。')); return
-        self.pending=self.target=hz; self.note.setText(f"{tr('設定待ち: ')}{hz / 1000000.0:.6f} MHz")
+            self.note.setText(tr('ui.5776314a7a73952e')); return
+        self.pending=self.target=hz; self.note.setText(f"{tr('ui.0e2faf3986020c5e')}{hz / 1000000.0:.6f} MHz")
     def nudge(self,n):
         base=self.target if self.target is not None else self.main.current_freq_hz
         if base: self.request_frequency(base+n*self.step.currentData())
@@ -301,7 +301,7 @@ class ControlWindow(QDialog):
     def request_mode(self,mode):
         if mode and self.ready():
             self.mode_pending=mode
-            self.note.setText(f"{tr('モード設定待ち: ')}{mode}")
+            self.note.setText(f"{tr('ui.06af9f6052b03d15')}{mode}")
         self.refresh_enabled()
     def tick(self):
         self.refresh_enabled()
@@ -332,13 +332,13 @@ class ControlWindow(QDialog):
             self.busy=False
             if generation!=self.main.connection_generation or self.main.radio is not ctl: return
             if error:
-                self.states={}; self.target=None; self.note.setText(f"{tr('操作失敗: ')}{error}"); self.main._radio_observed(None,error)
+                self.states={}; self.target=None; self.note.setText(f"{tr('ui.4054f3e49958ddf8')}{error}"); self.main._radio_observed(None,error)
             else:
                 ok,freq,states,current_mode=result; self.states.update(states)
                 self.mode_observed=current_mode
                 if self.pending is None: self.target=None
                 self.main._radio_observed(freq)
-                self.note.setText(tr('無線機の状態を取得しました。') if ok else tr('設定できませんでした。無線機のモード・送信状態を確認してください。'))
+                self.note.setText(tr('ui.828aa53324192553') if ok else tr('ui.a2401055106afc5f'))
             self.refresh_enabled()
             if self.tuner_pending:
                 self.tuner_pending=False

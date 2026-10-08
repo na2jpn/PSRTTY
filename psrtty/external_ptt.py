@@ -15,16 +15,16 @@ def validate_external(config, radio_port=''):
         return
     port = str(config.get('com_port', '')).strip().upper()
     if not port or port == 'AUTO':
-        raise ValueError(tr('外部接続のCOMポートを選択してください。'))
+        raise ValueError(tr('ui.908b9e45ca21eaf5'))
     if port == str(radio_port).strip().upper():
-        raise ValueError(tr('外部接続には無線機と別のCOMポートを選択してください。'))
+        raise ValueError(tr('ui.ccab6781bcc1fc2a'))
     if config.get('line') not in ('RTS', 'DTR'):
-        raise ValueError(tr('外部接続の制御線をRTSまたはDTRから選択してください。'))
+        raise ValueError(tr('ui.dfab275ee9970e4a'))
     if config.get('role', 'prekey') not in ('prekey', 'ptt'):
-        raise ValueError(tr('外部接続の用途を確認してください。'))
+        raise ValueError(tr('ui.e264011bdc01fdf0'))
     delay = float(config.get('delay_seconds', 0))
     if not 0.1 <= delay <= 9.9:
-        raise ValueError(tr('外部接続の先行時間は0.1～9.9秒です。'))
+        raise ValueError(tr('ui.90670eb97cfca458'))
 
 
 class ExternalPTT:
@@ -38,7 +38,7 @@ class ExternalPTT:
         if not self.config.get('enabled', False):
             return True
         if serial is None:
-            raise RuntimeError(tr('外部接続にはpyserialが必要です。'))
+            raise RuntimeError(tr('ui.0452672f31d4f348'))
         line = self.config['line'].lower()
         active = not bool(self.config.get('reversed', False))
         try:

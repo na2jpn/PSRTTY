@@ -87,7 +87,7 @@ class MonitorSink:
         if self.failed:return
         try:self.blocks.put_nowait(audio)
         except queue.Full:
-            self.failed=True;self.report(tr('第二AudioOUTが追従できません。出力先を確認してください。'))
+            self.failed=True;self.report(tr('ui.292e6223635779d3'))
     def run(self):
         try:
             while not self.cancel.is_set() and not self.failed and not self.closed.is_set():
@@ -116,15 +116,15 @@ class MonitorSink:
 
 
 def start_live(engine, sd, session, output_device, advanced, amplitude, ptt_on, ptt_off, finished, progress, offline=False):
-    if sd is None:return False,tr('sounddeviceがインストールされていません')
-    if engine._tx_active:return False,tr('送信中です')
+    if sd is None:return False,tr('ui.a1cea5a40ed3af98')
+    if engine._tx_active:return False,tr('ui.1270a65b09bcaf38')
     engine._tx_active=True;engine._tx_cancel.clear();engine.set_tx_gain(amplitude)
     engine.secondary_notice=''
     secondary=dict(engine.secondary_settings)
     def worker():
-        primary=None;monitor=None;success=False;message=tr('送信中止');primary_gain=lambda:engine.tx_gain
+        primary=None;monitor=None;success=False;message=tr('ui.63e1879b6cfd6a0e');primary_gain=lambda:engine.tx_gain
         def open_stream(selection):
-            if selection=='UNSET':raise ValueError(tr('未設定'))
+            if selection=='UNSET':raise ValueError(tr('ui.6213305916949e4c'))
             chosen=resolve_device(sd,selection,'output')
             stream=sd.OutputStream(samplerate=engine.sample_rate,device=chosen,channels=1,dtype='float32',blocksize=960,latency='low',
                 **({'extra_settings':sd.WasapiSettings(auto_convert=True)} if sys.platform=='win32' else {}))
@@ -151,7 +151,7 @@ def start_live(engine, sd, session, output_device, advanced, amplitude, ptt_on, 
                     engine.secondary_notice=str(exc)
                     if primary is None:raise
             if engine._tx_cancel.is_set():return
-            if not offline and (not ptt_on or ptt_on() is not True):raise RuntimeError(tr('PTTを確認できないため送信しませんでした'))
+            if not offline and (not ptt_on or ptt_on() is not True):raise RuntimeError(tr('ui.5eef7dde3c3c7e95'))
             if engine._tx_cancel.wait(.12):return
             encoder=ToneEncoder(engine.sample_rate,advanced['rtty_baud'],advanced['mark_hz'],advanced['space_hz'],advanced['invert'])
             def emit(audio):
@@ -179,22 +179,22 @@ def start_live(engine, sd, session, output_device, advanced, amplitude, ptt_on, 
                     with session.lock:complete=session.position==len(session.text)
                     if complete and not session.hold:
                         if not emit(encoder.char('\n')):return
-                        primary.stop();success=True;message=tr('送信完了');break
+                        primary.stop();success=True;message=tr('ui.fe0cbba02e8d4de7');break
                     if not emit(encoder.tone(True,advanced['rtty_baud']*960/engine.sample_rate)):return
-        except Exception as exc:message=tr('送信失敗: ')+str(exc)
+        except Exception as exc:message=tr('ui.f8732c961aef978d')+str(exc)
         finally:
             if primary:
                 try:
                     if not success:primary.abort()
-                except Exception as exc:success=False;message=tr('音声停止失敗: ')+str(exc)
+                except Exception as exc:success=False;message=tr('ui.611bb70023f686e8')+str(exc)
             if monitor:monitor.close(drain=success)
             try:
-                if not offline and ptt_off and ptt_off() is False:success=False;message=tr('PTT解除を確認できません。無線機を確認してください。')
-            except Exception as exc:success=False;message=tr('PTT解除失敗: ')+str(exc)
+                if not offline and ptt_off and ptt_off() is False:success=False;message=tr('ui.240e5b329beabdee')
+            except Exception as exc:success=False;message=tr('ui.386d70631d3ddd57')+str(exc)
             if primary:
                 try:primary.close()
                 except Exception as exc:success=False;message=str(exc)
             engine._tx_active=False
             finished(success,message)
     engine._tx_thread=threading.Thread(target=worker,daemon=True);engine._tx_thread.start()
-    return True,tr('送信開始')
+    return True,tr('ui.18e846a7e87b6ef5')

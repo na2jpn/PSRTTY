@@ -12,7 +12,7 @@ from .. import i18n
 
 def history_html() -> str:
     blocks = []
-    for section in (HISTORY_TEXT_EN if i18n.LANGUAGE == "en" else HISTORY_TEXT).split("\n\n"):
+    for section in tr('history.body').split("\n\n"):
         lines = section.splitlines()
         if not lines:
             continue
@@ -25,7 +25,7 @@ def history_html() -> str:
         "h3 { color: #a4510b; margin-top: 17px; margin-bottom: 5px; }"
         "ul { margin-top: 3px; margin-bottom: 11px; }"
         "li { margin-bottom: 4px; }"
-        "</style></head><body><h2>" + escape(tr("PSRTTYの更新履歴")) + "</h2>"
+        "</style></head><body><h2>" + escape(tr('ui.3c557b21e44807da')) + "</h2>"
         + "".join(blocks) + "</body></html>"
     )
 
@@ -33,7 +33,7 @@ def history_html() -> str:
 class HistoryDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(tr("PSRTTYの更新履歴"))
+        self.setWindowTitle(tr('ui.3c557b21e44807da'))
         self.resize(760, 650)
         layout = QVBoxLayout(self)
         self.history_view = QTextBrowser()
@@ -41,6 +41,6 @@ class HistoryDialog(QDialog):
         self.history_view.setHtml(history_html())
         layout.addWidget(self.history_view)
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        buttons.button(QDialogButtonBox.Close).setText(tr('閉じる'))
+        buttons.button(QDialogButtonBox.Close).setText(tr('ui.f6c244f98893cd95'))
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)

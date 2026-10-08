@@ -147,12 +147,14 @@ class Language106Fix2Tests(unittest.TestCase):
 
     def test_translation_placeholders_and_japanese_identity(self):
         formatter = string.Formatter()
-        for japanese, english in i18n.TEXT.items():
+        for japanese, key in i18n.ALIASES.items():
+            english = i18n.ENGLISH[key]
             expected = {x[1] for x in formatter.parse(japanese) if x[1] is not None}
             actual = {x[1] for x in formatter.parse(english) if x[1] is not None}
             self.assertEqual(expected, actual, japanese)
         i18n.configure('ja')
-        for text in i18n.TEXT:
+        for text, key in i18n.ALIASES.items():
+            if key in ('about.body', 'history.body', 'language.title'): continue  # versioned documents/menu titles
             self.assertEqual(i18n.tr(text), text)
 
     def test_radio_and_external_validation_messages(self):

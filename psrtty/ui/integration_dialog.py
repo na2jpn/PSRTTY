@@ -28,7 +28,7 @@ class IntegrationController(QObject):
 
     def run(self, work, done):
         if self.busy:
-            QMessageBox.warning(self.main, tr('HAMLOG連携'), tr('HAMLOGとの通信中です。終了してから操作してください。'))
+            QMessageBox.warning(self.main, tr('ui.0ac34687acceae77'), tr('ui.fdea9eee6b1d0a95'))
             return False
         self.busy = True
         def completed(result, error):
@@ -43,12 +43,12 @@ class IntegrationController(QObject):
             return
         def finished(result, error):
             if error:
-                QMessageBox.warning(self.main, tr('HAMLOG連携'),
-                    tr('PSRTTYのADIFには保存済みです。QSOを再追加しないでください。\nHAMLOG転送を完了できませんでした。\n{error}\n\nHAMLOGで未登録の場合は手動登録、またはHAMLOG CSV出力を利用してください。').format(error=error))
+                QMessageBox.warning(self.main, tr('ui.0ac34687acceae77'),
+                    tr('ui.562b84afbfde6dc7').format(error=error))
             else:
                 self.main.statusBar().showMessage(result, 10000)
         if self.busy:
-            finished(None, tr('前のHAMLOG処理が完了していません。この交信は転送していません。'))
+            finished(None, tr('ui.8782c571d070c4b3'))
             return
         qso = deepcopy(qso)
         auto_save = options.get('auto_save', False)
@@ -59,57 +59,57 @@ class HamlogSettingsDialog(QDialog):
     def __init__(self, controller, parent=None):
         super().__init__(parent)
         self.controller = controller
-        self.setWindowTitle(tr('HAMLOG連携設定'))
+        self.setWindowTitle(tr('ui.2354935a4ee2b937'))
         self.resize(640, 480)
         root = QVBoxLayout(self)
         for text in (tr(VERSION_NOTICE).format(version=TARGET_VERSION, api=API_VERSION),
-                     tr('PSRTTYで記録した交信をHAMLOGへ転送します。手動記録とTU73自動記録で共通です。逆方向の記録・編集・削除の同期は行いません。')):
+                     tr('ui.99ebd89f04ffb1bf')):
             label = QLabel(text); label.setWordWrap(True); root.addWidget(label)
-        self.enabled = QCheckBox(tr('記録時にHAMLOGへ転送する'))
+        self.enabled = QCheckBox(tr('ui.3965d764b4019026'))
         self.enabled.setChecked(controller.main.store.data.get('hamlog', {}).get('enabled', False))
         root.addWidget(self.enabled)
         self.save_mode = QComboBox()
-        self.save_mode.addItem(tr('入力欄へ転送のみ（HAMLOGで保存）'), False)
-        self.save_mode.addItem(tr('転送後にHAMLOGへ保存指示を送る'), True)
+        self.save_mode.addItem(tr('ui.55abaa225677564c'), False)
+        self.save_mode.addItem(tr('ui.b038c248f01d9777'), True)
         self.save_mode.setCurrentIndex(int(controller.main.store.data.get('hamlog', {}).get('auto_save', False)))
-        form = QFormLayout(); form.addRow(tr('HAMLOG側の保存'), self.save_mode); root.addLayout(form)
-        note = QLabel(tr('入力中の別の交信は上書きしません。途中で通信が切れた場合は自動再送せず、内容の確認を案内します。入力欄への転送のみを選んだ場合は、次の交信までにHAMLOGで保存してください。'))
+        form = QFormLayout(); form.addRow(tr('ui.b7609e3949e19670'), self.save_mode); root.addLayout(form)
+        note = QLabel(tr('ui.303123bf66937008'))
         note.setWordWrap(True); root.addWidget(note)
-        self.check_button = QPushButton(tr('HAMLOGの接続を確認'))
+        self.check_button = QPushButton(tr('ui.242261d9bdf8729e'))
         self.check_button.clicked.connect(self.check); root.addWidget(self.check_button)
         row = QHBoxLayout()
-        self.call = QLineEdit(); self.call.setPlaceholderText(tr('検索するCALL'))
-        self.search_button = QPushButton(tr('CALL検索・氏名／QTH取得'))
+        self.call = QLineEdit(); self.call.setPlaceholderText(tr('ui.e54f8ce684788b1b'))
+        self.search_button = QPushButton(tr('ui.a3f9a6c76bb95689'))
         self.search_button.clicked.connect(self.lookup)
         row.addWidget(self.call); row.addWidget(self.search_button); root.addLayout(row)
-        note = QLabel(tr('検索はHAMLOGの空の入力欄へCALLを入れ、HAMLOGの検索機能を使います。取得内容はHAMLOGの設定と登録データに従います。'))
+        note = QLabel(tr('ui.028b54989d5885bb'))
         note.setWordWrap(True); root.addWidget(note)
         self.result = QLabel(); self.result.setWordWrap(True); self.result.setTextFormat(Qt.PlainText)
         self.result.setTextInteractionFlags(Qt.TextSelectableByMouse); root.addWidget(self.result)
         root.addStretch()
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Save).setText(tr('保存'))
-        buttons.button(QDialogButtonBox.Cancel).setText(tr('キャンセル'))
+        buttons.button(QDialogButtonBox.Save).setText(tr('ui.a3030bf8f16dc63c'))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
         buttons.accepted.connect(self.save); buttons.rejected.connect(self.reject); root.addWidget(buttons)
 
     def _work(self, work, render):
         def done(result, error):
             self.check_button.setEnabled(True); self.search_button.setEnabled(True)
             if error:
-                QMessageBox.warning(self, tr('HAMLOG連携'), str(error))
+                QMessageBox.warning(self, tr('ui.0ac34687acceae77'), tr(str(error)))
             else:
                 self.result.setText(render(result))
         if self.controller.run(work, done):
             self.check_button.setEnabled(False); self.search_button.setEnabled(False)
-            self.result.setText(tr('HAMLOGと通信中…'))
+            self.result.setText(tr('ui.150fad0f11e1eadc'))
 
     def check(self):
-        self._work(self.controller.link.check, lambda title: tr('応答を確認しました：{title}').format(title=title))
+        self._work(self.controller.link.check, lambda title: tr('ui.23c45791e4c46b0f').format(title=title))
 
     def lookup(self):
         call = self.call.text()
         self._work(lambda: self.controller.link.lookup(call),
-                   lambda result: tr('CALL: {call}\n氏名: {name}\nQTH: {qth}').format(**result))
+                   lambda result: tr('ui.44d815d5ed26e974').format(**result))
 
     def save(self):
         data = self.controller.main.store.data
@@ -119,21 +119,21 @@ class HamlogSettingsDialog(QDialog):
             self.controller.main.store.save()
         except Exception as exc:
             data['hamlog'] = previous
-            QMessageBox.warning(self, tr('設定の保存'), str(exc)); return
+            QMessageBox.warning(self, tr('ui.5cfe5f420da9fee5'), tr(str(exc))); return
         self.accept()
 
 
 class ZLogSettingsDialog(QDialog):
     def __init__(self, main):
         super().__init__(main)
-        self.setWindowTitle(tr('zLog令和版連携設定')); self.resize(630, 340)
+        self.setWindowTitle(tr('ui.17cea206eaeefd06')); self.resize(630, 340)
         root = QVBoxLayout(self)
-        for text in (tr(ZLOG_NOTICE), tr('ADIFファイル出力で、標準・zLog一般・JARL WW RTTY・CQ WW RTTYを選択できます。zLogでコンテスト・自局CALL・時刻設定を合わせ、ADIFを読み込んでください。'),
-                     tr('CQ WW RTTYの州・地域はzLogのADIF読み込みでは受信番号に入りません。備考に元の交換番号を残します。取り込み後、該当局の受信番号とマルチを確認・修正してください。')):
+        for text in (tr(ZLOG_NOTICE), tr('ui.47def24ba89eedc5'),
+                     tr('ui.118c90276ecfe08d')):
             label = QLabel(text); label.setWordWrap(True); root.addWidget(label)
-        button = QPushButton(tr('ADIFファイル出力を開く'))
+        button = QPushButton(tr('ui.989d12c480a3da4d'))
         button.clicked.connect(main._export_adif); root.addWidget(button)
         root.addStretch()
         buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        buttons.button(QDialogButtonBox.Close).setText(tr('閉じる'))
+        buttons.button(QDialogButtonBox.Close).setText(tr('ui.f6c244f98893cd95'))
         buttons.rejected.connect(self.reject); root.addWidget(buttons)

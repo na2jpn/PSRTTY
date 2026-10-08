@@ -164,9 +164,11 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
                     if name != 'psrtty.exe': _validate_release_name(name)
             elif set(files) != {'psrtty.exe'}:
                 raise ValueError('旧形式の更新対象ファイルが不正です')
+            if comparison >= version_key('1.11') and not {f'language/{code}.json' for code in ('ja','en','ru','zh','ko')} <= files.keys():
+                raise ValueError('1.11以降の配布には5言語のlanguageファイルが必要です')
             expected = {prefix + MANIFEST} | {prefix + name for name in files}
             permitted_dirs = {prefix, prefix + "config/", prefix + "logdata/", prefix + "var/",
-                              prefix + 'lib/', prefix + 'lib/hamlib/', prefix + 'docs/'}
+                              prefix + 'lib/', prefix + 'lib/hamlib/', prefix + 'docs/', prefix + 'language/'}
             for item in items:
                 if item.is_dir() and item.filename in permitted_dirs:
                     continue
@@ -410,6 +412,9 @@ def helper_main(args):
     import ctypes
     from PySide6.QtCore import QLockFile
     stage, root, pid = Path(args[0]).resolve(), Path(args[1]).resolve(), int(args[2])
+    from .i18n import configure, tr
+    from .config import ConfigStore
+    configure(ConfigStore(root / "config" / "psrtty.json").data["ui"].get("language", "ja"), root / "language")
     lock = None
     try:
         request = json.loads((stage / "request.json").read_text(encoding="utf-8"))
@@ -439,7 +444,7 @@ def helper_main(args):
             message = f'更新は完了しましたが、自動再起動に失敗しました。\n{root / "psrtty.exe"} を起動してください。\nバックアップ: {backup}\n{exc}'
             (stage / 'restart-error.txt').write_text(message, encoding='utf-8')
             code = 2
-    ctypes.windll.user32.MessageBoxW(None, message.replace("\\n", "\n"), "PSRTTY 更新", 0x10)
+    ctypes.windll.user32.MessageBoxW(None, tr(message).replace("\\n", "\n"), tr("PSRTTY 更新"), 0x10)
     return code
 
 

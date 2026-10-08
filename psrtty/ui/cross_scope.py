@@ -177,7 +177,7 @@ class CrossScopeWindow(QDialog):
         self.audio = audio
         self.afterglow = ScopeAfterglow()
         self.cloud_stamp = None
-        self.setWindowTitle(tr('クロススコープ'))
+        self.setWindowTitle(tr('ui.209d0d9729031ab6'))
         self.setWindowModality(Qt.NonModal)
         self.resize(330, 365)
         layout = QVBoxLayout(self)
@@ -185,7 +185,7 @@ class CrossScopeWindow(QDialog):
         layout.addWidget(self.canvas)
         self.caption = QLabel()
         layout.addWidget(self.caption)
-        note = QLabel(tr('横長：MARK  縦長：SPACE\n縦横の楕円が同調の目安（SQとは独立）'))
+        note = QLabel(tr('ui.5668168179b230b9'))
         layout.addWidget(note)
         self.timer = QTimer(self)
         self.timer.setInterval(200)
@@ -250,7 +250,7 @@ class CrossScopeWindow(QDialog):
         frame = self.audio.scope_frame
         if frame is None or time.monotonic()-frame[0] > .5:
             self.afterglow.clear()
-            self.caption.setText(tr('受信音待ち'))
+            self.caption.setText(tr('ui.d49df91772485cbf'))
         else:
             stamp, samples, tones = frame
             mark, space, baud = tones

@@ -25,7 +25,7 @@ class SpectrumWidget(QWidget):
         self.drag = None
         self.view_bounds = None
         self.setMouseTracking(True)
-        self.setToolTip(tr('クリックでMARKを移動。MARK／Center／SPACEの線をドラッグすると間隔を保って移動します。'))
+        self.setToolTip(tr('ui.f3bd4e9e93a874cd'))
 
     def set_data(self, freqs: np.ndarray, power: np.ndarray) -> None:
         same = len(self.freqs)==len(freqs) and np.array_equal(self.freqs,freqs)

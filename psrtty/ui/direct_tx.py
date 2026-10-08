@@ -15,21 +15,21 @@ class DirectTxWindow(QWidget):
         from .window_state import independent_tool_window
         independent_tool_window(self, main)
         self.main=main;self.session=None;self.sent=0;self.changing=False;self.last_text='';self.suppressed=False;self.input_times=[]
-        self.setWindowTitle(tr('ダイレクト送信'))
+        self.setWindowTitle(tr('guide.9.title'))
         self.setWindowIcon(main.windowIcon())
         lay=QVBoxLayout(self)
         self.editor=QTextEdit();self.editor.setAcceptRichText(False);self.editor.setMinimumHeight(65)
-        self.editor.setPlaceholderText(tr('最大2行。未送信は青灰色、送信済みは黒です。'))
+        self.editor.setPlaceholderText(tr('ui.6ec1e6de948549b9'))
         lay.addWidget(self.editor)
         row=QHBoxLayout();left=QVBoxLayout()
-        self.auto=QCheckBox(tr('入力時にTX'));self.auto.setChecked(main.store.data['ui'].get('direct_auto_tx',True))
-        left.addWidget(self.auto);left.addWidget(QLabel(tr('要STOP（F11）')));row.addLayout(left);row.addStretch()
-        self.clear_button=QPushButton(tr('クリア'));self.clear_button.clicked.connect(self.clear)
-        self.tx_button=QPushButton(tr('再送／TX（F12）'));self.tx_button.clicked.connect(self.button)
+        self.auto=QCheckBox(tr('ui.8f6169b00e165c20'));self.auto.setChecked(main.store.data['ui'].get('direct_auto_tx',True))
+        left.addWidget(self.auto);left.addWidget(QLabel(tr('ui.14cd3a02c38b52d8')));row.addLayout(left);row.addStretch()
+        self.clear_button=QPushButton(tr('ui.df8b14c87ba1216c'));self.clear_button.clicked.connect(self.clear)
+        self.tx_button=QPushButton(tr('ui.c79fb302350cd0ea'));self.tx_button.clicked.connect(self.button)
         row.addWidget(self.clear_button);row.addWidget(self.tx_button);lay.addLayout(row)
-        note=QLabel(tr('入力後0.5秒の訂正猶予。送信済み部分は送信中に編集できません。入力待ちも送信が続きます。改行は受信行を区切り、送信は維持します。'))
+        note=QLabel(tr('ui.25f3e182f89868fa'))
         note.setWordWrap(True);lay.addWidget(note)
-        self.status=QLabel(tr('待機中'));self.status.setWordWrap(True);lay.addWidget(self.status)
+        self.status=QLabel(tr('ui.2f3ee0fc058199a7'));self.status.setWordWrap(True);lay.addWidget(self.status)
         self.timer=QTimer(self);self.timer.setSingleShot(True);self.timer.setInterval(500);self.timer.timeout.connect(self.auto_start)
         self.editor.textChanged.connect(self.changed);self.auto.toggled.connect(self.mode_changed)
         place_tool_window(self,main,(720,220),(340,180),main.store.data['ui'].get('direct_window'))
@@ -89,7 +89,7 @@ class DirectTxWindow(QWidget):
             self.session.times=self.input_times.copy()
         else:self.sent=0;self.paint()
         if not self.main._send_text(text, live_session=self.session):self.session=None;return
-        self.tx_button.setText(tr('TX STOP（F11）'));self.status.setText(tr('送信中（入力待ちも送信継続）'))
+        self.tx_button.setText(tr('ui.0d16c18e1b0c0af1'));self.status.setText(tr('ui.19ae7f1dfcb6e2d3'))
     def stop(self):
         self.timer.stop();self.suppressed=True;self.main._stop_tx()
     def toggle(self):
@@ -104,7 +104,7 @@ class DirectTxWindow(QWidget):
         self.sent=count;self.paint()
     def finished(self):
         self.session=None;self.suppressed=True;self.timer.stop();self.editor.setReadOnly(False)
-        self.tx_button.setText(tr('再送／TX（F12）'));self.status.setText(tr('待機中'))
+        self.tx_button.setText(tr('ui.c79fb302350cd0ea'));self.status.setText(tr('ui.2f3ee0fc058199a7'))
     def clear(self):
         self.stop();self.changing=True;self.editor.clear();self.changing=False
         self.last_text='';self.sent=0;self.input_times=[]

@@ -6,14 +6,31 @@ import shutil
 import tempfile
 import zipfile
 from psrtty import __version__
-from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files
+from psrtty.i18n import LANGUAGES, ENGLISH, load_catalog
+
+SOURCE_ROOT = Path(__file__).resolve().parent
+
+def validate_all(directory):
+    errors = []
+    for code in LANGUAGES:
+        entries, problems = load_catalog(code, directory)
+        errors.extend(f"{code}: {kind}: {key}: {reason}" for kind, key, reason in problems)
+        if len(entries) != len(ENGLISH): errors.append(f"{code}: incomplete catalogue")
+    if errors: raise ValueError("\n".join(errors))
+    return len(ENGLISH)
+from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files, version_key
 
 
 def package_release(root: Path):
-    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06', '1.07', '1.08', '1.09') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
+    if __version__ in ('1.02', '1.03', '1.04', '1.05', '1.06', '1.07', '1.08', '1.09', '1.10', '1.11') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
         # The already-distributed 1.01 EXE expects this exact root path.
         # The new EXE removes this identical copy on first launch.
         shutil.copy2(root / 'docs' / 'DISTRIBUTION_TERMS.txt', root / 'DISTRIBUTION_TERMS.txt')
+    if version_key(__version__) >= version_key('1.11'):
+        source = SOURCE_ROOT / "language"
+        if not (root / "language").exists():
+            shutil.copytree(source, root / "language")
+        validate_all(root / "language")
     create_manifest(root, __version__)
     archive = Path(str(root) + '.zip')
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -44,6 +61,9 @@ def build_distribution(executable: Path, output: Path):
             for item in Path('docs').glob(pattern):
                 (root / 'docs').mkdir(exist_ok=True)
                 shutil.copy2(item, root / 'docs' / item.name)
+        source_language = SOURCE_ROOT / 'language'
+        validate_all(source_language)
+        shutil.copytree(source_language, root / 'language')
         archive = package_release(root)
         target = output / archive.name
         fd, temp_name = tempfile.mkstemp(prefix='.psrtty-', suffix='.tmp', dir=output)

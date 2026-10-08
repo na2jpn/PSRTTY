@@ -1,22 +1,18 @@
-# PSRTTY Ver1.09 全ソース
+# PSRTTY Ver1.11 正本・全ソース
 
-基準はPSRTTY_1.08_FULL_SOURCE.zip。1.09の変更を統合済みです。過去の差分ZIPの追加適用は不要です。
-版表示1.09、更新履歴日付2026-10-08（日本時間）。
+1.09正本と1.10差分、1.11実装、FIX1・FIX2をすべて統合した正本です。
+UTF-8テスト修正と、1.10/1.11の更新履歴日付2026-10-08を反映済みです。
+過去の差分ZIPの追加適用は不要です。更新履歴日付: 2026-10-08（JST）。
 
-Windowsで build-windows.ps1 を実行してください。全テスト後、EXEとrelease/PSRTTY_1.09.zipを生成します。
+Windowsで `build-windows.ps1` を実行してください。
+言語検査と英語代替辞書の生成、全テスト、EXEビルドを行い、`release/PSRTTY_1.11.zip` を生成します。
 このソースZIPはアプリ内ZIP更新用ではありません。
 
-変更内容はUPDATE_HISTORY.txt、詳細はdocs/VER109_JA.md / VER109_EN.md、検証はVALIDATION_CANONICAL_109.mdを参照してください。
-config・logdata・varには利用者の設定・交信履歴を同梱していません。既存の設定・プロファイル・ログを削除せず引き継いでください。
-アイコンは正常なICOを継続使用しています。
+`language/ja.json` と `en.json` は必須同梱です。ru/zh/koを含む5言語を配布・更新します。
+初期言語は日本語。保存済み言語を使用し、読めなければ英語で表示します。
+選択言語の設定は保持し、修復後の次回起動で元に戻ります。
+全英語文言を本体に保持し、全言語ファイルの欠落時も起動できます。
+詳細は `docs/VER111_JA.md`、検証は `docs/VALIDATION_111.md` を参照してください。
 
-独立ウィンドウへの修正を統合済みです。追加検証はdocs/VALIDATION_109_FIX1.mdを参照してください。
-Window independence corrections are integrated; see docs/VALIDATION_109_FIX1.md.
-
-
-RXゲージとAudio INの色・基準を統一しました。灰は表示なし、水色はLow、緑はGood（30～79%）、黄はHigh（80～89%）、赤はOver!（90%以上）を同系色でゲージ横に表示します。表示の細かな揺れと境界付近のちらつきを抑え、音声入力・デコード処理は変更しません。
-Main RX and Audio IN share five level colors and matching labels: gray shows no text, light blue Low, green Good (30–79%), yellow High (80–89%) and red Over! (90% or more). Display smoothing and band confirmation reduce flicker without changing audio input or decoding.
-検証: docs/VALIDATION_109_FIX3.md
-
-2026-10-08: 1.09の修正を統合した正本です。差分の追加適用は不要です。RXゲージの説明は初期設定ガイド「波形の高さと入力音量」にも掲載。正本化検証: docs/VALIDATION_109_CANONICAL.md。
-Canonical 1.09 source includes all corrections; do not apply earlier patches. See docs/VALIDATION_109_CANONICAL.md.
+利用者のconfig・logdata・varは同梱しません。設定・プロファイル・交信履歴を削除しないでください。
+過去の1.09/1.10検証資料は当時の記録として残しています。

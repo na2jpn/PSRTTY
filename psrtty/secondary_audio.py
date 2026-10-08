@@ -32,14 +32,14 @@ class SecondaryOutput:
             return
         try:
             if self.settings['device'] in (None, 'UNSET'):
-                raise ValueError(tr('第二AudioOUTの出力先を選択してください。'))
+                raise ValueError(tr('ui.29441ac1db710a7f'))
             chosen = resolve_device(sd, self.settings['device'], 'output')
             # AUTO may resolve to None on non-Windows platforms.
             if primary_device is None:
                 primary_device = sd.default.device[1]
             if chosen is None: chosen = sd.default.device[1]
             if chosen == primary_device:
-                raise ValueError(tr('第二AudioOUTには主AudioOUTと別の出力先を選択してください。'))
+                raise ValueError(tr('ui.09337e8c26ad0762'))
             self.stream = sd.OutputStream(device=chosen, samplerate=sample_rate,
                 channels=1, dtype='float32', blocksize=960, latency='low',
                 callback=self.callback, **extra)
@@ -51,7 +51,7 @@ class SecondaryOutput:
     def error(self, exc):
         if not self.failed:
             self.failed = True
-            self.report(tr('第二AudioOUTを停止しました。出力先と接続を確認してください。') + ' ' + str(exc))
+            self.report(tr('ui.46a048ab2a22291f') + ' ' + str(exc))
 
     def callback(self, outdata, frames, time_info, status):
         outdata.fill(0)
@@ -100,10 +100,10 @@ def secondary_choices(primary):
         index = resolve_device(sd, primary, 'output')
     except Exception:
         if primary in (None, '', 'AUTO'):
-            raise ValueError(tr('主AudioOUTの自動出力先を確認できません。出力先を明示して保存してください。'))
+            raise ValueError(tr('ui.7159e8b16a5c171b'))
         index = None
     if primary in (None, '', 'AUTO') and index is None:
-        raise ValueError(tr('主AudioOUTの自動出力先を確認できません。出力先を明示して保存してください。'))
+        raise ValueError(tr('ui.7159e8b16a5c171b'))
     choices, excluded = [], [primary]
     for row in rows:
         if (index is not None and row['index'] == index) or same_device(row['choice'], primary):

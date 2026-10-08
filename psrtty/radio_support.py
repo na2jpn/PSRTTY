@@ -8,9 +8,9 @@ CAT_CABLE_MODELS = {'FT-817 / FT-817ND', 'FT-818ND', 'FT-857 / FT-857D'}
 def connection_note(model):
     from .i18n import tr
     if model in ICOM_EXTERNAL_PTT:
-        return tr('この機種は直接USB接続ではありません。周波数取得・制御はCI-Vケーブル／インターフェース、音声入出力は音声接続が必要です。CI-VでPTTを制御できないため、設定の「外部接続」でPTT用インターフェースを設定してください。')
+        return tr('ui.c79c269d9e540a84')
     if model in ICOM_EXTERNAL_AUDIO:
-        return tr('この機種は直接USB接続ではありません。CI-V対応ケーブル／インターフェースと音声入出力の接続が必要です。PTTはCI-Vで制御します。')
+        return tr('ui.f61962cfc1e2a168')
     if model in CAT_CABLE_MODELS:
-        return tr('この機種は直接USB接続ではありません。CATケーブル／インターフェースと音声接続を使用します。SCU-17ではEnhanced COMがCAT、Standard COMがPTT/CW/FSKです。機種は実際の無線機を選び、速度などはマニュアルで確認してください。FT-817/818は8N2、4800～38400 baudです。NB/NR・受信幅は本体で操作してください。')
+        return tr('ui.4a4b529cf5e65f11')
     return ''

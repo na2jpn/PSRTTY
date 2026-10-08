@@ -19,16 +19,16 @@ def wasapi_endpoint(sd, index):
     get_device.restype = ctypes.c_int
     ptr = ctypes.c_void_p()
     if get_device(index, ctypes.byref(ptr)) < 0 or not ptr.value:
-        raise RuntimeError(tr('音声デバイスの識別情報を取得できません'))
+        raise RuntimeError(tr('ui.55ceef53894c560a'))
     table = ctypes.cast(ptr, ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p))).contents
     get_state = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(ctypes.c_ulong))(table[6])
     state = ctypes.c_ulong()
     if get_state(ptr, ctypes.byref(state)) < 0:
-        raise RuntimeError(tr('音声デバイスの状態を確認できません'))
+        raise RuntimeError(tr('ui.d35de36fe28b4649'))
     get_id = ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.POINTER(ctypes.c_void_p))(table[5])
     identifier = ctypes.c_void_p()
     if get_id(ptr, ctypes.byref(identifier)) < 0 or not identifier.value:
-        raise RuntimeError(tr('音声デバイスIDを取得できません'))
+        raise RuntimeError(tr('ui.c70d7eb75a6edf00'))
     try:
         key = ctypes.wstring_at(identifier)
     finally:
@@ -108,7 +108,7 @@ def resolve_device(sd, selection, kind):
                     index = api[f'default_{kind}_device']
                     if index >= 0 and wasapi_endpoint(sd, index)[1]:
                         return index
-            raise ValueError(tr('有効な既定の音声デバイスがありません'))
+            raise ValueError(tr('ui.d41d72820023fe55'))
         index = _default_device_index(sd, kind)
         if index is not None:
             return index
@@ -116,7 +116,7 @@ def resolve_device(sd, selection, kind):
     if not isinstance(selection, dict):
         # Old numeric IDs cannot identify a device after USB/driver changes.
         if sys.platform == 'win32':
-            raise ValueError(tr('旧版の音声設定です。Audio設定でデバイスを選び直してください。'))
+            raise ValueError(tr('ui.58bffeeed4b5fb81'))
         return int(selection)
     for row in enumerate_devices(sd, kind):
         item = row['choice']
@@ -128,4 +128,4 @@ def resolve_device(sd, selection, kind):
                    if row['name'] == selection.get('name') and row['choice']['backend'] == selection.get('backend')]
         if len(matches) == 1:
             return matches[0]['index']
-    raise ValueError(tr('音声デバイスが未接続または無効です: {name}').format(name=selection.get('name', '')))
+    raise ValueError(tr('ui.cbc2252c7b35b0eb').format(name=selection.get('name', '')))

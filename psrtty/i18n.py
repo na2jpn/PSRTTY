@@ -1,186 +1,150 @@
-"""Display language only; logged text, radio identifiers and macros stay intact."""
-LANGUAGE = 'ja'
+"""External UI catalogues with an embedded, complete English fallback.
 
-TEXT = {
-    '日時手動': 'Manual date / time',
-    'JST（UTC+09:00）固定。PCの時計を使用します。日時手動をONにすると更新を止めて編集できます。': 'JST (UTC+09:00), using the PC clock. Enable Manual date / time to stop the clock and edit.',
-    '自局コールサインはメイン画面と共用です。Saveで反映します。\n通常交信では QTH {MYQTH} {MYJCCJCG} の順に送ります。\n追加送信文は複数行・空欄も使用できます。送信文は英数字で入力してください。': 'The station callsign is shared with the main window. Use Save to apply.\nNormal QSOs send QTH {MYQTH} {MYJCCJCG} in this order.\nAdditional text can be empty or multiline. Enter transmission text using Latin characters.',
-    '使用するCOMポート・音声デバイスを選択してください。\nICOMはCI-V、Yaesu・Kenwood機種はHamlibで制御します。': 'Select the COM port and audio devices.\nICOM uses CI-V; selected Yaesu and Kenwood radios use Hamlib.',
-    'クリックで受信位置を調整': 'Click to tune reception',
-    'クリックで設定済みの無線機に接続': 'Click to connect the configured radio',
-    '送信内容を確認': 'Check TX text', '日時固定': 'Fixed date / time',
-    '接続確認中…（最大約10秒・切断で中止）': 'Checking connection… (up to 10 seconds; Disconnect to cancel)',
-    '設定を保存しました。無線機を再接続してください': 'Settings saved. Reconnect the radio.',
-    'A/Bの受信専用サブデコードウィンドウを表示します。送信・自動ログは行いません。': 'Open receive-only A/B sub decoders. They do not transmit or auto log.',
-    '無線機の周波数・モード・フィルターなどを別ウィンドウで操作します。': 'Control radio frequency, mode and filters in a separate window.',
-    '受信音のクロススコープを別ウィンドウで表示': 'Show the audio cross scope in a separate window',
-    '別ウィンドウで周辺の2か所を受信専用でデコードします。': 'Decode two nearby signals in a separate receive-only window.',
-    'CALL取得・入力時の周波数から±20 Hz以上でCALL・RST-R・RCVDをクリア': 'Clear CALL, RST-R and RCVD when frequency changes by 20 Hz or more.',
-    '受信文からCALL・RST-R・RCVDを取得します。各欄は手修正できます。': 'Capture CALL, RST-R and RCVD from received text. You can edit each field.',
-    'ONではCQを含む受信文からのみCALLを自動取得します。': 'Capture CALL only from received text containing CQ.',
-    'OFFで文字のデコードと自動取得を停止。音声入力・スペクトラムは継続します。': 'OFF pauses decoding and capture; audio input and spectrum continue.',
-    'ON: SENTを保持。OFF: ログ追加成功時に数値を+1。数字以外は保持。送信だけでは増えません。': 'ON keeps SENT fixed. OFF increments numeric SENT after successful logging, not transmission.',
-    '交信欄の内容を確認してQSOログに追加します。': 'Review the QSO fields and add them to the log.',
-    '現在の送信を停止します。': 'Stop the current transmission.',
-    'Auto CQの繰り返し送信を停止します。': 'Stop repeated Auto CQ transmissions.',
-    '入力した文章をRTTYで送信します。': 'Transmit entered text as RTTY.',
-    '入力した自局コールサインを保存します。': 'Save the entered station callsign.',
-    '波形の表示だけを調整します。受信音量・デコードには影響しません。': 'Adjust the waveform display only; audio level and decoding are unchanged.',
-    'BANDは周波数から自動設定します。': 'BAND is determined from the frequency.',
-    'ダブルクリックでQSOログを開く': 'Double-click to open the QSO log',
-    'Mark 2125 Hz   Center 2210 Hz   Space 2295 Hz': 'Mark 2125 Hz   Center 2210 Hz   Space 2295 Hz',
-    '自動ログ: 送信文に TU 73 / TU73 がある場合、正常送信終了後に追加します。': 'Auto log after a successful transmission containing TU 73 / TU73.',
-    '未接続でもMACROと手動送信可': 'Allow macros and manual TX while disconnected',
-    'ログに追加する日時を固定': 'Fix the date / time for logging',
-    '正常送信完了時に日時を設定。自動ログONなら追加します。': 'Set the date / time after successful TX; add the QSO if auto log is ON.',
-    'ADIF出力': 'ADIF export', 'C同調 ---': 'C tuning ---',
-    'C同調 +24.9 Hz': 'C tuning +24.9 Hz', 'C同調 ': 'C tuning ',
-    'ログ合計 ': 'Log total ', ' 交信済み': ' worked', '初めての局です': 'First contact',
-    '保存しました：': 'Saved: ', '選択 ': 'Selected ', '件 / 対象 ': ' / available ',
-    '件': ' QSOs', '件）': ' QSOs)', '運用自局コール：': 'Operating station: ',
-    '期間：': 'Period: ', ' ～ ': ' – ', 'バンド：': 'Bands: ', 'ADIF出力：': 'ADIF export: ',
-    'Auto CQ 残り': 'Auto CQ remaining ', '次まで ': 'Next in ', '残り ': 'Remaining ',
-    '送信開始失敗: ': 'TX start failed: ', 'TX中止 ': 'TX aborted ', '自動ログ未追加: ': 'Auto log skipped: ',
-    'ログ読み込み失敗': 'Log read failed', 'バックアップを保存しました：': 'Backup saved: ',
-    'バックアップは保存済みです：': 'Backup already saved: ', '読み込めないファイルがあります：': 'Unreadable files: ',
-    'ファイル': 'File', '編集': 'Edit', '無線機': 'Radio', '表示': 'View', 'ヘルプ': 'Help',
-    '終了': 'Exit', '閉じる': 'Close', '保存': 'Save', 'キャンセル': 'Cancel', '戻る': 'Back',
-    '次へ': 'Next', '設定': 'Set', '反映': 'Apply', '削除': 'Delete', '更新': 'Refresh',
-    '接続': 'Connect', '切断': 'Disconnect', '再検出': 'Rescan', '未接続': 'Disconnected',
-    '接続中…': 'Connecting…', '接続確認中…': 'Checking connection…', '停止中…': 'Stopping…',
-    '送信中': 'Transmitting', '送信停止': 'TX stopped', '送信中止': 'Abort TX',
-    '未設定': 'Not set', '未接続／無効': 'Disconnected / unavailable', '（未接続）': '(Disconnected)',
-    '（未接続／無効）': '(Disconnected / unavailable)', '選択してください': 'Select…',
-    'logdataフォルダーを開く': 'Open logdata folder',
-    '今日の生ログTXTを開く（JST基準）': 'Open today’s transcript (JST)',
-    '今月のADIFを開く（UTC基準）': 'Open this month’s ADIF (UTC)',
-    'ADIFファイル出力': 'Export ADIF', 'Cabrilloファイル出力': 'Export Cabrillo',
-    'HAMLOG-CSV出力': 'Export HAMLOG CSV', 'ADIFを保存': 'Save ADIF',
-    'ADIFファイルに保存': 'Save ADIF file', 'HAMLOG-CSVに保存': 'Save HAMLOG CSV',
-    'HAMLOG-CSVを保存': 'Save HAMLOG CSV',
-    'マクロ編集': 'Edit macros', 'バックアップ設定': 'Backup settings',
-    '基本・無線機・Audio設定': 'General / Radio / Audio settings',
-    'QSOログ': 'QSO log', 'QSOログ編集': 'Edit QSO log',
-    'スペクトラム表示幅': 'Spectrum span', '受信カード文字サイズ': 'Receive card font size',
-    '最新QSO表示件数': 'Recent QSO count', 'コントロール': 'Control', 'クロススコープ': 'Cross scope',
-    'サブデコ': 'Sub decoder', 'サブデコの使用について': 'Using the sub decoder',
-    '初期設定ガイド': 'Initial setup guide', '起動コマンドフラグについて': 'Startup command flags',
-    'PSRTTYのバージョンアップ': 'Update PSRTTY', 'PSRTTYの更新履歴': 'PSRTTY version history',
-    'PSRTTYについて': 'About PSRTTY', 'PSRTTY 設定': 'PSRTTY settings',
-    'PSRTTY コントロール': 'PSRTTY control', 'PSRTTY配布ZIPを選択': 'Select PSRTTY release ZIP',
-    '基本設定': 'General', '外部接続': 'External control', '高度な設定': 'Advanced',
-    '高度な設定を初期値に戻す': 'Reset advanced settings',
-    'プロファイル': 'Profile', 'プロファイル名': 'Profile name', '＋ Profile追加': '+ Add profile',
-    'このProfileを削除': 'Delete this profile', 'Profile削除': 'Delete profile',
-    'プロファイル名（英数字・-/、10文字以内）': 'Profile name (letters, digits, - /; up to 10 characters)',
-    '英数字と - / を10文字以内で入力してください。': 'Use up to 10 letters, digits, - or /.',
-    '同じ名前のプロファイルがあります。': 'A profile with this name already exists.',
-    '最大6件です。': 'Up to 6 profiles.',
-    '先頭のProfileは基準となるため削除できません。': 'The first profile cannot be deleted.',
-    '使用中です。先にメイン画面で別のProfileへ切り替えてください。': 'This profile is active. Select another profile in the main window first.',
-    '別のプロファイルです。画面下の［保存］で設定を保存してください。': 'This is a different profile. Use Save at the bottom to store its settings.',
-    '運用するプロファイルはメイン画面で切り替えてください。': 'Select the operating profile in the main window.',
-    '自局コールサイン': 'Station callsign', '自局CALL': 'Station CALL', '自局': 'Station',
-    '相手CALL': 'Contact CALL', '現在のQSO': 'Current QSO', '最新QSO': 'Recent QSOs',
-    '自局コールサイン {MYCALL}': 'Station callsign {MYCALL}',
-    '自局運用場所 {MYQTH}': 'Station location {MYQTH}', '追加送信文 {MYTXT}': 'Additional text {MYTXT}',
-    '送信用の地名（英字）': 'Location for transmission (Latin letters)',
-    '名前・設備紹介など、追加で送る英文を自由入力': 'Additional text in English (name, equipment, etc.)',
-    'JCC/JCGコード': 'JCC/JCG code', 'COMポート': 'COM port', 'CAT速度': 'CAT speed',
-    'CI-V速度': 'CI-V speed', 'CI-Vアドレス': 'CI-V address', 'PTT方式': 'PTT method',
-    '接続テスト': 'Connection test', '接続テスト失敗': 'Connection test failed',
-    '接続時DATAモード': 'DATA mode on connection', '無線機固有の設定': 'Radio-specific settings',
-    '外部機器の先行切替を有効にする': 'Enable external control before PTT',
-    '外部機器のCOMポート': 'External device COM port', '制御線': 'Control line',
-    '動作を反転する': 'Invert control', 'PTTより先に切り替える時間': 'Lead time before PTT',
-    '受信レベル': 'Receive level', '送信レベル': 'Transmit level', 'RXメーター': 'RX meter',
-    '無線機ALC': 'Radio ALC', '音量設定を保存': 'Save audio level',
-    '暫定50%': 'Initial 50%', 'テスト音＋TX-PTT': 'Test tone + TX PTT',
-    'テスト送信を停止': 'Stop test transmission', '信号受信中に調整': 'Adjust while receiving a signal',
-    '音声デバイスを再検出': 'Rescan audio devices', '同名の有効な機器を選び直す': 'Select matching active device',
-    'USB Audioの受信音声レベル': 'USB Audio input level',
-    'RTTY速度': 'RTTY baud rate', 'ストップビット': 'Stop bits', '極性': 'Polarity',
-    'Mark / Spaceを反転する': 'Invert Mark / Space', 'AUTO TUNE許容幅': 'AUTO TUNE tolerance',
-    '未接続でもMACROと手動送信可': 'Allow macros and manual transmission while disconnected',
-    'シフト幅': 'Shift', '幅RESET': 'Reset shift', '位置RESET': 'Reset position',
-    '表示感度': 'Display gain', 'SQ(スケルチ)': 'SQ (squelch)', 'デコード': 'Decode',
-    '自動取得': 'Auto capture', 'CQのみ': 'CQ only', '周波数変更でクリア': 'Clear on frequency change',
-    'TU 73送出で自動ログ追加': 'Auto log after sending TU 73', '固定': 'Fixed',
-    'ログに追加': 'Add to log', '↓ ログに追加': '↓ Add to log', '手動送信': 'Manual TX',
-    '自由送信テキスト': 'Free text', '回数': 'Count', '間隔': 'Interval', '回': 'times', '秒': 'sec',
-    '停止': 'Stop', '待機中': 'Waiting', 'タイムアウト': 'Timeout', '応答なし': 'No response',
-    'モード': 'Mode', 'バンド': 'Band', '周波数 MHz': 'Frequency MHz', '周波数（MHz）': 'Frequency (MHz)',
-    'バンド：MHz（GはGHz）': 'Band: MHz (G = GHz)', 'ホイール反転': 'Reverse wheel',
-    '自動': 'Auto', '手動': 'Manual', '自動ノッチ': 'Auto notch', '手動ノッチ': 'Manual notch',
-    'アンテナTUNE': 'Antenna TUNE', 'アンテナチューニング中…': 'Antenna tuning…',
-    'アンテナチューニング完了': 'Antenna tuning complete', 'アンテナチューニング待ち…': 'Waiting to tune…',
-    '無線機の状態を取得しました。': 'Radio state received.',
-    '接続後、受信中に操作できます。送信中・Auto CQ中は停止します。': 'Controls are available when connected and receiving. They stop during TX or Auto CQ.',
-    '状態未取得／この機種・モードでは非対応。無線機本体で操作してください。': 'State unavailable or unsupported in this mode. Use the radio controls.',
-    '無線機側の受信フィルター。状態未取得・非対応時は操作できません。': 'Radio receive filter. Disabled when state is unavailable or unsupported.',
-    '機種の周波数範囲を確認してください。': 'Check the frequency range for this radio.',
-    'MHzを数値で入力してください（小数点以下6桁まで）。': 'Enter a frequency in MHz (up to 6 decimal places).',
-    '周波数をMHzで入力してください（小数点以下6桁まで）。': 'Enter a frequency in MHz (up to 6 decimal places).',
-    '設定できませんでした。無線機のモード・送信状態を確認してください。': 'Setting failed. Check the radio mode and TX state.',
-    '設定待ち: ': 'Setting pending: ', '操作失敗: ': 'Operation failed: ', 'モード設定待ち: ': 'Mode pending: ',
-    '新しいカードから文字サイズを反映します': 'Font size applies to new receive cards',
-    '① 期間・自局コール': '1. Period / station callsign', '② バンド選択': '2. Select bands',
-    '③ 対象交信の選択': '3. Select QSOs', '④ 確認・保存': '4. Confirm / save',
-    '開始（JST）': 'Start (JST)', '終了（JST、指定分を含む）': 'End (JST, inclusive minute)',
-    '運用自局コールサイン': 'Operating station callsign', '出力': 'Export', '日時（JST）': 'Date / time (JST)',
-    '受信番号': 'Received exchange', '全選択': 'Select all', '全解除': 'Clear selection',
-    '保存先フォルダーを開く': 'Open destination folder',
-    'Remarks2に自局CALLを出力する': 'Include station CALL in Remarks2',
-    '抽出する交信期間と、運用した自局コールサインを指定してください。': 'Select the QSO period and operating station callsign.',
-    '対象の期間・自局コールのログにあるバンドから選択してください。': 'Select bands present in the matching log.',
-    'ADIFに含める交信にチェックを入れてください。元のログは変更しません。': 'Check QSOs to include in the ADIF. Source logs are preserved.',
-    'CSVに含める交信にチェックを入れてください。元のログは変更しません。': 'Check QSOs to include in the CSV. Source logs are preserved.',
-    '運用自局コールサインを入力してください。': 'Enter the operating station callsign.',
-    '開始日時は終了日時以前にしてください。': 'The start must be before or equal to the end.',
-    'バンドを1つ以上選択してください。': 'Select at least one band.',
-    '交信を1件以上選択してください。': 'Select at least one QSO.',
-    '指定した期間と自局コールに該当する交信がありません。': 'No QSOs match the selected period and callsign.',
-    'ADIFログを読み込めませんでした。': 'Could not read the ADIF log.',
-    '読み込めないADIFログがあります。ログファイルを確認してください。': 'Some ADIF logs could not be read. Check the log files.',
-    'キー': 'Key', '名称': 'Name', '送信内容': 'TX text', 'テンプレート': 'Template',
-    'テンプレートを選択し、［反映］を押してから［保存］してください。': 'Select a template, Apply, then Save.',
-    'いますぐバックアップ': 'Back up now', '終了時にログをバックアップする。': 'Back up logs on exit.',
-    '件ごとにバックアップする。': 'QSOs between backups.', 'ログバックアップ': 'Log backup',
-    'バックアップするログがありません。': 'No logs to back up.',
-    'QSOの削除': 'Delete QSO', 'ログを変更できませんでした': 'Could not modify the log',
-    '日時不明': 'Unknown date / time', '入力の確認': 'Check input', '相手CALLが空欄': 'Contact CALL is empty',
-    '相手コールサインがありません。': 'Contact callsign is missing.', 'CALLを入力してください。': 'Enter a CALL.',
-    '設定の保存': 'Save settings', '終了時の設定保存': 'Save settings on exit',
-    'Audio INの設定を保存しました。': 'Audio IN settings saved.', 'Audio OUTの設定を保存しました。': 'Audio OUT settings saved.',
-    'Audio IN: 停止中': 'Audio IN: stopped', 'Audio IN: 入力中': 'Audio IN: receiving',
-    'Audio IN: 未設定': 'Audio IN: not set', 'Audio IN: 入力できません': 'Audio IN: unavailable',
-    'Audio IN: 切替中…': 'Audio IN: switching…', 'QSO完了': 'QSO complete',
-    'Auto CQ開始': 'Auto CQ started', 'Auto CQ完了': 'Auto CQ complete',
-}
+Only display text is translated. Configured callsigns, macros, radio IDs,
+received/transmitted text and exported records must never pass through here.
+"""
+from __future__ import annotations
+import json
+import logging
+import re
+from html.parser import HTMLParser
+from pathlib import Path
+from string import Formatter
+from .english_fallback import STRINGS as ENGLISH
+from .language_index import ALIASES, GUIDE_KEYS
+from .paths import app_root, resource_path
 
+LANGUAGES = ('ja', 'en', 'ru', 'zh', 'ko')
+LANGUAGE = 'ja'  # effective display language; requested setting is never rewritten
+REQUESTED_LANGUAGE = 'ja'
+_strings = dict(ENGLISH)
+_issues = []
+_seen = set()
+_QT_TRANSLATOR = None
 
-from .i18n_fix2 import TEXT as FIX2_TEXT
-TEXT.update(FIX2_TEXT)
-from .i18n_fix3 import TEXT as FIX3_TEXT
-TEXT.update(FIX3_TEXT)
-from .i18n_fix4 import TEXT as FIX4_TEXT
-TEXT.update(FIX4_TEXT)
+class _Markup(HTMLParser):
+    def __init__(self):
+        super().__init__(); self.stack=[]
+    def handle_starttag(self, tag, attrs):
+        if tag not in ('br','hr','img','meta','link','input','wbr'):self.stack.append(tag)
+    def handle_startendtag(self, tag, attrs):
+        if tag not in ('br','hr','img','meta','link','input','wbr'): raise ValueError('invalid self-closing HTML')
+    def handle_endtag(self, tag):
+        if not self.stack or self.stack.pop()!=tag:raise ValueError('unbalanced HTML')
 
-from .i18n_107 import TEXT as TEXT_107
-TEXT.update(TEXT_107)
+def _fields(value):
+    return sorted((name, spec, conv) for _,name,spec,conv in Formatter().parse(value) if name is not None)
 
-from .i18n_108 import TEXT as TEXT_108
-TEXT.update(TEXT_108)
+def validate_entry(key, value):
+    if not isinstance(value,str):raise ValueError('value must be a string')
+    ref=ENGLISH[key]
+    if ref.strip() and not value.strip():raise ValueError('empty translation')
+    # Guide HTML contains CSS braces only outside the text catalogue.
+    if _fields(value)!=_fields(ref):raise ValueError('format placeholders differ')
+    if re.search(r'</?(?:h[1-6]|p|li|ol|ul|table|tr|td|th|b|span|code)(?:\s|>)',ref):
+        parser=_Markup();parser.feed(value);parser.close()
+        if parser.stack:raise ValueError('unclosed HTML')
+    return value
 
-from .i18n_109 import TEXT as TEXT_109
-TEXT.update(TEXT_109)
+def _pairs(pairs):
+    result={}
+    for key,value in pairs:
+        if key in result:raise ValueError('duplicate JSON key: '+str(key))
+        result[key]=value
+    return result
 
-def configure(language):
-    global LANGUAGE
-    LANGUAGE = language if language in ('ja', 'en') else 'ja'
+def load_catalog(language, directory=None):
+    """Returns valid entries and diagnostics; never raises for an external file."""
+    path=Path(directory or app_root()/'language')/(language+'.json')
+    problems=[];valid={}
+    try:
+        if path.stat().st_size>4*1024*1024:raise ValueError('catalogue exceeds 4 MiB')
+        data=json.loads(path.read_text(encoding='utf-8-sig'),object_pairs_hook=_pairs)
+        if (not isinstance(data,dict) or data.get('format')!=1 or data.get('language')!=language
+                or not isinstance(data.get('strings'),dict)):
+            raise ValueError('unsupported catalogue structure / language')
+    except (OSError,ValueError,UnicodeError) as exc:
+        return {},[('file',str(path),str(exc))]
+    for key,reference in ENGLISH.items():
+        if key not in data['strings']:
+            problems.append(('entry',key,'missing'));continue
+        try:valid[key]=validate_entry(key,data['strings'][key])
+        except ValueError as exc:problems.append(('entry',key,str(exc)))
+    return valid,problems
 
+def _record(problem):
+    if problem in _seen:return
+    _seen.add(problem);_issues.append(problem)
+    logging.getLogger('psrtty.language').warning('%s: %s: %s',*problem)
+    try:
+        path=app_root()/'var'/'language.log';path.parent.mkdir(parents=True,exist_ok=True)
+        if path.exists() and path.stat().st_size>1024*1024:
+            path.replace(path.with_suffix('.log.1'))
+        with path.open('a',encoding='utf-8') as f:f.write(' | '.join(problem)+'\n')
+    except OSError:pass  # reporting failure must not prevent startup
+
+def configure(language, directory=None):
+    global LANGUAGE, REQUESTED_LANGUAGE, _strings, _issues, _seen
+    REQUESTED_LANGUAGE=language
+    _issues=[];_seen=set();_strings=dict(ENGLISH)
+    english,problems=load_catalog('en',directory)
+    _strings.update(english)
+    for problem in problems:_record(problem)
+    if language not in LANGUAGES:
+        LANGUAGE='en';_record(('file',str(language),'unsupported selected language'));return
+    selected,problems=load_catalog(language,directory) if language!='en' else (english,[])
+    LANGUAGE='en' if any(p[0]=='file' for p in problems) else language
+    _strings.update(selected)
+    for problem in problems:_record(problem)
+
+def startup_notice():
+    if any(p[0]=='file' for p in _issues):return tr('language.load_notice')
+    return ''
+
+def diagnostics():return tuple(_issues)
+
+def language_text(key, language):
+    # Compatibility for existing document exports / tests, outside active UI.
+    data,_=load_catalog(language)
+    return data.get(key,ENGLISH.get(key,key))
+
+TEXT={original:ENGLISH[key] for original,key in ALIASES.items()}
+TEXT.update(ENGLISH)
 
 def tr(text):
-    if LANGUAGE != 'en':
-        return text
-    return TEXT.get(text, text)
+    key=ALIASES.get(text,text)
+    if key in _strings:return _strings[key]
+    if key in ENGLISH:return ENGLISH[key]
+    # Backend diagnostic messages can contain already-formatted placeholders.
+    for original,k in ALIASES.items():
+        if '{' not in original or original.startswith('<'):continue
+        try:
+            parts=list(Formatter().parse(original));pattern='';names=[]
+            for literal,name,spec,conv in parts:
+                pattern+=re.escape(literal)
+                if name is not None:pattern+='(.*?)';names.append(name)
+            match=re.fullmatch(pattern,text,re.DOTALL)
+            if match:
+                values=dict(zip(names,match.groups()))
+                target=_strings.get(k,ENGLISH[k])
+                return ''.join(literal+(values.get(name,'') if name is not None else '')
+                               for literal,name,spec,conv in Formatter().parse(target))
+        except (ValueError,TypeError):continue
+    return text  # technical identifiers and arbitrary external error text
+
+def install_qt_translation():
+    global _QT_TRANSLATOR
+    from PySide6.QtCore import QTranslator,QLibraryInfo
+    from PySide6.QtWidgets import QApplication
+    app=QApplication.instance()
+    if app is None:return
+    if _QT_TRANSLATOR is not None:app.removeTranslator(_QT_TRANSLATOR)
+    _QT_TRANSLATOR=QTranslator(app)
+    code={'ja':'ja','en':'en','ru':'ru','zh':'zh_CN','ko':'ko'}[LANGUAGE]
+    if LANGUAGE=='en':return  # Qt's original strings are English
+    loaded=_QT_TRANSLATOR.load('qtbase_'+code,QLibraryInfo.path(QLibraryInfo.TranslationsPath))
+    if not loaded:loaded=_QT_TRANSLATOR.load(str(resource_path('assets/qt-translations/qtbase_'+code+'.qm')))
+    if loaded:app.installTranslator(_QT_TRANSLATOR)
+    else:_record(('qt',code,'Qt catalogue unavailable; standard buttons use English'))
+
+configure('ja')

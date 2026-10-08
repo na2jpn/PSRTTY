@@ -49,13 +49,12 @@ class SettingsDialog(QDialog):
         self.working_profiles[self.active_profile_index].update(
             {key: deepcopy(config_store.data[key]) for key in PROFILE_KEYS})
         self.working.update({key: deepcopy(self.working_profiles[0][key]) for key in PROFILE_KEYS})
-        self.setWindowTitle(tr("PSRTTY 設定"))
+        self.setWindowTitle(tr('ui.e5c2ff2ea7d4fb50'))
         self.resize(660, 600)
 
         root = QVBoxLayout(self)
         intro = QLabel(
-            tr("使用するCOMポート・音声デバイスを選択してください。\n"
-            "ICOMはCI-V、Yaesu・Kenwood機種はHamlibで制御します。")
+            tr('ui.d75c3ae48c5ec3ce')
         )
         intro.setWordWrap(True)
         intro.setObjectName("helpText")
@@ -67,7 +66,7 @@ class SettingsDialog(QDialog):
             page = QWidget(); page.setLayout(QVBoxLayout())
             page.layout().setContentsMargins(0, 2, 0, 0)
             self.profile_tabs.addTab(page, profile['name'])
-        add_profile = QPushButton(tr('＋ Profile追加'))
+        add_profile = QPushButton(tr('ui.a0d9f4ff64b05071'))
         add_profile.setMinimumHeight(28)
         add_profile.clicked.connect(self._add_profile)
         self.profile_tabs.setCornerWidget(add_profile, Qt.TopRightCorner)
@@ -77,17 +76,17 @@ class SettingsDialog(QDialog):
         self._update_profile_tab_colors()
 
         actions = QHBoxLayout()
-        self.delete_profile_button = QPushButton(tr('このProfileを削除'))
+        self.delete_profile_button = QPushButton(tr('ui.49cee7d28b4f3090'))
         self.delete_profile_button.clicked.connect(self._delete_profile)
         actions.addWidget(self.delete_profile_button)
         actions.addStretch(1)
-        self.secondary_button = QPushButton(tr('第二AudioOUTの設定'))
+        self.secondary_button = QPushButton(tr('ui.acd8e57f9bb73955'))
         self.secondary_button.clicked.connect(self._open_secondary_audio)
         self.secondary_button.hide()
         actions.addWidget(self.secondary_button)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        buttons.button(QDialogButtonBox.Save).setText(tr("保存"))
-        buttons.button(QDialogButtonBox.Cancel).setText(tr("キャンセル"))
+        buttons.button(QDialogButtonBox.Save).setText(tr('ui.a3030bf8f16dc63c'))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
         actions.addWidget(buttons)
@@ -104,23 +103,23 @@ class SettingsDialog(QDialog):
         self.profile_name_edit = QLineEdit(self.working_profiles[self.profile_index]['name'])
         self.profile_name_edit.setMaxLength(10)
         self.profile_name_edit.setValidator(QRegularExpressionValidator(QRegularExpression('[A-Za-z0-9/-]{0,10}'), self.profile_name_edit))
-        form.addRow(tr('プロファイル名（英数字・-/、10文字以内）'), self.profile_name_edit)
+        form.addRow(tr('ui.6d0497876c48026d'), self.profile_name_edit)
         self.my_call = QLineEdit(self.working.get('station_callsign', ''))
-        self.my_call.setPlaceholderText(tr('例: JX1XXX'))
+        self.my_call.setPlaceholderText(tr('ui.25533bf82cf78b98'))
         station = self.working['station']
         self.my_qth = QLineEdit(station['qth'])
-        self.my_qth.setPlaceholderText(tr('送信用の地名（英字）'))
+        self.my_qth.setPlaceholderText(tr('ui.5f7936285da3f143'))
         self.my_jcc_jcg = QLineEdit(station['jcc_jcg'])
-        self.my_jcc_jcg.setPlaceholderText(tr('JCC/JCGコード'))
+        self.my_jcc_jcg.setPlaceholderText(tr('ui.8e3c0baaaddfca68'))
         self.my_text = QPlainTextEdit(station['text'])
-        self.my_text.setPlaceholderText(tr('名前・設備紹介など、追加で送る英文を自由入力'))
-        form.addRow(tr('自局コールサイン {MYCALL}'), self.my_call)
-        form.addRow(tr('自局運用場所 {MYQTH}'), self.my_qth)
+        self.my_text.setPlaceholderText(tr('ui.a1a062efb75ab178'))
+        form.addRow(tr('ui.18619d6669e0866e'), self.my_call)
+        form.addRow(tr('ui.2097a2f37bbe4363'), self.my_qth)
         form.addRow('JCC/JCG {MYJCCJCG}', self.my_jcc_jcg)
-        form.addRow(tr('追加送信文 {MYTXT}'), self.my_text)
-        note = QLabel(tr('自局コールサインはメイン画面と共用です。Saveで反映します。\n通常交信では QTH {MYQTH} {MYJCCJCG} の順に送ります。\n追加送信文は複数行・空欄も使用できます。送信文は英数字で入力してください。'))
+        form.addRow(tr('ui.1a0f216487deae85'), self.my_text)
+        note = QLabel(tr('ui.fa6c7f957970e52c'))
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
-        self.tabs.addTab(tab, tr('基本設定'))
+        self.tabs.addTab(tab, tr('ui.a37d92500512aa67'))
 
     def _rebuild_inner_tabs(self):
         page = self.profile_tabs.widget(self.profile_index)
@@ -143,16 +142,16 @@ class SettingsDialog(QDialog):
             self._adopt_main_connection()
         else:
             self.connect_button.setEnabled(False)
-            self.connect_button.setToolTip(tr('運用するプロファイルはメイン画面で切り替えてください。'))
+            self.connect_button.setToolTip(tr('ui.4d2025f57bff3bbe'))
 
     def _capture_profile(self):
         name = profile_name(self.profile_name_edit.text().strip())
         if not name:
-            QMessageBox.warning(self, tr('プロファイル名'), tr('英数字と - / を10文字以内で入力してください。'))
+            QMessageBox.warning(self, tr('ui.88961610d2a4c6ac'), tr('ui.a3fb0d3ca1a1210c'))
             return False
         if any(i != self.profile_index and p['name'].lower() == name.lower()
                for i, p in enumerate(self.working_profiles)):
-            QMessageBox.warning(self, tr('プロファイル名'), tr('同じ名前のプロファイルがあります。'))
+            QMessageBox.warning(self, tr('ui.88961610d2a4c6ac'), tr('ui.26b9020f630663cf'))
             return False
         self.working_profiles[self.profile_index]['name'] = name
         self.profile_tabs.setTabText(self.profile_index, name)
@@ -193,7 +192,7 @@ class SettingsDialog(QDialog):
 
     def _add_profile(self):
         if len(self.working_profiles) >= 6:
-            QMessageBox.information(self, tr('プロファイル'), tr('最大6件です。')); return
+            QMessageBox.information(self, tr('ui.5be15c5e5420e0c5'), tr('ui.c439d65e7b5d0271')); return
         if not self._capture_profile(): return
         used = {p['name'].lower() for p in self.working_profiles}
         number = next(n for n in range(1, 10) if f'profile{n}' not in used)
@@ -220,16 +219,16 @@ class SettingsDialog(QDialog):
     def _delete_profile(self):
         index = self.profile_index
         if index == 0:
-            QMessageBox.information(self, tr('Profile削除'), tr('先頭のProfileは基準となるため削除できません。'))
+            QMessageBox.information(self, tr('ui.ddca9a49fef40d64'), tr('ui.938723042f443c6c'))
             return
         if index == self.active_profile_index:
-            QMessageBox.information(self, tr('Profile削除'), tr('使用中です。先にメイン画面で別のProfileへ切り替えてください。'))
+            QMessageBox.information(self, tr('ui.ddca9a49fef40d64'), tr('ui.04864c7da4dae51f'))
             return
         if self.tx_testing or self.test_pending:
-            QMessageBox.information(self, tr('Profile削除'), tr('接続テスト・送信テストの終了を待ってください。'))
+            QMessageBox.information(self, tr('ui.ddca9a49fef40d64'), tr('ui.396888a93624ff49'))
             return
         name = self.working_profiles[index]['name']
-        if QMessageBox.question(self, tr('Profile削除'), tr('{name} を削除しますか？\n保存すると削除が確定します。').format(name=name)) != QMessageBox.Yes:
+        if QMessageBox.question(self, tr('ui.ddca9a49fef40d64'), tr('ui.e1ed8e390038d0e0').format(name=name)) != QMessageBox.Yes:
             return
         self._release_test_controller()
         old = self.tabs
@@ -252,102 +251,98 @@ class SettingsDialog(QDialog):
     def _build_radio_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
-        self.rig = QComboBox(); self.rig.addItem(tr('選択してください'), '')
+        self.rig = QComboBox(); self.rig.addItem(tr('ui.0de0988dea1ae0b7'), '')
         from ..radio_support import ICOM_EXTERNAL_AUDIO, ICOM_EXTERNAL_PTT
-        groups=[(tr('ICOM：直接USB接続'), [m for m in RIG_MODELS if m not in ICOM_EXTERNAL_AUDIO and m not in ICOM_EXTERNAL_PTT and m != 'その他ICOM']),
-                (tr('ICOM：外部CI-V／音声接続'), list(ICOM_EXTERNAL_AUDIO)),
-                (tr('ICOM：外部PTTも必要'), list(ICOM_EXTERNAL_PTT))]
+        groups=[(tr('ui.63998b8a254e5921'), [m for m in RIG_MODELS if m not in ICOM_EXTERNAL_AUDIO and m not in ICOM_EXTERNAL_PTT and m != 'その他ICOM']),
+                (tr('ui.052eb3a7ebf8c24c'), list(ICOM_EXTERNAL_AUDIO)),
+                (tr('ui.1865f48534f2ba77'), list(ICOM_EXTERNAL_PTT))]
         for heading,models in groups:
             self.rig.addItem(heading, '')
             self.rig.model().item(self.rig.count()-1).setEnabled(False)
             for model in models:self.rig.addItem(model,model)
-        self.rig.addItem(tr('その他ICOM'),'その他ICOM')
+        self.rig.addItem(tr('ui.148cbb4bebaec374'),'その他ICOM')
         for model, (_,label) in HAMLIB_MODELS.items(): self.rig.addItem(label, model)
         self._select_data(self.rig, self.working['radio']['model'])
-        form.addRow(tr('無線機'), self.rig)
-        self.com = QComboBox(); self.com.addItem(tr('自動'), 'AUTO')
+        form.addRow(tr('ui.45bf10f170732eed'), self.rig)
+        self.com = QComboBox(); self.com.addItem(tr('ui.36147b7e34df7ac8'), 'AUTO')
         for port, name in CIVController.port_choices(): self.com.addItem(name, port)
         target = self.working['radio']['com_port']
         if self.com.findData(target) < 0:
-            self.com.addItem(f"{target}{tr('（未接続）')}", target)
+            self.com.addItem(f"{target}{tr('ui.fdaf3eaa9227aabe')}", target)
         self._select_data(self.com, target)
-        form.addRow(tr('COMポート'), self.com)
+        form.addRow(tr('ui.6bf76187430ec90a'), self.com)
         self.port_note = QLabel(); self.port_note.setWordWrap(True); self.port_note.setObjectName('helpText')
         form.addRow('', self.port_note)
-        self.specific = QGroupBox(tr('無線機固有の設定'))
+        self.specific = QGroupBox(tr('ui.e3dee3c5ad0acd89'))
         self.specific_form = f = QFormLayout(self.specific)
         f.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.civ_addr = QComboBox(); self.civ_addr.setEditable(True)
         self.civ_addr.addItems([f'{v:02X}' for v in sorted(set(RIG_MODELS.values())) if v])
         self.civ_addr.setCurrentText(self.working['radio']['civ_address'])
-        self.address_label = QLabel(tr('CI-Vアドレス')); f.addRow(self.address_label, self.civ_addr)
-        self.address_note = QLabel(tr('機種選択時に標準値を入力します。無線機側で変更した場合は手修正できます。'))
+        self.address_label = QLabel(tr('ui.6c64150cb31ca77d')); f.addRow(self.address_label, self.civ_addr)
+        self.address_note = QLabel(tr('ui.2821e46ec62f4b24'))
         self.address_note.setWordWrap(True); self.address_note.setObjectName('helpText'); f.addRow(self.address_note)
-        self.ptt = QComboBox(); f.addRow(tr('PTT方式'), self.ptt)
+        self.ptt = QComboBox(); f.addRow(tr('ui.b000e357ff8c5615'), self.ptt)
         self.baud = QComboBox(); self.baud_label = QLabel(); f.addRow(self.baud_label, self.baud)
         self.stopbits = QComboBox(); self.stopbits.addItem('1', 1); self.stopbits.addItem('2', 2)
-        self.stopbits_label = QLabel(tr('ストップビット')); f.addRow(self.stopbits_label, self.stopbits)
+        self.stopbits_label = QLabel(tr('ui.2897a2b4ec27d731')); f.addRow(self.stopbits_label, self.stopbits)
         self.auto_mode = QCheckBox(); self.auto_mode.setChecked(self.working['radio'].get('auto_data_mode', True))
         f.addRow(self.auto_mode)
-        self.cat_note = QLabel(tr('Hamlibを使用します。COMポートとCAT速度を指定して接続テストしてください。'
-                               '無線機のDATA入力はUSBに設定します。ALCを取得できない場合は無線機本体で確認してください。'))
+        self.cat_note = QLabel(tr('ui.95a6d1cca4557c83'))
         self.cat_note.setWordWrap(True); self.cat_note.setObjectName('helpText'); f.addRow(self.cat_note)
         form.addRow(self.specific)
-        self.test_button = QPushButton(tr('接続テスト')); self.test_button.clicked.connect(self._test_radio)
+        self.test_button = QPushButton(tr('ui.3ee76ae7045f1ff8')); self.test_button.clicked.connect(self._test_radio)
         form.addRow('', self.test_button)
         self.test_note = QLabel(); self.test_note.setWordWrap(True); form.addRow(self.test_note)
-        self.connect_button = QPushButton(tr("接続"))
+        self.connect_button = QPushButton(tr('ui.d528fb88a6930dfb'))
         self.connect_button.clicked.connect(self._connect_saved)
         form.addRow("", self.connect_button)
         self.rig.currentIndexChanged.connect(self._rig_changed)
         self._rig_changed(initial=True)
-        self.tabs.addTab(tab, tr('無線機'))
+        self.tabs.addTab(tab, tr('ui.45bf10f170732eed'))
 
     def _build_external_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
         values = self.working['external']
-        self.external_enabled = QCheckBox(tr('外部接続を有効にする'))
+        self.external_enabled = QCheckBox(tr('ui.956da5cd42c70171'))
         self.external_enabled.setChecked(bool(values['enabled']))
         form.addRow(self.external_enabled)
         self.external_role = QComboBox()
-        self.external_role.addItem(tr('外部機器の先行切替'), 'prekey')
-        self.external_role.addItem(tr('無線機のPTT制御'), 'ptt')
+        self.external_role.addItem(tr('ui.0289ec3b89c43dc1'), 'prekey')
+        self.external_role.addItem(tr('ui.548dfef1e28627a1'), 'ptt')
         self._select_data(self.external_role, values.get('role', 'prekey'))
-        form.addRow(tr('外部接続の用途'), self.external_role)
-        ptt_note = QLabel(tr('PTT用に使用する場合は有効にし、用途を「無線機のPTT制御」、無線機タブのPTT方式を「外部接続」にします。CI-V用とは別のCOMポートのRTS/DTRでPTTを操作します。先行切替時間はこの用途では使用しません。'))
+        form.addRow(tr('ui.bf4c22dd0b17534a'), self.external_role)
+        ptt_note = QLabel(tr('ui.5b93a2afd56d0f63'))
         ptt_note.setWordWrap(True); form.addRow(ptt_note)
         self.external_port = QComboBox()
-        self.external_port.addItem(tr('選択してください'), '')
+        self.external_port.addItem(tr('ui.0de0988dea1ae0b7'), '')
         for port, label in CIVController.port_choices():
             self.external_port.addItem(label, port)
         selected = values.get('com_port', '')
         if selected and self.external_port.findData(selected) < 0:
-            self.external_port.addItem(f"{selected}{tr('（未接続）')}", selected)
+            self.external_port.addItem(f"{selected}{tr('ui.fdaf3eaa9227aabe')}", selected)
         self._select_data(self.external_port, selected)
-        form.addRow(tr('外部機器のCOMポート'), self.external_port)
+        form.addRow(tr('ui.8a74968e2d064881'), self.external_port)
         self.external_line = QComboBox()
         self.external_line.addItems(['RTS', 'DTR'])
         self.external_line.setCurrentText(values.get('line', 'RTS'))
-        form.addRow(tr('制御線'), self.external_line)
+        form.addRow(tr('ui.16b0af04bae02158'), self.external_line)
         self.external_delay = QDoubleSpinBox()
         self.external_delay.setRange(.1, 9.9)
         self.external_delay.setSingleStep(.1)
         self.external_delay.setDecimals(1)
-        self.external_delay.setSuffix(tr(' 秒'))
+        self.external_delay.setSuffix(tr('ui.00fe8dda1fd70f64'))
         self.external_delay.setValue(float(values.get('delay_seconds', .1)))
-        form.addRow(tr('PTTより先に切り替える時間'), self.external_delay)
-        note = QLabel(tr('送信時、指定COMのRTSまたはDTRを切り替えてから設定秒数後に無線機のPTTをONにします。'
-                      '終了時は先にPTTをOFFにしてから外部制御線を戻します。'
-                      '無線機のCATとは別のCOMポートが必要です。接続した機器の極性と配線を確認してください。'))
+        form.addRow(tr('ui.57585c17a31bb792'), self.external_delay)
+        note = QLabel(tr('ui.5ba4d8ac67fd501e'))
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
         spacer = QWidget(); spacer.setFixedHeight(9); form.addRow(spacer)
-        self.external_reverse = QCheckBox(tr('動作を反転する'))
+        self.external_reverse = QCheckBox(tr('ui.7f83d32e5f1fd39d'))
         self.external_reverse.setChecked(bool(values.get('reversed', False)))
         form.addRow(self.external_reverse)
-        reverse_note = QLabel(tr('送信開始前に外部機器を切り替え、送信終了後に元へ戻します。'
-                              '接続先が逆に動く場合だけ「動作を反転する」を選んでください。'))
+        reverse_note = QLabel(tr('ui.80ef022b95e55fe9'))
         reverse_note.setWordWrap(True); reverse_note.setObjectName('helpText'); form.addRow(reverse_note)
-        self.tabs.addTab(tab, tr('外部接続'))
+        self.tabs.addTab(tab, tr('ui.c66e3b1994a02069'))
 
     def _external_values(self):
         return dict(role=self.external_role.currentData(), enabled=self.external_enabled.isChecked(),
@@ -373,19 +368,19 @@ class SettingsDialog(QDialog):
         if initial: self.ptt.setCurrentText(saved.get('ptt', 'CAT' if yaesu else 'CI-V'))
         for index in range(self.ptt.count()):
             if self.ptt.itemText(index) == '外部接続':
-                self.ptt.setItemData(index, '外部接続'); self.ptt.setItemText(index, tr('外部接続'))
-        self.baud.clear(); self.baud.addItem(tr('自動'), 'AUTO')
+                self.ptt.setItemData(index, '外部接続'); self.ptt.setItemText(index, tr('ui.c66e3b1994a02069'))
+        self.baud.clear(); self.baud.addItem(tr('ui.36147b7e34df7ac8'), 'AUTO')
         speeds = [115200, 38400, 19200, 9600, 4800] if yaesu else [115200, 57600, 38400, 19200, 9600, 4800]
         for speed in speeds: self.baud.addItem(str(speed), str(speed))
         self._select_data(self.baud, saved.get('cat_baud' if yaesu else 'civ_baud', 'AUTO'))
-        self.baud_label.setText(tr('CAT速度') if yaesu else tr('CI-V速度'))
+        self.baud_label.setText(tr('ui.040c990b28af8cdc') if yaesu else tr('ui.282ae772aeb81bab'))
         bits = saved.get('cat_stopbits') if initial else None
         self._select_data(self.stopbits, bits or (1 if model == 'FTX-1' else 2))
-        self.port_note.setText(tr('Hamlib制御はCOMポートとCAT速度を指定してください。YaesuのUSB接続ではEnhanced COMが一般的です。') if yaesu else tr('通常は「自動」でCI-V応答を確認して接続します。複数の無線機を使用する場合は、接続先のCOMポートを指定してください。'))
+        self.port_note.setText(tr('ui.23dc07621ef4d739') if yaesu else tr('ui.7e882691990d3ed6'))
         if connection_note(model):
             self.port_note.setText(connection_note(model))
         self.port_note.setStyleSheet("color:#075aa6;" if model in ICOM_EXTERNAL_PTT else "")
-        self.cat_note.setText(tr("USB接続の場合は無線機のDATA入力をUSBに設定します。それ以外はCAT設定と音声入力を無線機のマニュアルで確認してください。ALCは取得できなければ本体で確認してください。"))
+        self.cat_note.setText(tr('ui.572e3f063948c095'))
         self._mode_caption()
 
     def _mode_caption(self, *_):
@@ -395,23 +390,23 @@ class SettingsDialog(QDialog):
         elif model.startswith('TS-'):mode=('LSB-DATA' if mode=='LSB-D' else 'USB-DATA')
         elif model in HAMLIB_MODELS:
             mode = ('DATA-L' if mode == 'LSB-D' else 'DATA-U') if model == 'FTX-1' else ('DATA-LSB' if mode == 'LSB-D' else 'DATA-USB')
-        self.auto_mode.setText(tr('接続時に {mode} へ自動切替').format(mode=mode))
+        self.auto_mode.setText(tr('ui.5a1692fc86baebf3').format(mode=mode))
 
     def _audio_choices(self, combo, kind, selected):
-        if kind == 'input': combo.addItem(tr('未設定'), 'UNSET')
-        combo.addItem(tr('自動'), 'AUTO')
+        if kind == 'input': combo.addItem(tr('ui.6213305916949e4c'), 'UNSET')
+        combo.addItem(tr('ui.36147b7e34df7ac8'), 'AUTO')
         try:
             for choice, label in AudioEngine.devices(kind):
                 combo.addItem(label, choice)
                 if isinstance(choice, dict) and isinstance(selected, dict) and all(choice.get(k) == selected.get(k) for k in ('backend', 'id', 'kind')):
                     selected = choice
         except Exception as exc:
-            self.audio_error = str(exc)
+            self.audio_error = tr(str(exc))
         if combo.findData(selected) < 0:
             if isinstance(selected, dict):
-                label = selected.get('name', '') + tr('（未接続／無効）')
+                label = selected.get('name', '') + tr('ui.1184daf535ccfd3e')
             else:
-                label = tr('旧設定 [{selected}]（選び直してください）').format(selected=selected)
+                label = tr('ui.db352cdf32e298b2').format(selected=selected)
             combo.addItem(label, selected)
         self._select_data(combo, selected)
 
@@ -422,7 +417,7 @@ class SettingsDialog(QDialog):
         self.audio_error = ''
         self._audio_choices(self.audio_in, 'input', self.working['audio']['input_device'])
         form.addRow("Audio IN", self.audio_in)
-        n1 = QLabel(tr("受信用：無線機 → パソコン\n未設定では入力しません。設定済みなら無線機未接続でも入力します。\n受信音が入る録音デバイス（USB Audio／LINE IN／マイク入力など）を選んでください。"))
+        n1 = QLabel(tr('ui.f64ba79915c04f8b'))
         n1.setWordWrap(True); n1.setObjectName("helpText"); form.addRow("", n1)
 
         self.rx_gain = QSlider(Qt.Horizontal)
@@ -431,20 +426,20 @@ class SettingsDialog(QDialog):
         self.rx_label = QLabel()
         self.rx_gain.valueChanged.connect(self._rx_gain_changed)
         self.rx_label.setText(f"{self.rx_gain.value()}%")
-        preset = QPushButton(tr('暫定50%')); preset.setToolTip(tr('受信音を聞く前の仮設定です。実際の信号を受信してから再調整してください。'))
+        preset = QPushButton(tr('ui.6372d78797362875')); preset.setToolTip(tr('ui.288f092e337e724d'))
         preset.clicked.connect(lambda: self.rx_gain.setValue(50))
         row = QHBoxLayout(); row.addWidget(self.rx_gain, 1); row.addWidget(self.rx_label); row.addWidget(preset)
-        form.addRow(tr("受信レベル"), row)
+        form.addRow(tr('ui.e0989c705a08bff3'), row)
         self.rx_meter = QProgressBar(); self.rx_meter.setRange(0,100)
         self.rx_meter.setFormat('%v%')
         self.rx_state = QLabel(''); self.rx_state.setFixedWidth(42)
         meter_row = QHBoxLayout(); meter_row.addWidget(self.rx_meter, 1); meter_row.addWidget(self.rx_state)
-        form.addRow(tr('RXメーター'), meter_row)
-        self.rx_good = QLabel(tr('灰：表示なし／水色：Low／緑：Good（30～79%）／黄：High（80～89%）／赤：Over!（90%以上）'))
+        form.addRow(tr('ui.cd8dc38be5fb329b'), meter_row)
+        self.rx_good = QLabel(tr('ui.a281684c744c4a90'))
         form.addRow('', self.rx_good)
-        n2 = QLabel(tr('受信音を聞く前は暫定50%を使用できます。RTTY信号を受信できたら、RXメーターが緑のGoodの範囲に入るよう再調整してください。Goodは音声レベルの目安で、復調成功を保証しません。無信号・弱い信号は音量だけでは区別できないため、低い表示を設定不良と判定しません。受信文字も確認してください。'))
+        n2 = QLabel(tr('ui.f045587050bec9bd'))
         n2.setWordWrap(True); n2.setObjectName("helpText"); form.addRow("", n2)
-        save_in = QPushButton(tr('音量設定を保存')); save_in.clicked.connect(self._save_audio_in)
+        save_in = QPushButton(tr('ui.6e82b2bf5e205f8f')); save_in.clicked.connect(self._save_audio_in)
         form.addRow('', save_in)
         self.tabs.addTab(tab, 'Audio IN')
 
@@ -456,9 +451,9 @@ class SettingsDialog(QDialog):
         self.audio_out_status = QLabel()
         self.audio_out_status.setWordWrap(True)
         self.audio_out_status.setStyleSheet('color: #725d49; background: transparent; border: none; padding: 0;')
-        self.rebind_audio_out = QPushButton(tr('同名の有効な機器を選び直す'))
+        self.rebind_audio_out = QPushButton(tr('ui.3a13935e213d6a26'))
         self.rebind_audio_out.clicked.connect(self._rebind_audio_out)
-        refresh = QPushButton(tr('音声デバイスを再検出'))
+        refresh = QPushButton(tr('ui.35034c60be24bfaf'))
         refresh.clicked.connect(self._refresh_audio_out_choices)
         row_device = QHBoxLayout()
         row_device.addWidget(self.rebind_audio_out)
@@ -467,7 +462,7 @@ class SettingsDialog(QDialog):
         form.addRow('', row_device)
         self.audio_out.currentIndexChanged.connect(self._update_audio_out_availability)
         self._update_audio_out_availability()
-        n3 = QLabel(tr("送信用：パソコン → 無線機\n送信音を送る再生デバイス（USB Audio／LINE OUT／スピーカー出力など）を選んでください。"))
+        n3 = QLabel(tr('ui.09acce0bec978e52'))
         n3.setWordWrap(True); n3.setObjectName("helpText"); form.addRow("", n3)
 
         self.tx_gain = QSlider(Qt.Horizontal)
@@ -477,28 +472,30 @@ class SettingsDialog(QDialog):
         self.tx_gain.valueChanged.connect(self._tx_gain_changed)
         self.tx_label.setText(f"{self.tx_gain.value()}%")
         row2 = QHBoxLayout(); row2.addWidget(self.tx_gain, 1); row2.addWidget(self.tx_label)
-        form.addRow(tr("送信レベル"), row2)
-        n4 = QLabel(tr('試験送信は実際にPTTをONにしてRTTY音を送出します。低いレベルから始め、無線機のALCが動作し始める手前に合わせてください。無線機が運用接続中ならそのまま使用できます。未接続なら無線機タブで接続テストを成功させてください。'))
+        form.addRow(tr('ui.4cd82636e7230603'), row2)
+        n4 = QLabel(tr('ui.7baf25c906bf109b'))
         n4.setWordWrap(True); n4.setMinimumHeight(n4.fontMetrics().lineSpacing() * 6)
         n4.setObjectName("helpText"); form.addRow("", n4)
         self.alc_meter = QProgressBar(); self.alc_meter.setRange(0,120); self.alc_meter.setValue(0)
-        self.alc_meter.setFormat(tr('ALC：未取得'))
-        form.addRow(tr('無線機ALC'), self.alc_meter)
-        self.alc_good = QLabel(tr('ALC調整目安：未判定'))
+        self.alc_meter.setFormat(tr('ui.9b5652a9d2212a19'))
+        form.addRow(tr('ui.e0d7761322289d68'), self.alc_meter)
+        from ..alc_display import calibration_onset
+        self.alc_onset=calibration_onset(self.working['audio'],self.working['radio'])
+        self.alc_good = QLabel(tr('ui.1e97c80054138853'))
         form.addRow('', self.alc_good)
-        self.alc_note = QLabel(tr('ALCを取得できない場合は無線機本体のALCメーターを確認してください。'))
+        self.alc_note = QLabel(tr('ui.7d3c34926543670f'))
         self.alc_note.setWordWrap(True); self.alc_note.setObjectName('helpText'); form.addRow('', self.alc_note)
-        self.test_tx_button = QPushButton(tr('テスト音＋TX-PTT')); self.test_tx_button.setEnabled(False)
+        self.test_tx_button = QPushButton(tr('ui.e34d5bd94eb35240')); self.test_tx_button.setEnabled(False)
         self.test_tx_button.clicked.connect(self._toggle_test_tx)
-        self.test_count_label = QLabel(tr('待機中'))
+        self.test_count_label = QLabel(tr('ui.2f3ee0fc058199a7'))
         test_row=QHBoxLayout(); test_row.addWidget(self.test_tx_button); test_row.addWidget(self.test_count_label); test_row.addStretch(1)
         form.addRow('', test_row)
-        self.tx_test_note = QLabel(tr('もう一度押すと停止。10秒でも自動停止します。送信停止後に保存してください。'))
+        self.tx_test_note = QLabel(tr('ui.4f2331557b0415ba'))
         self.tx_test_note.setWordWrap(True); self.tx_test_note.setObjectName('helpText'); form.addRow('', self.tx_test_note)
-        self.save_out_button = QPushButton(tr('音量設定を保存')); self.save_out_button.clicked.connect(self._save_audio_out)
+        self.save_out_button = QPushButton(tr('ui.6e82b2bf5e205f8f')); self.save_out_button.clicked.connect(self._save_audio_out)
         form.addRow('', self.save_out_button)
 
-        note = QLabel(self.audio_error or tr('有効な音声デバイスを表示します。USB機器を追加した場合はPSRTTYを再起動してください。\n旧版で番号指定した機器は選び直してください。「自動」は各OSの既定の機器を使用します。'))
+        note = QLabel(self.audio_error or tr('ui.576351e2ada676f7'))
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
         self.tabs.addTab(tab, 'Audio OUT')
 
@@ -510,26 +507,26 @@ class SettingsDialog(QDialog):
             dialog = SecondaryAudioDialog(self.working['audio'].get('secondary'),
                 self._save_secondary_audio, self, primary_device=primary)
         except Exception as exc:
-            QMessageBox.warning(self, tr('第二AudioOUTの設定'), str(exc))
+            QMessageBox.warning(self, tr('ui.acd8e57f9bb73955'), tr(str(exc)))
             return
         dialog.exec()
 
     def _confirm_primary_audio_save(self):
         box = QMessageBox(self)
-        box.setWindowTitle(tr('第二AudioOUTの設定'))
-        box.setText(tr('第二AudioOUT設定を開くには、主AudioOUTの出力先と音量を保存する必要があります。保存して開きますか？'))
+        box.setWindowTitle(tr('ui.acd8e57f9bb73955'))
+        box.setText(tr('ui.95d3a4734b58c555'))
         box.setStandardButtons(QMessageBox.Save | QMessageBox.Cancel)
-        box.button(QMessageBox.Save).setText(tr('保存して開く'))
-        box.button(QMessageBox.Cancel).setText(tr('キャンセル'))
+        box.button(QMessageBox.Save).setText(tr('ui.2bd03e1cf1453880'))
+        box.button(QMessageBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
         box.setDefaultButton(QMessageBox.Cancel)
         return box.exec() == QMessageBox.Save
 
     def _save_primary_before_secondary(self):
         parent = self.parent()
         if self.tx_testing or (parent and parent.audio._tx_active):
-            raise ValueError(tr('送信が止まってから保存してください。'))
+            raise ValueError(tr('ui.f4cdea9046ecf0ce'))
         if [item['name'] for item in self.working_profiles] != [item['name'] for item in self.store.data['profiles']]:
-            raise ValueError(tr('先に設定画面の［保存］でProfileの変更を保存し、設定画面を開き直してください。'))
+            raise ValueError(tr('ui.4addcf30bcab9b5d'))
         values = dict(output_device=deepcopy(self.audio_out.currentData() or 'AUTO'), tx_gain=self.tx_gain.value()/100)
         old = deepcopy(self.store.data)
         try:
@@ -550,12 +547,12 @@ class SettingsDialog(QDialog):
         from ..secondary_audio import normalize_settings
         parent = self.parent()
         if self.tx_testing or (parent and parent.audio._tx_active):
-            raise ValueError(tr('送信が止まってから保存してください。'))
+            raise ValueError(tr('ui.f4cdea9046ecf0ce'))
         if [item['name'] for item in self.working_profiles] != [item['name'] for item in self.store.data['profiles']]:
-            raise ValueError(tr('先に設定画面の［保存］でProfileの変更を保存し、設定画面を開き直してください。'))
+            raise ValueError(tr('ui.4addcf30bcab9b5d'))
         values = normalize_settings(values)
         if values['enabled'] and values['device'] == self.audio_out.currentData():
-            raise ValueError(tr('第二AudioOUTには主AudioOUTと別の出力先を選択してください。'))
+            raise ValueError(tr('ui.09337e8c26ad0762'))
         old = deepcopy(self.store.data)
         try:
             self.store.data['profiles'][self.profile_index]['audio']['secondary'] = deepcopy(values)
@@ -574,7 +571,7 @@ class SettingsDialog(QDialog):
     def _build_advanced_tab(self):
         tab = QWidget()
         root = QVBoxLayout(tab)
-        warning = QLabel(tr("通常は初期値のままで使用してください。RTTY復調・AFSK送信の動作値を変更できます。"))
+        warning = QLabel(tr('ui.554478281f77814e'))
         warning.setWordWrap(True); warning.setObjectName("helpText")
         root.addWidget(warning)
         form = QFormLayout(); root.addLayout(form)
@@ -584,7 +581,7 @@ class SettingsDialog(QDialog):
         self.shift = QSpinBox(); self.shift.setRange(50, 1000); self.shift.setValue(int(adv["shift_hz"])); self.shift.setSuffix(" Hz")
         self.mark = QSpinBox(); self.mark.setRange(300, 3500); self.mark.setValue(int(adv["mark_hz"])); self.mark.setSuffix(" Hz")
         self.space = QSpinBox(); self.space.setRange(300, 3500); self.space.setValue(int(adv["space_hz"])); self.space.setSuffix(" Hz")
-        self.invert = QCheckBox(tr("Mark / Spaceを反転する")); self.invert.setChecked(bool(adv["invert"]))
+        self.invert = QCheckBox(tr('ui.cbbd64975fc85d89')); self.invert.setChecked(bool(adv["invert"]))
         self.spec_width = QComboBox()
         for v in (500, 1000, 2000, 3000): self.spec_width.addItem(f"{v if v<1000 else v//1000 if v%1000==0 else v/1000} {'Hz' if v<1000 else 'kHz'}", v)
         self._select_data(self.spec_width, int(adv["spectrum_width_hz"]))
@@ -594,14 +591,14 @@ class SettingsDialog(QDialog):
         self.data_mode.setCurrentText(adv.get("data_mode", "LSB-D"))
         self.data_mode.currentTextChanged.connect(self._mode_caption)
         self._mode_caption()
-        form.addRow(tr("接続時DATAモード"), self.data_mode)
-        form.addRow(tr("RTTY速度"), self.rtty_baud)
+        form.addRow(tr('ui.a0a3d4182392ee0e'), self.data_mode)
+        form.addRow(tr('ui.50022e97e35f13db'), self.rtty_baud)
         form.addRow("Shift", self.shift)
         form.addRow("Mark", self.mark)
         form.addRow("Space", self.space)
-        form.addRow(tr("極性"), self.invert)
-        form.addRow(tr("スペクトラム表示幅"), self.spec_width)
-        form.addRow(tr("AUTO TUNE許容幅"), self.tune_tol)
+        form.addRow(tr('ui.1f4b4a7dd5e867a6'), self.invert)
+        form.addRow(tr('ui.b4810bd0256c51ef'), self.spec_width)
+        form.addRow(tr('ui.c747e4873d78574c'), self.tune_tol)
 
         def shift_changed(v):
             self.space.blockSignals(True); self.space.setValue(self.mark.value() + v); self.space.blockSignals(False)
@@ -609,11 +606,11 @@ class SettingsDialog(QDialog):
         self.mark.valueChanged.connect(lambda v: shift_changed(self.shift.value()))
         self.space.valueChanged.connect(lambda v: self.shift.setValue(abs(v - self.mark.value())))
 
-        reset = QPushButton(tr("高度な設定を初期値に戻す"))
+        reset = QPushButton(tr('ui.01956a753c3d1f99'))
         reset.clicked.connect(self._reset_advanced)
         root.addWidget(reset)
         root.addStretch(1)
-        self.tabs.addTab(tab, tr("高度な設定"))
+        self.tabs.addTab(tab, tr('ui.9652fd780df9e978'))
 
     @staticmethod
     def _select_data(combo: QComboBox, value):
@@ -644,7 +641,7 @@ class SettingsDialog(QDialog):
         if not self.tx_testing and self.verified_values != self._radio_values():
             self.test_tx_button.setEnabled(False)
             if self.verified_values:
-                self.tx_test_note.setText(tr('無線機設定を変更しました。接続テストを再実行してください。'))
+                self.tx_test_note.setText(tr('ui.1917f6d1076ed413'))
 
     def _adopt_main_connection(self):
         parent=self.parent()
@@ -657,7 +654,7 @@ class SettingsDialog(QDialog):
         self.test_uses_main=True
         self.verified_values=self._radio_values()
         self.test_tx_button.setEnabled(True)
-        self.test_note.setText(tr('運用接続を確認しました。Audio OUTで試験送信できます。'))
+        self.test_note.setText(tr('ui.fe6aa465e8d7f98f'))
         return True
 
     def _rx_gain_changed(self, value):
@@ -676,6 +673,8 @@ class SettingsDialog(QDialog):
     def _refresh_rx_meter(self):
         parent = self.parent()
         value = parent.level.value() if parent and hasattr(parent, 'level') else 0
+        if parent and (parent.active_tx_id is not None or parent.audio._tx_active):
+            value=round(parent.rx_display.percent)
         self.rx_meter.setValue(value)
         from ..rx_level import level_band, LABELS, COLORS, TEXT_COLORS
         display=getattr(parent, 'rx_display', None)
@@ -684,30 +683,32 @@ class SettingsDialog(QDialog):
         self.rx_meter.setFormat(f'{value}%')
         self.rx_state.setText(LABELS[band])
         self.rx_state.setStyleSheet(f'color: {TEXT_COLORS[band]}; font-weight: bold;')
-        self.rx_state.setToolTip(tr('RX色：ほぼなし＝灰／低い＝水色／目安＝緑／やや高い＝黄／高すぎ＝赤。受信レベルの目安で、デコード成功の保証ではありません。'))
+        self.rx_state.setToolTip(tr('ui.ab87f3c2cbea0e9a'))
 
     def _save_audio_in(self):
         parent=self.parent()
         if self.profile_index != self.store.data['active_profile']:
-            self.test_note.setText(tr('別のプロファイルです。画面下の［保存］で設定を保存してください。'))
+            self.test_note.setText(tr('ui.5b9b2e8703cdd590'))
             return
         old=self.store.data['audio']['input_device']
         self.store.data['audio'].update(input_device=self.audio_in.currentData() or 'AUTO', rx_gain=self.rx_gain.value()/100)
         self.working['audio'].update(self.store.data['audio'])
         self.store.save()
         if parent and old != self.store.data['audio']['input_device']: parent._restart_audio_input()
-        self.test_note.setText(tr('Audio INの設定を保存しました。'))
+        self.test_note.setText(tr('ui.65004674ef6f3b17'))
 
     def _save_audio_out(self):
         if self.profile_index != self.store.data['active_profile']:
-            self.tx_test_note.setText(tr('別のプロファイルです。画面下の［保存］で設定を保存してください。'))
+            self.tx_test_note.setText(tr('ui.5b9b2e8703cdd590'))
             return
         if self.tx_testing or self.parent().audio._tx_active:
-            self.tx_test_note.setText(tr('送信が止まってから保存してください。')); return
+            self.tx_test_note.setText(tr('ui.f4cdea9046ecf0ce')); return
+        if 'alc_calibration' in self.working['audio']:
+            self.store.data['audio']['alc_calibration']=deepcopy(self.working['audio']['alc_calibration'])
         self.store.data['audio'].update(output_device=self.audio_out.currentData() or 'AUTO', tx_gain=self.tx_gain.value()/100)
         self.working['audio'].update(self.store.data['audio'])
         self.store.save()
-        self.tx_test_note.setText(tr('Audio OUTの設定を保存しました。'))
+        self.tx_test_note.setText(tr('ui.66fc26834d7a8509'))
 
     def _refresh_audio_out_choices(self):
         selected = self.audio_out.currentData()
@@ -719,7 +720,7 @@ class SettingsDialog(QDialog):
 
     def _matching_audio_out(self):
         selected = self.audio_out.currentData()
-        if not isinstance(selected, dict) or tr('未接続／無効') not in self.audio_out.currentText():
+        if not isinstance(selected, dict) or tr('ui.fd07aab3e60ac251') not in self.audio_out.currentText():
             return []
         return [index for index in range(self.audio_out.count())
                 if isinstance(self.audio_out.itemData(index), dict)
@@ -729,14 +730,14 @@ class SettingsDialog(QDialog):
                 and self.audio_out.itemData(index).get('id') != selected.get('id')]
 
     def _update_audio_out_availability(self, *_):
-        stale = tr('未接続／無効') in self.audio_out.currentText()
+        stale = tr('ui.fd07aab3e60ac251') in self.audio_out.currentText()
         matches = self._matching_audio_out() if stale else []
         self.rebind_audio_out.setVisible(len(matches) == 1)
         self.audio_out_status.setVisible(stale)
         if stale:
-            self.audio_out_status.setText(tr('保存済みの音声デバイスIDが現在は使えません。')
-                + (tr('同名の有効な機器が見つかりました。ボタンで選び直してからテスト送信してください。') if len(matches) == 1 else
-                   tr('音声デバイスを再検出し、一覧から送信先の機器を選び直してください。')))
+            self.audio_out_status.setText(tr('ui.aa672587f14fb7f2')
+                + (tr('ui.fbecbb2692fe4ba9') if len(matches) == 1 else
+                   tr('ui.9b93f629e40c1b41')))
         else:
             self.audio_out_status.setText('')
 
@@ -744,27 +745,28 @@ class SettingsDialog(QDialog):
         matches = self._matching_audio_out()
         if len(matches) == 1:
             self.audio_out.setCurrentIndex(matches[0])
-            self.tx_test_note.setText(tr('有効なAudio OUTを選び直しました。テスト送信で確認し、停止後に音量設定を保存してください。'))
+            self.tx_test_note.setText(tr('ui.e8acf2e95aa01f7f'))
 
     def _show_alc(self, value):
         self.alc_value=value
         if value is None:
-            self.alc_meter.setValue(0); self.alc_meter.setFormat(tr('ALC：取得できません'))
-            self.alc_good.setText(tr('ALC調整目安：本体メーターを確認'))
+            self.alc_meter.setValue(0); self.alc_meter.setFormat(tr('ui.08acbe39bbb1062d'))
+            self.alc_good.setText(tr('ui.8b44eb7116cf4984'))
             self.alc_good.setStyleSheet('color: #765d44;')
-            self.alc_note.setText(tr('ALC情報を取得できません。テスト送信中は無線機本体のALCメーターを見て、動き始める手前まで音量を上げてください。'))
+            self.alc_note.setText(tr('ui.8b3d01bf8a09cae0'))
             self.alc_meter.setStyleSheet('')
             return
         self.alc_meter.setValue(min(120,value))
         self.alc_meter.setFormat(f'ALC {value} / 120')
         gain=self.tx_gain.value()
-        good = self.alc_onset is not None and self.alc_onset-5 <= gain < self.alc_onset and value <= 1
-        self.alc_good.setText(tr('ALC調整目安：Good') if good else tr('ALC調整目安：調整中'))
+        from ..alc_display import classify
+        good, color = classify(value,gain,self.alc_onset)
+        self.alc_good.setText(tr('ui.7fcb53e00458f9a5') if good else tr('ui.581dce38e3ecb48f'))
         self.alc_good.setStyleSheet('background: #208341; color: white; padding: 4px; font-weight: bold;' if good else 'color: #765d44;')
-        color = '#208341' if good else '#c0392b' if value >= 10 else '#c98722'
+
         self.alc_meter.setStyleSheet(f'QProgressBar::chunk {{ background: {color}; }}; QProgressBar {{ border: 2px solid {color}; }}')
-        self.alc_note.setText(tr('緑：ALC調整目安（動作開始点から少し下げた位置）') if good else
-                              tr('ALCが動き始める手前に調整してください。緑は動作開始点を一度確認した後に表示します。'))
+        self.alc_note.setText(tr('ui.b0616e27bddaf033') if good else
+                              tr('ui.8b75f49df672a1a5'))
 
     def _toggle_test_tx(self):
         if self.tx_testing:
@@ -777,41 +779,41 @@ class SettingsDialog(QDialog):
             parent.antenna_tuning or parent.auto_cq_active or
             parent.audio._tx_active):
             self.test_tx_button.setEnabled(False)
-            self.tx_test_note.setText(tr('無線機タブで接続テストを再実行してください。')); return
+            self.tx_test_note.setText(tr('ui.15cf5f8c1e1471fc')); return
         ctl=self.test_controller
         mode=self.verified_values['ptt']
         ptt={'CI-V':ctl.set_ptt,'CAT':ctl.set_ptt,'RTS':ctl.set_rts,'DTR':ctl.set_dtr}.get(mode)
         if not ptt and mode != '外部接続':
 
-            self.tx_test_note.setText(tr('PTT方式を確認してください。')); return
+            self.tx_test_note.setText(tr('ui.3013aa78f5fcae4d')); return
         adv=self.working['advanced']
         # RY alternation exercises both mark and space. The worker is cut off at 10 s.
         text='RY ' * 70
         try:
             sequencer=ExternalPTT(self._external_values(), ctl.status.port, parent.audio._tx_cancel)
         except ValueError as exc:
-            self.tx_test_note.setText(str(exc)); return
+            self.tx_test_note.setText(tr(str(exc))); return
         from ..tx_keying import keying_callbacks
         try:
             on, off = keying_callbacks(ctl, mode, sequencer,
                 lambda: self.test_controller is ctl and ctl.status.connected)
         except ValueError as exc:
-            self.tx_test_note.setText(str(exc)); return
+            self.tx_test_note.setText(tr(str(exc))); return
         ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
             adv['mark_hz'],adv['space_hz'],adv['invert'],self.tx_gain.value()/100,
             on, off, lambda success,note:self.tx_test_finished.emit(success,note))
         if not ok:
             self.tx_test_note.setText(msg); return
         self.tx_testing=True; self.test_deadline=time.monotonic()+10
-        self.test_tx_button.setText(tr('テスト送信を停止'))
-        self.test_count_label.setText(tr('残り 10秒'))
+        self.test_tx_button.setText(tr('ui.aa5a54ec36936dd5'))
+        self.test_count_label.setText(tr('ui.59c8551120be3c6c'))
         self.save_out_button.setEnabled(False)
-        self.tx_test_note.setText(tr('実際に送信中です。無線機のALCと送信状態を確認してください。'))
+        self.tx_test_note.setText(tr('ui.3dd8bb2ff31785ed'))
         self.countdown.start()
 
     def _tick_test_tx(self):
         remaining=max(0,self.test_deadline-time.monotonic())
-        self.test_count_label.setText(f"{tr('残り ')}{int(remaining + 0.999)}{tr('秒')}" if remaining else tr('停止中…'))
+        self.test_count_label.setText(f"{tr('ui.f79606416528fb2b')}{int(remaining + 0.999)}{tr('ui.9dcdc2b289b9d233')}" if remaining else tr('ui.02099d7931da52b4'))
         if remaining <= 0:
             self._stop_test_tx(); return
         if self.alc_busy or not self.test_controller or not hasattr(self.test_controller,'read_alc'): return
@@ -823,23 +825,25 @@ class SettingsDialog(QDialog):
             if error: value=None
             if value is not None and value >= 2 and self.alc_onset is None:
                 self.alc_onset=self.tx_gain.value()
+                from ..alc_display import signature
+                self.working['audio']['alc_calibration']={'onset':self.alc_onset,'signature':signature(self._radio_values(),self.audio_out.currentData())}
             self._show_alc(value)
         self.alc_job=BackgroundJob(self,ctl.read_alc,done)
 
     def _stop_test_tx(self):
         if not self.tx_testing: return
         self.countdown.stop()
-        self.test_count_label.setText(tr('停止中…'))
+        self.test_count_label.setText(tr('ui.02099d7931da52b4'))
         self.parent().audio.stop_tx()
 
     def _test_tx_finished(self, success, message):
         self.tx_testing=False; self.countdown.stop()
-        self.test_tx_button.setText(tr('テスト音＋TX-PTT'))
-        self.test_count_label.setText(tr('停止'))
+        self.test_tx_button.setText(tr('ui.e34d5bd94eb35240'))
+        self.test_count_label.setText(tr('ui.ca4d973c0b006b75'))
         self.save_out_button.setEnabled(True)
-        self.alc_meter.setValue(0); self.alc_meter.setFormat(tr('ALC：送信停止'))
-        self.alc_good.setText(tr('ALC調整目安：送信停止'));self.alc_good.setStyleSheet('color: #765d44;')
-        self.tx_test_note.setText(tr('送信を停止しました。音量設定を保存できます。') if success or message==tr('送信中止') else message)
+        self.alc_meter.setValue(0); self.alc_meter.setFormat(tr('ui.07534165f419d0c6'))
+        self.alc_good.setText(tr('ui.6dfd71243d7c36d2'));self.alc_good.setStyleSheet('color: #765d44;')
+        self.tx_test_note.setText(tr('ui.087d32aadb80dca2') if success or message==tr('ui.63e1879b6cfd6a0e') else message)
         if not self.isVisible(): self._release_test_controller()
 
     def _release_test_controller(self):
@@ -859,7 +863,7 @@ class SettingsDialog(QDialog):
         parent = self.parent()
         if parent is not None and hasattr(parent, '_connected') and (parent._connected() or parent.connecting):
             if not self._adopt_main_connection():
-                self.test_note.setText(tr('運用接続中の設定と画面の選択が異なります。設定を保存して再接続してください。'))
+                self.test_note.setText(tr('ui.4102ec0494913a11'))
             return
         if self.tx_testing: return
         if self.test_controller:
@@ -868,7 +872,7 @@ class SettingsDialog(QDialog):
         try:
             ctl = create_controller(values)
         except ValueError as exc:
-            QMessageBox.warning(self, tr("接続テスト"), str(exc)); return
+            QMessageBox.warning(self, tr('ui.3ee76ae7045f1ff8'), tr(str(exc))); return
         self.test_controller = ctl
         self.test_uses_main = False
         self.test_pending = True
@@ -878,9 +882,9 @@ class SettingsDialog(QDialog):
         self._show_alc(None)
         self.test_tx_button.setEnabled(False)
         self.connect_button.setEnabled(False)
-        self.test_note.setText(tr("接続確認中…"))
+        self.test_note.setText(tr('ui.c1083127083f08e6'))
         advanced = dict(data_mode=self.data_mode.currentText())
-        self.test_button.setEnabled(False); self.test_button.setText(tr("接続確認中…"))
+        self.test_button.setEnabled(False); self.test_button.setText(tr('ui.c1083127083f08e6'))
         def work():
             return connect_configured(ctl, values, advanced)
         self.test_job = BackgroundJob(self, work, lambda st, err: self._test_done(st, err, values) if self.test_controller is ctl else None)
@@ -888,9 +892,9 @@ class SettingsDialog(QDialog):
             if self.test_controller is ctl and self.test_pending:
                 self.test_timed_out = True
                 ctl.cancel.set()
-                self.test_note.setText(tr("中止処理中です。完了後に再試行してください。"))
+                self.test_note.setText(tr('ui.d4e6b390bdb33e67'))
                 if self.isVisible():
-                    QMessageBox.warning(self, tr("接続テスト"), tr("接続がタイムアウトしました"))
+                    QMessageBox.warning(self, tr('ui.3ee76ae7045f1ff8'), tr('ui.86d2eac7a8dea68a'))
         QTimer.singleShot(10000, self, deadline)
 
     def _test_done(self, status, error, values):
@@ -903,16 +907,16 @@ class SettingsDialog(QDialog):
             self.verified_values=values
             self.test_tx_button.setEnabled(True)
         self.connect_button.setEnabled(bool(self.rig.currentData()))
-        self.test_note.setText(tr("接続テスト失敗") if failed else tr("接続テストに成功しました。Audio OUTを調整できます。運用を開始するには［接続］を押してください。"))
-        self.test_button.setEnabled(True); self.test_button.setText(tr("接続テスト"))
+        self.test_note.setText(tr('ui.c65cb3ae8835c7ef') if failed else tr('ui.65af76f90e2a2ada'))
+        self.test_button.setEnabled(True); self.test_button.setText(tr('ui.3ee76ae7045f1ff8'))
         if not self.isVisible():
             return
         if timed_out:
             return
         if failed:
-            QMessageBox.warning(self, tr("接続テスト"), str(error) if error else status.message if status else tr('応答なし'))
+            QMessageBox.warning(self, tr('ui.3ee76ae7045f1ff8'), tr(str(error)) if error else tr(status.message) if status else tr('ui.382bfcb90044d03c'))
         else:
-            QMessageBox.information(self, tr("接続テスト"), tr('接続テストに成功しました。Audio OUTで送信レベルを調整できます。\n{port} / {baud} bps\n周波数: {frequency:,} Hz').format(port=status.port, baud=status.baud, frequency=status.frequency_hz))
+            QMessageBox.information(self, tr('ui.3ee76ae7045f1ff8'), tr('ui.0a9d893efceea360').format(port=status.port, baud=status.baud, frequency=status.frequency_hz))
             if self.test_controller and not self.test_uses_main:
                 self.test_connection_generation += 1
                 generation=self.test_connection_generation
@@ -925,7 +929,7 @@ class SettingsDialog(QDialog):
             return
         self._release_test_controller()
         self.test_tx_button.setEnabled(False)
-        self.test_note.setText(tr('接続テストを終了しました。継続して運用するには［接続］を押してください。'))
+        self.test_note.setText(tr('ui.6b3c79a9a83a317f'))
 
     def done(self, result):
         self.level_timer.stop()
@@ -951,7 +955,7 @@ class SettingsDialog(QDialog):
 
     def _save(self):
         if self.tx_testing or (self.test_controller and not self.verified_values):
-            self.test_note.setText(tr("接続テスト・送信テストの終了を待ってください。"))
+            self.test_note.setText(tr('ui.396888a93624ff49'))
             return
         self._release_test_controller()
         values = self._radio_values()
@@ -959,14 +963,14 @@ class SettingsDialog(QDialog):
             if values["model"]:
                 validate_radio(values)
         except ValueError as exc:
-            QMessageBox.warning(self, tr("設定"), str(exc)); return
+            QMessageBox.warning(self, tr('ui.0d8619aae051ae34'), tr(str(exc))); return
         try:
             validate_external(self._external_values(), values['com_port'])
             external=self._external_values()
             if values['ptt'] == '外部接続' and (not external['enabled'] or external['role'] != 'ptt'):
-                raise ValueError(tr('外部接続でPTT制御を有効にしてください。'))
+                raise ValueError(tr('ui.3e8772d73f01525a'))
         except ValueError as exc:
-            QMessageBox.warning(self, tr("外部接続"), str(exc)); return
+            QMessageBox.warning(self, tr('ui.c66e3b1994a02069'), tr(str(exc))); return
         call_edited = self.basic_call_changed()
         if not self._capture_profile(): return
         self.before_save.emit()
