@@ -1434,6 +1434,10 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '・Preserved Japanese startup, language changes after restart, English fallback and saved selection.\n'
                  '・Distribution and update validation from 1.12 require all eight catalogues. Standard buttons support '
                  'the new languages.\n'
+                 '・ Added a world RTTY frequency guide under Help, in all eight languages. Overview, Japan and Regions '
+                 '1–3 show 2026 practices and segment examples, covering 1.8/1.9–430 MHz and up to 1200 MHz in Japan. '
+                 'Includes FT8 coexistence, Japan domestic FT8 at 7.041 MHz, USB/LSB and actual transmitted spectrum, '
+                 'sources and check date.\n'
                  '\n'
                  '2026-10-08  Ver1.11\n'
                  '・Reviewed UI, guides, descriptions and warnings; moved five-language text to separate JSON files in '
@@ -1981,4 +1985,76 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'qt.32': 'Name',
  'qt.33': 'Size',
  'qt.34': 'Type',
- 'qt.35': 'Date Modified'}
+ 'qt.35': 'Date Modified',
+ 'freq.title': 'World RTTY frequency guide',
+ 'freq.year': 'RTTY operating practices as of 2026',
+ 'freq.common': 'Overview',
+ 'freq.japan': 'Japan',
+ 'freq.r1': 'Region 1',
+ 'freq.r2': 'Region 2',
+ 'freq.r3': 'Region 3',
+ 'freq.band': 'Band',
+ 'freq.frequency': 'Frequency reference (MHz)',
+ 'freq.kind': 'Type',
+ 'freq.notes': 'Notes',
+ 'freq.practice': 'Operating example',
+ 'freq.plan': 'Band-plan segment',
+ 'freq.centre': 'Activity centre',
+ 'freq.local': 'Consult the national plan',
+ 'freq.sources': 'Sources and check date',
+ 'freq.checked': 'Checked: 2026-10-09',
+ 'freq.scope': 'Display language and operating region are separate. Choose the tab for your location. Regions cover '
+               '1.8/1.9–430 MHz; Japan extends to 1200 MHz.',
+ 'freq.meaning': 'Operating examples help you find RTTY. Band-plan segments describe shared data or all-mode areas, '
+                 'not dedicated RTTY allocations or guaranteed activity. Exclusions still apply within each range.',
+ 'freq.rules': 'Before transmitting, check the current national band plan and licence conditions. National conditions '
+               'take priority where they differ from regional guidance.',
+ 'freq.contest': 'Contest activity may spread beyond the usual examples. Listen first, even on an apparently clear '
+                 'frequency, and avoid established areas of other modes. Do not use 10, 18 or 24 MHz (WARC) for '
+                 'contests.',
+ 'freq.sideband': 'Account for USB/LSB: choose a place where the actual transmitted spectrum does not overlap FT8 or '
+                  'other activity, rather than judging the dial alone. AFSK tones appear above a USB dial and below an '
+                  'LSB dial. Check the radio manual for its FSK display reference; allow for both MARK/SPACE and the '
+                  'full signal width.',
+ 'freq.ft8': 'FT8 normally uses established frequencies; this does not mean operators cannot change frequency. Move '
+             'RTTY away from those operating areas. The Overview tab lists example USB dial frequencies; FT8 signals '
+             'extend above them by the audio offset. Apply the same care to other FT8, FT4 and DX frequencies.',
+ 'freq.japan7': 'Japan domestic FT8 uses a 7.041 MHz USB dial. If your signal reaches Japan, avoid overlapping its '
+                'actual operating spectrum. Also avoid FT8 areas such as 7.074 MHz.',
+ 'freq.beacons': 'Exclude beacons and their guard segments. Check local protection around 14.100 / 18.110 / 21.150 / '
+                 '24.930 / 28.200 MHz; keep your full transmitted spectrum outside.',
+ 'freq.no_centre': 'No established RTTY centre was verified. Check the local band plan and activity.',
+ 'freq.shared': 'Shared with other data or modes. Listen before transmitting.',
+ 'freq.warc': 'WARC: ordinary QSOs; no contests.',
+ 'freq.avoid': 'Choose outside established FT8 and other operating areas.',
+ 'freq.japan7lower': 'Usually from around 7.040 MHz. This example also includes operation from around 7.035 MHz during '
+                     'contests and similar activity.',
+ 'freq.japan160': 'Occupied bandwidth at 1.9075–1.9125 MHz is limited to 500 Hz. Also avoid FT8 around 1.840 MHz.',
+ 'freq.r1_160': '1.838–1.840 MHz is a narrowband segment. Avoid FT8 around 1.840 MHz. National conditions vary.',
+ 'freq.r1_80': 'The main reference is 3.580–3.600 MHz. Above 3.600 MHz take care with phone and other shared activity.',
+ 'freq.r1_40': 'In Region 1, do not use below 7.040 MHz as an RTTY reference. Higher frequencies also share with phone '
+               'and other activity.',
+ 'freq.r1_beacon': 'Region 1 guard segments: 14.099–14.101 / 18.109–18.111 / 21.149–21.151 / 24.929–24.931 MHz.',
+ 'freq.vhf': 'Not exclusive to RTTY. Avoid FT8, EME and meteor-scatter activity; check local divisions.',
+ 'freq.uhf': 'Avoid beacon, repeater, satellite and VoIP segments. Differences between countries and local areas are '
+             'large; consult local guidance.',
+ 'freq.japan1200': '1293–1294 MHz is an example all-mode segment, not an RTTY centre. Avoid the 1294.50–1294.60 MHz '
+                   'beacon segment, EME, repeaters and other designated areas.',
+ 'freq.japan_intro': 'Guidance for operation in Japan. HF uses ordinary operating examples; 7 MHz also covers '
+                     'practical contest activity from around 7.035 MHz. VHF/UHF lists verified plan segments.',
+ 'freq.r1_intro': 'Europe, Africa, the Middle East and other Region 1 areas. Based on current IARU Region 1 and RSGB '
+                  'references. Check each country’s conditions separately.',
+ 'freq.r2_intro': 'The Americas and other Region 2 areas. Numeric entries are US examples from ARRL, not allocations '
+                  'shared throughout Region 2. Outside the US, consult the national band plan.',
+ 'freq.r3_intro': 'Asia-Pacific and other Region 3 areas; use the Japan tab for Japan. These are segment examples from '
+                  'published IARU Region 3 material; national conditions differ. The April 2026 proposal for 7 MHz is '
+                  'not applied because its effective status was not verified.',
+ 'freq.r3_40': '7.040 MHz is an RTTY DX activity reference in the published plan, not an exclusive frequency for the '
+               'whole region.',
+ 'freq.r3_beacon': 'The published Region 3 plan protects 500 Hz on each side of international beacons.',
+ 'freq.bounds': 'Range endpoints are not safe dial limits. Keep both MARK/SPACE and the full signal width within the '
+                'usable segment.',
+ 'freq.history': '・ Added a world RTTY frequency guide under Help, in all eight languages. Overview, Japan and Regions '
+                 '1–3 show 2026 practices and segment examples, covering 1.8/1.9–430 MHz and up to 1200 MHz in Japan. '
+                 'Includes FT8 coexistence, Japan domestic FT8 at 7.041 MHz, USB/LSB and actual transmitted spectrum, '
+                 'sources and check date.'}

@@ -17,3 +17,12 @@ Qt標準ボタンはi18nのCatalogueTranslatorでカタログqt.*を利用。
 タイ語ガイドに対応フォント候補を指定。日本語/英語の既存文言を不用意に変更しないでください。
 1.12更新ZIPは8言語必須、1.11の5言語検査との互換を維持。
 Windowsのビルド・フォント・実機確認を継続してください。
+
+世界のRTTY周波数ガイドを含めて1.12正本を更新（2026-10-09）。
+- psrtty/frequency_guide.py: 共通の数値・出典・表生成（送信/無線機設定は変更しない）。
+- psrtty/ui/frequency_guide.py: 独立したモデルレス5タブ。MainWindow.help_windowsで再利用。
+- 表示文言freq.*は全8言語JSON、本体英語代替辞書にも反映。
+- 全地域7 MHz欄に日本国内FT8 7.041 MHzの注意。USB/LSB、MARK/SPACEと全送信帯域を考慮。
+- 1.8/1.9〜430 MHzを全地域、日本のみ1200 MHz。未確認のRTTY中心は推測しない。
+- 第2地域の数値は米国ARRLの例と明示。第3地域2026年4月の提案は施行未確認につき採用しない。
+- 出典と選定理由はdocs/RTTY_FREQUENCY_GUIDE_SOURCES.md。将来の変更時は公式資料を再確認する。

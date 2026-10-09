@@ -1,0 +1,34 @@
+test_cancel_and_custom_macro_text_are_preserved (tests.test_v106_fix2.Language106Fix2Tests.test_cancel_and_custom_macro_text_are_preserved) ... ok
+test_cq_region_identity_survives_translation (tests.test_v106_fix2.Language106Fix2Tests.test_cq_region_identity_survives_translation) ... ok
+test_english_template_selection_apply_save_reload_and_japanese_reopen (tests.test_v106_fix2.Language106Fix2Tests.test_english_template_selection_apply_save_reload_and_japanese_reopen) ... ok
+test_help_all_tabs_history_about_update_are_english (tests.test_v106_fix2.Language106Fix2Tests.test_help_all_tabs_history_about_update_are_english) ... ok
+test_radio_and_external_validation_messages (tests.test_v106_fix2.Language106Fix2Tests.test_radio_and_external_validation_messages) ... ok
+test_settings_tabs_dynamic_labels_and_saved_radio_identity (tests.test_v106_fix2.Language106Fix2Tests.test_settings_tabs_dynamic_labels_and_saved_radio_identity) ... ok
+test_translation_placeholders_and_japanese_identity (tests.test_v106_fix2.Language106Fix2Tests.test_translation_placeholders_and_japanese_identity) ... ok
+test_menu_order_modeless_reuse_and_close (tests.test_frequency_guide.FrequencyGuideMenuTests.test_menu_order_modeless_reuse_and_close) ... This plugin does not support raise()
+This plugin does not support raise()
+ok
+test_all_languages_complete_and_all_five_tabs_render (tests.test_frequency_guide.FrequencyGuideTests.test_all_languages_complete_and_all_five_tabs_render) ... ok
+test_frequency_reference_exclusions_and_national_examples (tests.test_frequency_guide.FrequencyGuideTests.test_frequency_reference_exclusions_and_national_examples) ... ok
+test_missing_translation_falls_back_while_retaining_usable_guide (tests.test_frequency_guide.FrequencyGuideTests.test_missing_translation_falls_back_while_retaining_usable_guide) ... ok
+test_region_selection_independent_of_display_language_and_japan_only_1200 (tests.test_frequency_guide.FrequencyGuideTests.test_region_selection_independent_of_display_language_and_japan_only_1200) ... ok
+test_requested_band_coverage_and_seven_mhz_warning_in_every_region (tests.test_frequency_guide.FrequencyGuideTests.test_requested_band_coverage_and_seven_mhz_warning_in_every_region) ... ok
+test_added_file_failure_recovers_without_rewriting_choice (tests.test_v112.Language112Tests.test_added_file_failure_recovers_without_rewriting_choice) ... file: /tmp/tmpk9i4q5ts/language/id.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+file: /tmp/tmpk9i4q5ts/language/th.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+file: /tmp/tmpk9i4q5ts/language/es.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+ok
+test_added_invalid_item_falls_back_only_for_that_item (tests.test_v112.Language112Tests.test_added_invalid_item_falls_back_only_for_that_item) ... entry: ui.a3030bf8f16dc63c: empty translation
+entry: ui.a3030bf8f16dc63c: empty translation
+entry: ui.a3030bf8f16dc63c: empty translation
+ok
+test_added_language_preferences_survive_restart (tests.test_v112.Language112Tests.test_added_language_preferences_survive_restart) ... ok
+test_distribution_refuses_missing_added_language (tests.test_v112.Language112Tests.test_distribution_refuses_missing_added_language) ... ok
+test_native_standard_buttons_without_qtbase_catalogue (tests.test_v112.Language112Tests.test_native_standard_buttons_without_qtbase_catalogue) ... ok
+test_update_rejects_missing_new_language_but_accepts_111_five (tests.test_v112.Language112Tests.test_update_rejects_missing_new_language_but_accepts_111_five) ... ok
+test_user_transmission_and_identifiers_are_preserved (tests.test_v112.Language112Tests.test_user_transmission_and_identifiers_are_preserved) ... ok
+test_version_eight_complete_languages_and_history (tests.test_v112.Language112Tests.test_version_eight_complete_languages_and_history) ... ok
+
+----------------------------------------------------------------------
+Ran 21 tests in 1.812s
+
+OK

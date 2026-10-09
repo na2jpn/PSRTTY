@@ -256,6 +256,7 @@ class MainWindow(QMainWindow):
         helpm = mb.addMenu(tr('ui.30672835496bc409'))
         self._act(helpm, tr('ui.61a34b5ad6c83323'), self._guide_initial)
         self._act(helpm, tr('ui.3e9f8e3d03440dc5'), self._guide_shortcuts)
+        self._act(helpm, tr('freq.title'), self._guide_frequencies)
         self._act(helpm, tr('ui.2c9d39577a049dc5'), self._guide_flags)
         self.update_action = self._act(helpm, tr('ui.8dabb1c0eda28080'), self._upgrade_zip)
         helpm.addSeparator()
@@ -1651,6 +1652,14 @@ class MainWindow(QMainWindow):
         win=self.help_windows.get(title)
         if win is None:
             win=GuideWindow(self); self.help_windows[title]=win
+        win.showNormal(); win.raise_(); win.activateWindow()
+
+    def _guide_frequencies(self):
+        from .frequency_guide import FrequencyGuide
+        win = self.help_windows.get('rtty_frequency_guide')
+        if win is None:
+            win = FrequencyGuide(self)
+            self.help_windows['rtty_frequency_guide'] = win
         win.showNormal(); win.raise_(); win.activateWindow()
 
     def _guide_ft8(self):
