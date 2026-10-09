@@ -1014,3 +1014,5 @@ ALIASES = {'日時手動': 'ui.226cd94a60d1b77b',
  '{p0}は3桁のRSTを入力してください。': 'ui.0a09be8281d35426',
  '{p0}：年齢または01（00/99も可）を数字で入力してください。': 'ui.be2fbe30fdc9aecf'}
 GUIDE_KEYS = [('guide.0.title', 'guide.0.body'), ('guide.1.title', 'guide.1.body'), ('guide.2.title', 'guide.2.body'), ('guide.3.title', 'guide.3.body'), ('guide.4.title', 'guide.4.body'), ('guide.5.title', 'guide.5.body'), ('guide.6.title', 'guide.6.body'), ('guide.7.title', 'guide.7.body'), ('guide.8.title', 'guide.8.body'), ('guide.9.title', 'guide.9.body')]
+
+ALIASES['1.12以降の配布には8言語のlanguageファイルが必要です'] = 'ui.update_requires_eight'

@@ -1395,7 +1395,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'of signal completes it; short-text filtering applies afterward. Characters handed to audio output '
                  'during Direct TX are recorded in raw transcripts and TX cards. Color does not confirm reception by '
                  'the other station. Use the existing QSO recording controls to save contacts.</p>',
- 'about.body': '<h2>PSRTTY 1.11</h2>\n'
+ 'about.body': '<h2>PSRTTY 1.12</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
                '<p>Selected Yaesu and Kenwood models use Hamlib CAT control.</p>\n'
@@ -1427,7 +1427,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-08  Ver1.11\n'
+ 'history.body': '2026-10-09  Ver1.12\n'
+                 '・Added Indonesian, Thai and Spanish, expanding display languages to eight. UI, guides, descriptions, '
+                 'warnings and history are supplied as external JSON.\n'
+                 '・Used concise operation labels and reviewed existing additional-language labels.\n'
+                 '・Preserved Japanese startup, language changes after restart, English fallback and saved selection.\n'
+                 '・Distribution and update validation from 1.12 require all eight catalogues. Standard buttons support '
+                 'the new languages.\n'
+                 '\n'
+                 '2026-10-08  Ver1.11\n'
                  '・Reviewed UI, guides, descriptions and warnings; moved five-language text to separate JSON files in '
                  'language.\n'
                  '・Japanese remains the initial language. Unreadable catalogues use English; missing or invalid '
@@ -1936,4 +1944,41 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.c67636ec3fcf8845': '{p0}: Use YYYY-MM-DD.',
  'ui.053caa215ea47709': 'QSO {p0} {p1}: Recorded station CALL {p2} differs from submission CALL {p3}.',
  'ui.0a09be8281d35426': '{p0}: Enter a 3-digit RST.',
- 'ui.be2fbe30fdc9aecf': '{p0}: Enter age or 01 (00/99 allowed) as digits.'}
+ 'ui.be2fbe30fdc9aecf': '{p0}: Enter age or 01 (00/99 allowed) as digits.',
+ 'ui.update_requires_eight': 'Releases from 1.12 require all eight language files',
+ 'qt.0': 'OK',
+ 'qt.1': 'Save',
+ 'qt.2': 'Save All',
+ 'qt.3': 'Open',
+ 'qt.4': 'Cancel',
+ 'qt.5': 'Close',
+ 'qt.6': 'Apply',
+ 'qt.7': 'Reset',
+ 'qt.8': 'Restore Defaults',
+ 'qt.9': 'Help',
+ 'qt.10': 'Yes',
+ 'qt.11': 'Yes to All',
+ 'qt.12': 'No',
+ 'qt.13': 'No to All',
+ 'qt.14': 'Abort',
+ 'qt.15': 'Retry',
+ 'qt.16': 'Ignore',
+ 'qt.17': 'Discard',
+ 'qt.18': "Don't Save",
+ 'qt.19': 'Look in:',
+ 'qt.20': 'File name:',
+ 'qt.21': 'Files of type:',
+ 'qt.22': 'Directory:',
+ 'qt.23': 'Back',
+ 'qt.24': 'Forward',
+ 'qt.25': 'Parent Directory',
+ 'qt.26': 'Create New Folder',
+ 'qt.27': 'List View',
+ 'qt.28': 'Detail View',
+ 'qt.29': 'All Files (*)',
+ 'qt.30': 'New Folder',
+ 'qt.31': 'Show hidden files',
+ 'qt.32': 'Name',
+ 'qt.33': 'Size',
+ 'qt.34': 'Type',
+ 'qt.35': 'Date Modified'}

@@ -1,0 +1,21 @@
+file: /tmp/tmpuvhau4j2/language/id.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+file: /tmp/tmpuvhau4j2/language/th.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+file: /tmp/tmpuvhau4j2/language/es.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+.entry: ui.a3030bf8f16dc63c: empty translation
+entry: ui.a3030bf8f16dc63c: empty translation
+entry: ui.a3030bf8f16dc63c: empty translation
+.......entry: ui.a3030bf8f16dc63c: empty translation
+entry: ui.f8f5d84186bd2947: format placeholders differ
+entry: guide.0.body: unclosed HTML
+.file: /tmp/tmp469cctck/language/ko.json: Expecting property name enclosed in double quotes: line 1 column 2 (char 1)
+file: /tmp/tmp469cctck/language/ko.json: duplicate JSON key: format
+file: /tmp/tmp469cctck/language/ko.json: unsupported catalogue structure / language
+.....file: /tmp/tmp0bo581j9/language/en.json: [Errno 2] No such file or directory: '/tmp/tmp0bo581j9/language/en.json'
+file: /tmp/tmp0bo581j9/language/ru.json: [Errno 2] No such file or directory: '/tmp/tmp0bo581j9/language/ru.json'
+.file: /tmp/tmpq3gfzxzv/language/en.json: [Errno 2] No such file or directory: '/tmp/tmpq3gfzxzv/language/en.json'
+entry: ui.a3030bf8f16dc63c: missing
+...................
+----------------------------------------------------------------------
+Ran 34 tests in 3.567s
+
+OK

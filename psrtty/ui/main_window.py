@@ -248,7 +248,7 @@ class MainWindow(QMainWindow):
         self._act(integration, tr('ui.17cea206eaeefd06'), self._zlog_settings)
         language = mb.addMenu(tr('language.title'))
         self.language_group = QActionGroup(self); self.language_group.setExclusive(True)
-        for code, label in (('ja', '日本語'), ('en', 'English'), ('ru','Русский'), ('zh','简体中文'), ('ko','한국어')):
+        for code, label in (('ja', '日本語'), ('en', 'English'), ('ru','Русский'), ('zh','简体中文'), ('ko','한국어'), ('id','Bahasa Indonesia'), ('th','ไทย'), ('es','Español')):
             a = self._act(language, label, lambda checked=False, v=code: self._set_language(v))
             a.setCheckable(True); a.setData(code); self.language_group.addAction(a)
             a.setChecked(self.store.data['ui'].get('language', 'ja') == code)

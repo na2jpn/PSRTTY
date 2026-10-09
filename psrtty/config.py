@@ -69,7 +69,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.11",
+    "version": "1.12",
     "schema_version": 1,
     "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
@@ -244,7 +244,7 @@ class ConfigStore:
         try: ui['decode_ignore_chars'] = max(0, min(10, int(ui.get('decode_ignore_chars', 0))))
         except (TypeError, ValueError, OverflowError): ui['decode_ignore_chars'] = 0
         if ui.get('time_zone') not in ('JST', 'UTC'): ui['time_zone'] = 'JST'
-        if ui.get('language') not in ('ja', 'en', 'ru', 'zh', 'ko'):
+        if ui.get('language') not in ('ja', 'en', 'ru', 'zh', 'ko', 'id', 'th', 'es'):
             ui['language'] = 'ja'
         if ui.get('latest_qso_count') not in (2, 4, 6, 8, 10):
             ui['latest_qso_count'] = 4

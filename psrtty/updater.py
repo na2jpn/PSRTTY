@@ -166,6 +166,8 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
                 raise ValueError('旧形式の更新対象ファイルが不正です')
             if comparison >= version_key('1.11') and not {f'language/{code}.json' for code in ('ja','en','ru','zh','ko')} <= files.keys():
                 raise ValueError('1.11以降の配布には5言語のlanguageファイルが必要です')
+            if comparison >= version_key('1.12') and not {f'language/{code}.json' for code in ('ja','en','ru','zh','ko','id','th','es')} <= files.keys():
+                raise ValueError('1.12以降の配布には8言語のlanguageファイルが必要です')
             expected = {prefix + MANIFEST} | {prefix + name for name in files}
             permitted_dirs = {prefix, prefix + "config/", prefix + "logdata/", prefix + "var/",
                               prefix + 'lib/', prefix + 'lib/hamlib/', prefix + 'docs/', prefix + 'language/'}

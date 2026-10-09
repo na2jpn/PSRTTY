@@ -21,7 +21,10 @@ class GuideWindow(QDialog):
         selected=[(tr(t),tr(b)) for t,b in i18n.GUIDE_KEYS]
         for title,body in selected:
             browser=QTextBrowser(); font=QFont(); font.setPointSize(11); browser.setFont(font)
-            browser.document().setDefaultStyleSheet(STYLE)
+            style = STYLE
+            if i18n.LANGUAGE == "th":
+                style = style.replace('"Yu Gothic UI", sans-serif', '"Leelawadee UI", "Noto Sans Thai", "Tahoma", sans-serif')
+            browser.document().setDefaultStyleSheet(style)
             browser.setHtml(body); self.tabs.addTab(browser,title)
         close=QPushButton(tr('ui.f6c244f98893cd95')); close.clicked.connect(self.hide); root.addWidget(close)
 

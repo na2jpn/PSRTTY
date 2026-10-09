@@ -69,8 +69,8 @@ class UI110Tests(unittest.TestCase):
                 self.assertGreater(g.tabs.count(),1);text=g.tabs.widget(0).toPlainText()
                 self.assertIn('ALC',text);self.assertIn('Good',text);self.assertTrue(any('F11' in g.tabs.widget(i).toPlainText() for i in range(g.tabs.count())));g.close()
         finally:configure('ja')
-    def test_language_menu_has_five_choices(self):
-        self.assertEqual({a.data() for a in self.window.language_group.actions()},{'ja','en','ru','zh','ko'})
+    def test_language_menu_has_supported_choices(self):
+        self.assertEqual({a.data() for a in self.window.language_group.actions()},set(__import__('psrtty.i18n',fromlist=['LANGUAGES']).LANGUAGES))
 
     def test_async_alc_callback_rejects_old_tx(self):
         w=self.window;w.active_tx_id=1;callbacks=[]

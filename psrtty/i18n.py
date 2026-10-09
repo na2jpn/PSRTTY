@@ -14,7 +14,7 @@ from .english_fallback import STRINGS as ENGLISH
 from .language_index import ALIASES, GUIDE_KEYS
 from .paths import app_root, resource_path
 
-LANGUAGES = ('ja', 'en', 'ru', 'zh', 'ko')
+LANGUAGES = ('ja', 'en', 'ru', 'zh', 'ko', 'id', 'th', 'es')
 LANGUAGE = 'ja'  # effective display language; requested setting is never rewritten
 REQUESTED_LANGUAGE = 'ja'
 _strings = dict(ENGLISH)
@@ -132,19 +132,36 @@ def tr(text):
         except (ValueError,TypeError):continue
     return text  # technical identifiers and arbitrary external error text
 
+# Qt does not ship Indonesian/Thai qtbase catalogues. These display-only
+# strings are kept in the same validated files as the rest of the interface.
+_QT_SOURCES = {'OK': 'qt.0', 'Save': 'qt.1', 'Save All': 'qt.2', 'Open': 'qt.3', 'Cancel': 'qt.4', 'Close': 'qt.5', 'Apply': 'qt.6', 'Reset': 'qt.7', 'Restore Defaults': 'qt.8', 'Help': 'qt.9', 'Yes': 'qt.10', 'Yes to All': 'qt.11', 'No': 'qt.12', 'No to All': 'qt.13', 'Abort': 'qt.14', 'Retry': 'qt.15', 'Ignore': 'qt.16', 'Discard': 'qt.17', "Don't Save": 'qt.18', 'Look in:': 'qt.19', 'File name:': 'qt.20', 'Files of type:': 'qt.21', 'Directory:': 'qt.22', 'Back': 'qt.23', 'Forward': 'qt.24', 'Parent Directory': 'qt.25', 'Create New Folder': 'qt.26', 'List View': 'qt.27', 'Detail View': 'qt.28', 'All Files (*)': 'qt.29', 'New Folder': 'qt.30', 'Show hidden files': 'qt.31', 'Name': 'qt.32', 'Size': 'qt.33', 'Type': 'qt.34', 'Date Modified': 'qt.35'}
+
 def install_qt_translation():
     global _QT_TRANSLATOR
-    from PySide6.QtCore import QTranslator,QLibraryInfo
+    from PySide6.QtCore import QTranslator, QLibraryInfo
     from PySide6.QtWidgets import QApplication
-    app=QApplication.instance()
-    if app is None:return
-    if _QT_TRANSLATOR is not None:app.removeTranslator(_QT_TRANSLATOR)
-    _QT_TRANSLATOR=QTranslator(app)
-    code={'ja':'ja','en':'en','ru':'ru','zh':'zh_CN','ko':'ko'}[LANGUAGE]
-    if LANGUAGE=='en':return  # Qt's original strings are English
-    loaded=_QT_TRANSLATOR.load('qtbase_'+code,QLibraryInfo.path(QLibraryInfo.TranslationsPath))
-    if not loaded:loaded=_QT_TRANSLATOR.load(str(resource_path('assets/qt-translations/qtbase_'+code+'.qm')))
-    if loaded:app.installTranslator(_QT_TRANSLATOR)
-    else:_record(('qt',code,'Qt catalogue unavailable; standard buttons use English'))
+    app = QApplication.instance()
+    if app is None:
+        return
+    if _QT_TRANSLATOR is not None:
+        app.removeTranslator(_QT_TRANSLATOR)
+    if LANGUAGE == 'en':
+        _QT_TRANSLATOR = None
+        return
+    class CatalogueTranslator(QTranslator):
+        def isEmpty(self):
+            return False
+        def translate(self, context, sourceText, disambiguation=None, n=-1):
+            if context in ('QPlatformTheme', 'QDialogButtonBox', 'QFileDialog', 'QFileSystemModel'):
+                key = _QT_SOURCES.get(sourceText.replace('&', ''))
+                if key is not None:
+                    return tr(key)
+            return super().translate(context, sourceText, disambiguation, n)
+    _QT_TRANSLATOR = CatalogueTranslator(app)
+    code = {'zh': 'zh_CN'}.get(LANGUAGE, LANGUAGE)
+    loaded = _QT_TRANSLATOR.load('qtbase_' + code, QLibraryInfo.path(QLibraryInfo.TranslationsPath))
+    if not loaded:
+        _QT_TRANSLATOR.load(str(resource_path('assets/qt-translations/qtbase_' + code + '.qm')))
+    app.installTranslator(_QT_TRANSLATOR)
 
 configure('ja')
