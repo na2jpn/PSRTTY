@@ -30,13 +30,14 @@ class Language112Tests(unittest.TestCase):
         i18n.install_qt_translation()
         self.tmp.cleanup()
     def test_version_eight_complete_languages_and_history(self):
-        self.assertEqual(__version__, '1.12')
+        self.assertGreaterEqual(tuple(map(int,__version__.split('.'))), (1,12))
         self.assertEqual(i18n.LANGUAGES, ('ja','en','ru','zh','ko','id','th','es'))
         self.assertEqual(validate_all(self.catalog), len(i18n.ENGLISH))
         for code in i18n.LANGUAGES:
             s=json.loads((self.catalog/f'{code}.json').read_text(encoding='utf-8'))['strings']
             self.assertEqual(set(s),set(i18n.ENGLISH))
-            self.assertTrue(s['history.body'].startswith('2026-10-09  Ver1.12'))
+            self.assertRegex(s['history.body'].splitlines()[0],r'^2026-\d{2}-\d{2}  Ver'+__version__+r'$')
+            self.assertIn('2026-10-09  Ver1.12',s['history.body'])
             self.assertIn('2026-10-08',s['history.body'])
             self.assertIn('Ver1.10',s['history.body'])
     def test_added_language_preferences_survive_restart(self):
@@ -91,7 +92,7 @@ class Language112Tests(unittest.TestCase):
         self.assertTrue({f'language/{c}.json' for c in i18n.LANGUAGES} <= info['files'].keys())
         staging=self.root/'staging';staging.mkdir()
         with zipfile.ZipFile(release) as z:z.extractall(staging)
-        installation=staging/'PSRTTY_1.12'
+        installation=staging/f'PSRTTY_{__version__}'
         for code in ('id','th','es'):(installation/'language'/f'{code}.json').unlink()
         def archive(version):
             create_manifest(installation,version)

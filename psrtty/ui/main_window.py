@@ -258,6 +258,7 @@ class MainWindow(QMainWindow):
         self._act(helpm, tr('ui.3e9f8e3d03440dc5'), self._guide_shortcuts)
         self._act(helpm, tr('freq.title'), self._guide_frequencies)
         self._act(helpm, tr('ui.2c9d39577a049dc5'), self._guide_flags)
+        helpm.addSeparator()
         self.update_action = self._act(helpm, tr('ui.8dabb1c0eda28080'), self._upgrade_zip)
         helpm.addSeparator()
         self._act(helpm, tr('ui.3c557b21e44807da'), self._history)
@@ -982,7 +983,7 @@ class MainWindow(QMainWindow):
                 self.transcript.append('TX '+text); self._add_card(text,'TX')
                 if success: self.printer.submit('TX',text,zone=self.store.data['ui'].get('time_zone','JST'))
             self.live_session=None
-            if self.direct_window:self.direct_window.finished()
+            if self.direct_window:self.direct_window.finished(success)
         print_tx,self.print_tx=self.print_tx,None
         if success and print_tx and print_tx[0]==finished_id and print_tx[4]==self.printer.generation:
             self.printer.submit('TX',print_tx[1],print_tx[2],print_tx[3])
@@ -1618,8 +1619,7 @@ class MainWindow(QMainWindow):
     def _open_transcript(self): self._open_path(self.transcript.ensure_file())
     def _open_adif(self): self._open_path(self.adif.ensure_file())
     def _zlog_settings(self):
-        from .integration_dialog import ZLogSettingsDialog
-        ZLogSettingsDialog(self).exec()
+        self.integration.zlog_settings()
 
     def _export_adif(self):
         from .adif_export_dialog import ADIFExportDialog
@@ -1834,6 +1834,7 @@ class MainWindow(QMainWindow):
             return
         if self.integration.dialog:
             self.integration.dialog.close()
+        self.integration.close()
         self.center_timer.stop()
         self.track_timer.stop()
         self.q_datetime.timer.stop()

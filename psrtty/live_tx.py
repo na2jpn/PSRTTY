@@ -12,7 +12,7 @@ from .i18n import tr
 
 class LiveText:
     """Only the uncommitted tail may be edited. Epochs discard stale replay events."""
-    def __init__(self, text='', delay=.5, hold=True):
+    def __init__(self, text='', delay=.5, hold=True, idle_timeout=2.):
         self.lock = threading.RLock()
         self.text = text
         self.delay = delay
@@ -21,6 +21,9 @@ class LiveText:
         self.position = 0
         self.epoch = 0
         self.records = []
+        self.idle_timeout = idle_timeout
+        self.idle_since = None
+        self.closing = False
 
     def update(self, text):
         with self.lock:
@@ -29,6 +32,7 @@ class LiveText:
             while common < min(len(text), len(self.text)) and text[common] == self.text[common]: common += 1
             self.times = self.times[:common] + [time.monotonic()] * (len(text)-common)
             self.text = text
+            self.idle_since = None
             return True
 
     def replay(self):
@@ -36,7 +40,27 @@ class LiveText:
             self.position = 0
             self.epoch += 1
             self.times = [0.] * len(self.text)
+            self.idle_since = None
             return self.epoch
+
+    def idle_expired(self, now=None):
+        """Called by the audio worker only after the previous emit completes.
+
+        Pending text cancels the deadline even while it is too young to send.
+        Claim completion under the same lock as update(), so late input can
+        be retained by the window and resumed after the draining stream ends.
+        """
+        with self.lock:
+            now = time.monotonic() if now is None else now
+            if self.position < len(self.text):
+                self.idle_since = None
+                return False
+            if self.idle_since is None:
+                self.idle_since = now
+            if self.hold and self.idle_timeout is not None and now - self.idle_since >= self.idle_timeout:
+                self.closing = True
+                return True
+            return False
 
     def next_char(self, now=None):
         with self.lock:
@@ -45,6 +69,7 @@ class LiveText:
             if now < self.times[self.position] + self.delay: return None
             index = self.position
             self.position += 1
+            self.idle_since = None
             return self.epoch, index, self.text[index]
 
 
@@ -63,6 +88,11 @@ class ToneEncoder:
         return result
     def code(self, code):
         return np.concatenate([self.tone(False,1)] + [self.tone(bool(code>>i&1),1) for i in range(5)] + [self.tone(True,1.5)])
+    def idle(self):
+        """LTRS diddle is protocol state, never input or sent-text progress."""
+        self.figures = False
+        return self.code(31)
+
     def char(self, ch):
         ch = ch.upper()
         codes = []
@@ -177,10 +207,11 @@ def start_live(engine, sd, session, output_device, advanced, amplitude, ptt_on, 
                     progress(item_epoch,index+1,ch)
                 else:
                     with session.lock:complete=session.position==len(session.text)
-                    if complete and not session.hold:
-                        if not emit(encoder.char('\n')):return
+                    auto_stop = session.idle_expired()
+                    if auto_stop or (complete and not session.hold):
+                        if not auto_stop and not emit(encoder.char('\n')):return
                         primary.stop();success=True;message=tr('ui.fe0cbba02e8d4de7');break
-                    if not emit(encoder.tone(True,advanced['rtty_baud']*960/engine.sample_rate)):return
+                    if not emit(encoder.idle()):return
         except Exception as exc:message=tr('ui.f8732c961aef978d')+str(exc)
         finally:
             if primary:

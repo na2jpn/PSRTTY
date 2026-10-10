@@ -1,16 +1,17 @@
 """Integration settings and background dispatch, independent of RX/TX I/O."""
 from copy import deepcopy
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt, QTimer
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout)
+    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QSpinBox)
 
 from ..hamlog_link import HamlogLink, TARGET_VERSION, API_VERSION
 from ..i18n import tr
+from ..zserver_link import ZServerLink, LinkError, DEFAULT_OPTIONS
 from .background import BackgroundJob
 
 VERSION_NOTICE = '対応対象：Turbo HAMLOG/Win Ver{version}（公開連携API Ver{api}以降）。'
-ZLOG_NOTICE = '対応対象：zLog 3.0.4.0（ZLOG3040）のADIF読み込み仕様。リアルタイム連動ではありません。'
+ZLOG_NOTICE = 'zlink.notice'
 
 
 class IntegrationController(QObject):
@@ -20,11 +21,40 @@ class IntegrationController(QObject):
         self.link = HamlogLink(main.paths['var'] / 'hamlog-transfer.jsonl')
         self.busy = False
         self.dialog = None
+        self.zlog_dialog = None
+        self.zlink = ZServerLink(main.paths['var'] / 'zserver-outbox.json')
+        self._last_zstatus = None
+        self.z_timer = QTimer(self); self.z_timer.setInterval(500)
+        self.z_timer.timeout.connect(self.poll_zlog); self.z_timer.start()
+        try:self.zlink.configure(main.store.data.get('zlog', {}))
+        except Exception as exc:self.zlink._status('zlink.error', str(exc))
 
     def settings(self):
         if self.dialog is None:
             self.dialog = HamlogSettingsDialog(self, self.main)
         self.dialog.show(); self.dialog.raise_(); self.dialog.activateWindow()
+
+    def zlog_settings(self):
+        if self.zlog_dialog is None:self.zlog_dialog = ZLogSettingsDialog(self.main)
+        self.zlog_dialog.reload()
+        self.zlog_dialog.show(); self.zlog_dialog.raise_(); self.zlog_dialog.activateWindow()
+
+    def zstatus_text(self):
+        state, detail, count, confirmed = self.zlink.snapshot()
+        result=tr(state) + ' — ' + tr('zlink.pending').format(count=count)
+        if detail:result += '\n' + detail
+        return result
+
+    def poll_zlog(self):
+        status=self.zlink.snapshot()
+        if self.zlog_dialog:self.zlog_dialog.status.setText(self.zstatus_text())
+        if status != self._last_zstatus and self.main.store.data.get('zlog',{}).get('enabled'):
+            self.main.statusBar().showMessage(self.zstatus_text(),8000)
+        self._last_zstatus=status
+
+    def close(self):
+        self.z_timer.stop();self.zlink.close()
+        if self.zlog_dialog:self.zlog_dialog.close()
 
     def run(self, work, done):
         if self.busy:
@@ -38,6 +68,10 @@ class IntegrationController(QObject):
         return True
 
     def record(self, qso):
+        try:self.zlink.enqueue(deepcopy(qso))
+        except Exception as exc:
+            detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)
+            QMessageBox.warning(self.main,tr('ui.17cea206eaeefd06'),tr('zlink.record_error').format(error=detail))
         options = self.main.store.data.get('hamlog', {})
         if not options.get('enabled', False):
             return
@@ -126,14 +160,66 @@ class HamlogSettingsDialog(QDialog):
 class ZLogSettingsDialog(QDialog):
     def __init__(self, main):
         super().__init__(main)
-        self.setWindowTitle(tr('ui.17cea206eaeefd06')); self.resize(630, 340)
-        root = QVBoxLayout(self)
-        for text in (tr(ZLOG_NOTICE), tr('ui.47def24ba89eedc5'),
-                     tr('ui.118c90276ecfe08d')):
-            label = QLabel(text); label.setWordWrap(True); root.addWidget(label)
-        button = QPushButton(tr('ui.989d12c480a3da4d'))
-        button.clicked.connect(main._export_adif); root.addWidget(button)
+        self.main=main;self.controller=main.integration
+        self.setWindowTitle(tr('ui.17cea206eaeefd06'));self.resize(680,640)
+        self.setStyleSheet('QLineEdit, QComboBox, QSpinBox { min-height:22px; padding:4px; }')
+        root=QVBoxLayout(self)
+        for key in ('zlink.notice','zlink.setup'):
+            label=QLabel(tr(key));label.setWordWrap(True);root.addWidget(label)
+        self.enabled=QCheckBox(tr('zlink.enabled'));root.addWidget(self.enabled)
+        self.host=QLineEdit();self.port=QSpinBox();self.port.setRange(1,65535)
+        self.pc_name=QLineEdit();self.pc_name.setMaxLength(20)
+        self.operator=QLineEdit();self.operator.setMaxLength(20)
+        self.tx=QSpinBox();self.tx.setRange(0,15)
+        self.time_basis=QComboBox();self.time_basis.addItem('UTC','UTC');self.time_basis.addItem('JST','JST')
+        self.decimal=QComboBox();self.decimal.addItem('.','.');self.decimal.addItem(',',',')
+        form=QFormLayout()
+        for key,widget in (('host',self.host),('port',self.port),('pc_name',self.pc_name),
+                           ('operator',self.operator),('tx',self.tx),('time_basis',self.time_basis),('decimal',self.decimal)):
+            form.addRow(tr('zlink.'+key),widget)
+        root.addLayout(form)
+        note=QLabel(tr('zlink.time_note'));note.setWordWrap(True);root.addWidget(note)
+        self.status=QLabel();self.status.setWordWrap(True);self.status.setTextFormat(Qt.PlainText)
+        self.status.setTextInteractionFlags(Qt.TextSelectableByMouse);root.addWidget(self.status)
+        self.connect_button=QPushButton(tr('zlink.save_connect'));self.connect_button.clicked.connect(self.connect_now)
+        root.addWidget(self.connect_button)
+        note=QLabel(tr('zlink.queue_note'));note.setWordWrap(True);root.addWidget(note)
+        button=QPushButton(tr('ui.989d12c480a3da4d'));button.clicked.connect(main._export_adif);root.addWidget(button)
         root.addStretch()
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
-        buttons.button(QDialogButtonBox.Close).setText(tr('ui.f6c244f98893cd95'))
-        buttons.rejected.connect(self.reject); root.addWidget(buttons)
+        buttons=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel)
+        buttons.button(QDialogButtonBox.Save).setText(tr('ui.a3030bf8f16dc63c'))
+        buttons.button(QDialogButtonBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
+        buttons.accepted.connect(self.save);buttons.rejected.connect(self.reject);root.addWidget(buttons)
+        self.reload()
+
+    def reload(self):
+        options=dict(DEFAULT_OPTIONS,**self.main.store.data.get('zlog',{}))
+        self.enabled.setChecked(options['enabled']);self.host.setText(options['host'])
+        self.port.setValue(options['port']);self.pc_name.setText(options['pc_name'])
+        self.operator.setText(options['operator']);self.tx.setValue(options['tx'])
+        self.time_basis.setCurrentIndex(self.time_basis.findData(options['time_basis']))
+        self.decimal.setCurrentIndex(self.decimal.findData(options['decimal']))
+        self.status.setText(self.controller.zstatus_text())
+
+    def values(self):
+        return {'enabled':self.enabled.isChecked(),'host':self.host.text(),'port':self.port.value(),
+                'pc_name':self.pc_name.text(),'operator':self.operator.text(),'tx':self.tx.value(),
+                'time_basis':self.time_basis.currentData(),'decimal':self.decimal.currentData()}
+
+    def apply(self):
+        previous=deepcopy(self.main.store.data.get('zlog',{}))
+        try:
+            options=self.controller.zlink.check_options(self.values())
+            self.main.store.data['zlog']=options;self.main.store.save()
+        except Exception as exc:
+            self.main.store.data['zlog']=previous
+            detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)
+            QMessageBox.warning(self,tr('ui.17cea206eaeefd06'),detail);return False
+        self.controller.zlink.configure(options)
+        self.controller.zlink.wake.set();self.controller.poll_zlog();return True
+
+    def connect_now(self):
+        self.enabled.setChecked(True);self.apply()
+
+    def save(self):
+        if self.apply():self.accept()

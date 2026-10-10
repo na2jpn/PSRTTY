@@ -1,9 +1,10 @@
 from __future__ import annotations
+import re
 from ..i18n import tr
 from .. import i18n
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap
+from PySide6.QtCore import Qt, QUrl
+from PySide6.QtGui import QPixmap, QDesktopServices
 from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QWidget, QPushButton
 
 from .. import __version__
@@ -21,11 +22,11 @@ def hamlib_about():
     return tr('ui.c2f9ceee5a00ecff').format(value=value)
 
 
-ABOUT_TEXT = i18n.language_text('about.body','ja')
-ABOUT_TEXT_EN = i18n.language_text('about.body','en')
+ABOUT_TEXT = re.sub(r'\bPSRTTY \d+\.\d+', 'PSRTTY '+__version__, i18n.language_text('about.body','ja'))
+ABOUT_TEXT_EN = re.sub(r'\bPSRTTY \d+\.\d+', 'PSRTTY '+__version__, i18n.language_text('about.body','en'))
 
 def about_html():
-    return tr('about.body').replace('PSRTTY 1.10','PSRTTY '+__version__)+'<p>'+hamlib_about()+'</p>'
+    return re.sub(r'\bPSRTTY \d+\.\d+', 'PSRTTY '+__version__, tr('about.body'))+'<p>'+hamlib_about()+'</p>'
 
 
 class AboutDialog(QDialog):
@@ -58,7 +59,10 @@ class AboutDialog(QDialog):
         self.thanks_button=QPushButton(tr('ui.13b044e575dd7a62'))
         self.thanks_button.clicked.connect(self._show_thanks)
         buttons=QHBoxLayout()
-        buttons.addWidget(self.thanks_button);buttons.addStretch(1)
+        buttons.addWidget(self.thanks_button)
+        self.website_button=QPushButton(tr('about.website'))
+        self.website_button.clicked.connect(lambda: QDesktopServices.openUrl(QUrl('https://2jp.org/ps/psrtty/?')))
+        buttons.addWidget(self.website_button);buttons.addStretch(1)
         self.close_button=QPushButton(tr('ui.f6c244f98893cd95'))
         self.close_button.clicked.connect(self.reject)
         buttons.addWidget(self.close_button);root.addLayout(buttons)

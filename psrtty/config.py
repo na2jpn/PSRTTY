@@ -69,8 +69,9 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.12",
+    "version": "1.14",
     "schema_version": 1,
+    "zlog": {"enabled": False, "host": "127.0.0.1", "port": 23, "pc_name": "PSRTTY", "operator": "", "tx": 15, "time_basis": "UTC", "decimal": "."},
     "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
@@ -112,6 +113,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "auto_tune_tolerance_hz": 90,
     },
     "ui": {
+        "direct_idle_seconds": 2,
         "language": "ja",
         "time_zone": "JST",
         "latest_qso_count": 4,
@@ -239,8 +241,14 @@ class ConfigStore:
         hamlog = self.data.get('hamlog')
         if not isinstance(hamlog, dict): hamlog = {}
         self.data['hamlog'] = {key: hamlog.get(key) is True for key in ('enabled', 'auto_save')}
+        from .zserver_link import options_checked, DEFAULT_OPTIONS
+        try:self.data['zlog']=options_checked(self.data.get('zlog',{}))
+        except Exception:self.data['zlog']=deepcopy(DEFAULT_OPTIONS)
         self.data['printer'] = normalize_settings(self.data.get('printer'))
         ui = self.data['ui']
+        try:ui['direct_idle_seconds']=int(ui.get('direct_idle_seconds',2))
+        except (ValueError,TypeError,OverflowError):ui['direct_idle_seconds']=2
+        if not 1<=ui['direct_idle_seconds']<=9:ui['direct_idle_seconds']=2
         try: ui['decode_ignore_chars'] = max(0, min(10, int(ui.get('decode_ignore_chars', 0))))
         except (TypeError, ValueError, OverflowError): ui['decode_ignore_chars'] = 0
         if ui.get('time_zone') not in ('JST', 'UTC'): ui['time_zone'] = 'JST'

@@ -808,7 +808,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.17cea206eaeefd06': 'zLog Reiwa integration settings',
  'ui.0ac34687acceae77': 'HAMLOG integration',
  'ui.d9ddf94612c39b98': 'Target: Turbo HAMLOG/Win Ver{version} (public integration API Ver{api} or later).',
- 'ui.eb5b7d2fe17640ef': 'Target: zLog 3.0.4.0 (ZLOG3040) ADIF import. This is file-based integration.',
+ 'ui.eb5b7d2fe17640ef': 'Send newly recorded PSRTTY QSOs directly to Z-Server for real-time registration in connected '
+                        'zLog clients. This is a one-way link.',
  'ui.99ebd89f04ffb1bf': 'Transfer recorded PSRTTY QSOs to HAMLOG, for both manual logging and TU73 auto logging. '
                         'Records, edits and deletions in HAMLOG are not synchronized back to PSRTTY.',
  'ui.3965d764b4019026': 'Transfer to HAMLOG when logging a QSO',
@@ -904,12 +905,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.bf96c252d44dc974': 'Direct TX',
  'ui.df8b14c87ba1216c': 'Clear',
  'ui.8f6169b00e165c20': 'TX while typing',
- 'ui.14cd3a02c38b52d8': 'STOP required (F11)',
+ 'ui.14cd3a02c38b52d8': 'Auto STOP: 2 s (F11 stops)',
  'ui.c79fb302350cd0ea': 'Replay / TX (F12)',
  'ui.0d16c18e1b0c0af1': 'TX STOP (F11)',
  'ui.6ec1e6de948549b9': 'Up to two lines. Pending text is blue gray; transmitted text is black.',
- 'ui.25f3e182f89868fa': 'A 0.5-second correction delay follows typing. Transmitted text cannot be edited during TX. TX '
-                        'continues while waiting for input. A newline ends the received line while keeping TX active.',
+ 'ui.25f3e182f89868fa': 'Correct pending text for 0.5 s. Sent text stays black/bold; only new text continues. Replay '
+                        'sends all. Auto STOP: 1–9 s (default 2). Idle LTRS never extends the timer.',
  'ui.19ae7f1dfcb6e2d3': 'Transmitting (TX continues while waiting for input)',
  'ui.3bc3ce01106e5489': 'Direct TX (Ctrl+F12 / Shift+F12)',
  'ui.3e9f8e3d03440dc5': 'Keyboard shortcut guide',
@@ -1357,45 +1358,40 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'already saved: do not add that QSO again. Interrupted transfers are journaled and not retried '
                  'automatically. Check HAMLOG and manually enter only missing QSOs, or use File → HAMLOG CSV export. '
                  'Records, edits and deletions in HAMLOG do not synchronize back to PSRTTY.</p>\n'
-                 '<h3>zLog target: 3.0.4.0 (ZLOG3040)</h3><p>Integration → zLog Reiwa integration settings opens ADIF '
-                 'export. Selected QSOs are transferred by file, without live radio/log control. File → ADIF export '
-                 'opens the same export wizard.</p><ol><li>In zLog, select the matching contest, station CALL and time '
-                 'settings. ADIF times are UTC; zLog converts them according to its contest settings.</li><li>Select '
-                 'the export format, period, station CALL, bands and QSOs, then save.</li><li>Import the ADIF file in '
-                 'zLog and check count, time, band, mode, both RSTs, both exchanges and multipliers. Avoid importing '
-                 'the same file twice.</li></ol>\n'
-                 '<table><tr><th>Format</th><th>Exchange mapping</th></tr><tr><td>Standard '
-                 'ADIF</td><td>STX_STRING/SRX_STRING and numeric STX/SRX, as before.</td></tr><tr><td>General '
-                 'zLog</td><td>Also retains original SENT/RCVD and station CALL in COMMENT.</td></tr><tr><td>JARL WW '
-                 'RTTY</td><td>Received age also goes into AGE. Enter one or two digits.</td></tr><tr><td>CQ WW '
-                 'RTTY</td><td>Received zone goes into CQZ and state/province into STATE, e.g. 05 MA. Zone must be '
-                 '01–40.</td></tr></table>\n'
-                 '<p><b>The target zLog ADIF importer does not include state/province in the CQ WW RTTY received '
-                 'exchange.</b>After import, use the original RCVD in the note to correct affected exchanges and '
-                 'multipliers. Numeric fields may lose leading zeroes in their display; the original text is retained '
-                 'in string fields and notes. Check contest configuration and exchanges before submitting a contest '
-                 'log.</p>\n'
-                 '<h3>Radio controls</h3><p>NB and NR read/write are enabled through Hamlib for listed Yaesu/Kenwood '
-                 'models except FT-817/818/857, with state readback. Yaesu uses the DNR label. FT-991/FT-991A, FTX-1, '
-                 'FT-710, FTDX10, FTDX101D/MP and FTDX3000 offer mode-specific receive widths. TS-590SG DATA/SSB width '
-                 'is adjusted by changing high cut while preserving low cut.</p><p>Hamlib 4.7.2 does not implement '
-                 'receive bandwidth control for TS-890S/TS-990S; use the radio controls for width. NB/NR remain '
-                 'available. Controls are disabled during TX or when connection/state retrieval fails.</p>',
+                 '<h3>zLog: real-time Z-Server link</h3><ol><li>Start normal TCP Z-Server and connect zLog. Check its '
+                 'contest, station CALL, exchanges and time basis.</li><li>Open Integration → zLog settings. Set '
+                 'server, port, unique client name, operator and TX number. On one PC use 127.0.0.1. Match UTC/JST and '
+                 'the decimal mark to zLog.</li><li>Enable sending new QSOs and use Save &amp; connect / retry. '
+                 'Default is OFF.</li></ol><p>Both manual and TU73 automatic recording send new QSOs after successful '
+                 'ADIF saving: CALL, time, RST, sent/received exchange, RTTY, band and frequency. CQ WW state/province '
+                 'exchanges are passed intact; check contest interpretation and multipliers in zLog.</p><p>Unconfirmed '
+                 'QSOs persist in var/zserver-outbox.json. Reconnection compares IDs and contents before retry. Old '
+                 'logs and new QSOs recorded with the link OFF are not sent automatically. ADIF export remains '
+                 'available for bulk transfer; do not register a QSO by both routes. Server confirmation does not '
+                 'confirm a particular zLog client; check its log. Reverse edit/delete sync and TLS/login mode are not '
+                 'supported.</p><h3>Radio controls</h3><p>NB and NR read/write are enabled through Hamlib for listed '
+                 'Yaesu/Kenwood models except FT-817/818/857, with state readback. Yaesu uses the DNR label. '
+                 'FT-991/FT-991A, FTX-1, FT-710, FTDX10, FTDX101D/MP and FTDX3000 offer mode-specific receive widths. '
+                 'TS-590SG DATA/SSB width is adjusted by changing high cut while preserving low cut.</p><p>Hamlib '
+                 '4.7.2 does not implement receive bandwidth control for TS-890S/TS-990S; use the radio controls for '
+                 'width. NB/NR remain available. Controls are disabled during TX or when connection/state retrieval '
+                 'fails.</p>',
  'guide.9.title': 'Direct TX',
- 'guide.9.body': '<h2>1TX and Direct TX</h2><p>Main-window 1TX sends one line and stops as before. Its label becomes '
-                 'STOP during TX. Clear stops TX and empties the field.</p><p>Direct TX opens a separate window for up '
-                 'to two lines. TX while typing defaults ON, with a 0.5-second correction delay. Pending text is blue '
-                 'gray, RGB(136,153,175); transmitted text is black. Only pending text can be edited during TX. '
-                 'Waiting for input transmits MARK continuously, so STOP is required. A newline sends CR/LF while '
-                 'retaining PTT.</p><p>With TX while typing OFF, the button sends both lines then stops automatically. '
-                 'Clear and closing the window stop TX. F11 toggles TX/STOP; F12 replays from the beginning. From the '
-                 'main window, F11/F12 only focus an already-open Direct TX window. Ctrl+F12 and Shift+F12 open/close '
-                 'it. See the keyboard shortcut guide below Initial setup guide.</p><h3>Receive idle and '
-                 'records</h3><p>MARK, LTRS and NUL idle keep the received line together. A newline or 1.5-second loss '
-                 'of signal completes it; short-text filtering applies afterward. Characters handed to audio output '
-                 'during Direct TX are recorded in raw transcripts and TX cards. Color does not confirm reception by '
-                 'the other station. Use the existing QSO recording controls to save contacts.</p>',
- 'about.body': '<h2>PSRTTY 1.12</h2>\n'
+ 'guide.9.body': '<h2>1TX and direct TX</h2><p>Main 1TX sends one line and stops. Direct TX accepts two lines. TX '
+                 'while typing defaults ON, with a 0.5-second correction delay. Pending text is blue-gray; sent text '
+                 'is black and bold.</p><p>Choose auto STOP from 1–9 seconds after all pending characters finish; '
+                 'default 2, saved across restarts. Idle TX repeats LTRS, producing MARK and SPACE. Idle LTRS is not '
+                 'input, progress or logged text and never extends the STOP timer. New input resets the idle deadline. '
+                 'Pending correction delays and transmitting characters prevent idle STOP. STOP occurs at an RTTY '
+                 'character boundary, with a small possible delay.</p><p>After STOP, append to send only new text. '
+                 'Replay/F12 sends everything again. Newlines send CR/LF and continue. Closing stops TX; reopening '
+                 'within the same app session retains text and sent formatting. Font is one point larger. With TX '
+                 'while typing OFF, the two lines are sent together and TX stops.</p><p>F11 is TX/STOP, F12 replay. In '
+                 'the main window they focus an open direct window. Ctrl+F12/Shift+F12 open/close it. Clear and close '
+                 'also stop TX. Color is not remote reception confirmation. Sent text enters the raw log and TX card; '
+                 'use normal QSO recording. RX holds lines during MARK/LTRS/NUL idle and finalizes at a newline or 1.5 '
+                 'seconds without signal.</p>',
+ 'about.body': '<h2>PSRTTY 1.14</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
                '<p>Selected Yaesu and Kenwood models use Hamlib CAT control.</p>\n'
@@ -1427,7 +1423,22 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-09  Ver1.12\n'
+ 'history.body': '2026-10-10  Ver1.14\n'
+                 '・ Direct TX idle now repeats LTRS; FIGS is restored when digits resume.\n'
+                 '・ Auto STOP is selectable from 1–9 seconds, default 2; the choice is saved.\n'
+                 '・ zLog integration now registers QSOs through Z-Server in real time, with connection settings, '
+                 'status, retained outbox and readback after reconnection.\n'
+                 '・ Screens, help and guides updated in all eight languages. ADIF export remains available.\n'
+                 '\n'
+                 '2026-10-09  Ver1.13\n'
+                 '・Direct TX marks sent text black and bold, preserving it after STOP and window reopening. Appending '
+                 'sends only new text; Replay sends everything.\n'
+                 '・Auto STOP releases PTT after all pending text finishes and two seconds pass without new input. New '
+                 'input resets the wait; the 0.5-second correction delay and in-flight characters prevent stopping.\n'
+                 '・Increased Direct TX input text by one point and updated guidance in all eight languages.\n'
+                 '・Added a separator above Update in Help and a website button beside Thanks in About.\n'
+                 '\n'
+                 '2026-10-09  Ver1.12\n'
                  '・Added Indonesian, Thai and Spanish, expanding display languages to eight. UI, guides, descriptions, '
                  'warnings and history are supplied as external JSON.\n'
                  '・Used concise operation labels and reviewed existing additional-language labels.\n'
@@ -2057,4 +2068,45 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'freq.history': '・ Added a world RTTY frequency guide under Help, in all eight languages. Overview, Japan and Regions '
                  '1–3 show 2026 practices and segment examples, covering 1.8/1.9–430 MHz and up to 1200 MHz in Japan. '
                  'Includes FT8 coexistence, Japan domestic FT8 at 7.041 MHz, USB/LSB and actual transmitted spectrum, '
-                 'sources and check date.'}
+                 'sources and check date.',
+ 'about.website': 'PSRTTY website',
+ 'direct.stop_after': 'Auto STOP:',
+ 'direct.seconds_stop': 's (F11 stops)',
+ 'zlink.enabled': 'Send new QSOs to Z-Server',
+ 'zlink.host': 'Server',
+ 'zlink.port': 'Port',
+ 'zlink.pc_name': 'Client name (unique)',
+ 'zlink.operator': 'Operator',
+ 'zlink.tx': 'TX number (0–15)',
+ 'zlink.time_basis': 'zLog time basis',
+ 'zlink.decimal': 'zLog decimal mark',
+ 'zlink.save_connect': 'Save & connect / retry',
+ 'zlink.disabled': 'Link off',
+ 'zlink.connecting': 'Connecting…',
+ 'zlink.connected': 'Connected to Z-Server',
+ 'zlink.pending': 'Unconfirmed: {count}',
+ 'zlink.error': 'Connection error (auto retry)',
+ 'zlink.bad_options': 'Check server, port, client name and TX number. Client/operator names must fit CP932 and 20 '
+                      'characters.',
+ 'zlink.bad_qso': 'Cannot transfer. Check CALL, time, band, RST and exchanges. Characters outside CP932 cannot be '
+                  'sent.',
+ 'zlink.too_long': 'QSO exceeds zLog message length. Shorten exchanges, operator or client name.',
+ 'zlink.protocol': 'Unexpected Z-Server response.',
+ 'zlink.normal_tcp': 'Use normal TCP Z-Server mode. TLS/login mode is not supported in this version.',
+ 'zlink.storage': 'Cannot read/write outbox. Check ADIF and preserve the outbox file.',
+ 'zlink.pending_settings': 'Unconfirmed QSOs remain. Confirm them on the current server before changing connection '
+                           'settings. You may turn the link off.',
+ 'zlink.id_collision': 'QSO ID/content mismatch. Transfer held. Check Z-Server records and the outbox.',
+ 'zlink.unconfirmed': 'Registration not yet confirmed. QSO retained for readback on reconnect.',
+ 'zlink.record_error': 'ADIF is saved, but this QSO could not enter the zLog outbox.\n'
+                       '{error}\n'
+                       'Transfer it separately, for example via ADIF export.',
+ 'zlink.notice': 'Send newly recorded PSRTTY QSOs directly to Z-Server for real-time registration in connected zLog '
+                 'clients. This is a one-way link.',
+ 'zlink.setup': 'Start Z-Server in normal TCP mode and connect zLog to the same server. Use 127.0.0.1 on one PC, or '
+                'the server IP on another PC. Give each client a unique name.',
+ 'zlink.time_note': 'Match UTC/JST and the decimal mark to zLog and Windows regional settings. Use a separate TX '
+                    'number. Check the contest, station CALL and exchanges in zLog.',
+ 'zlink.queue_note': 'QSOs are retained on disconnect. IDs and contents are checked before retrying. Status confirms '
+                     'server registration only; also check the zLog log. ADIF export remains available. TLS/login and '
+                     'reverse edit/delete synchronization are not supported.'}
