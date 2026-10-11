@@ -54,14 +54,14 @@ class UI108Fix1Tests(unittest.TestCase):
         def created(*args,**kwargs):
             self.store.save.assert_called_once()
             self.assertEqual(self.store.data['audio']['output_device'],a)
-            self.assertEqual(self.store.data['audio']['tx_gain'],.42)
+            self.assertEqual(self.store.data['audio']['tx_gain'],.21168)
             self.assertEqual(kwargs['primary_device'],a)
             return Mock()
         with patch.object(d,'_confirm_primary_audio_save',return_value=True),patch('psrtty.ui.secondary_audio_dialog.SecondaryAudioDialog',side_effect=created):d._open_secondary_audio()
         d.reject()
         self.assertEqual(self.store.data['audio']['input_device'],old_in)
         self.assertEqual(self.store.data['audio']['secondary'],old_secondary)
-        self.assertEqual(self.window.audio.tx_gain,.42)
+        self.assertEqual(self.window.audio.tx_gain,.21168)
 
     def test_inactive_profile_save_does_not_change_active(self):
         second=deepcopy(self.store.data['profiles'][0]);second['name']='P2';self.store.data['profiles'].append(second)
@@ -69,7 +69,7 @@ class UI108Fix1Tests(unittest.TestCase):
         active=deepcopy(self.store.data['audio']);d.tx_gain.setValue(55)
         d._save_primary_before_secondary()
         self.assertEqual(self.store.data['audio'],active)
-        self.assertEqual(self.store.data['profiles'][1]['audio']['tx_gain'],.55)
+        self.assertEqual(self.store.data['profiles'][1]['audio']['tx_gain'],.36)
         d.reject()
 
     def test_excluded_saved_secondary_not_reinserted_bilingual(self):

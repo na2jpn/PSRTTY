@@ -352,4 +352,30 @@ class HamlibController(CIVController):
 
     def set_narrow(self,*_):return False
 
-    def read_alc(self):return None
+    def _read_meter_level(self, name):
+        from .radio_meters import valid_reading
+        with self._lock:
+            if not self._control_ready(): return None
+            try:
+                flag=self.lib.rig_parse_level(name)
+                if not flag: return None
+                value=LevelValue()
+                if self.lib.rig_get_level(self.handle,VFO,flag,ctypes.byref(value)) != 0: return None
+                return valid_reading(value.f)
+            except (AttributeError,OSError): return None
+
+    def read_alc(self):
+        value=self._read_meter_level(b'ALC')
+        return None if value is None else value*120
+
+    def read_swr(self):
+        value=self._read_meter_level(b'SWR')
+        return value if value is not None and value >= 1 else None
+
+    def read_power(self):
+        # Prefer the measured native value; no unit suffix is displayed.
+        value=self._read_meter_level(b'RFPOWER_METER_WATTS')
+        if value is None:
+            value=self._read_meter_level(b'RFPOWER_METER')
+            if value is not None: value *= 100
+        return value

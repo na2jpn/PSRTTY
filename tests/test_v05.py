@@ -117,12 +117,11 @@ class UI05Tests(unittest.TestCase):
             self.assertLess(time.monotonic()-start,.05)
             self.store.data['audio']['input_device']='SECOND'; w._restart_audio_input(); self.pump(.3)
         timer.stop(); self.assertEqual(calls,['FIRST','SECOND']); self.assertGreater(len(ticks),10)
-    def test_offline_audio_only_and_auto_cq_always_requires_radio(self):
+    def test_offline_audio_only_and_auto_cq_available(self):
         w=self.window; self.assertFalse(w.offline_tx.isChecked()); self.assertFalse(isinstance(w.offline_tx.parentWidget(),QGroupBox))
-        w.offline_tx.setChecked(True); self.assertTrue(w.send_button.isEnabled()); self.assertFalse(w.auto_cq_button.isEnabled())
+        w.offline_tx.setChecked(True); self.assertTrue(w.send_button.isEnabled()); self.assertTrue(w.auto_cq_button.isEnabled())
         self.assertTrue(all(s.isEnabled() for s in w.shortcuts[:9]))
         with patch.object(w.audio,'send_text',return_value=(True,'OK')) as send:
-            w._start_auto_cq(); send.assert_not_called()
             w._send_macro(0); args=send.call_args.args
             self.assertTrue(args[7]()); self.assertTrue(args[8]())
             args[9](True,'OK'); self.pump(.05); self.assertIsNone(w.active_tx_id)

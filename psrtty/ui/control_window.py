@@ -87,8 +87,9 @@ class ControlWindow(QDialog):
         self.setWindowTitle(tr('ui.845348469dbec848')); self.setModal(False); self.resize(480,630)
         self.busy=False; self.pending=None; self.target=None; self.feature_pending=None
         self.mode_pending=None; self.mode_profile=None; self.mode_observed=None; self.tuner_pending=False
-        self.states={}; self.last_poll=0.; self.controller=None; self.band_memory={}; self.band_profile=None
+        self.state_observed=False; self.states={}; self.last_poll=0.; self.controller=None; self.band_memory={}; self.band_profile=None
         root=QVBoxLayout(self); self.frequency=QLabel('---.------ MHz'); self.frequency.setObjectName('freqLabel'); root.addWidget(self.frequency)
+        self.connection_notice=QLabel(); self.connection_notice.setWordWrap(True); root.addWidget(self.connection_notice)
         row=QHBoxLayout(); self.entry=QLineEdit(); self.entry.setPlaceholderText(tr('ui.2c648cc8670af874'))
         self.apply=QPushButton(tr('ui.0d8619aae051ae34')); self.apply.clicked.connect(self.apply_frequency); self.entry.returnPressed.connect(self.apply_frequency)
         row.addWidget(self.entry,1); row.addWidget(QLabel('MHz')); row.addWidget(self.apply); root.addLayout(row)
@@ -169,7 +170,14 @@ class ControlWindow(QDialog):
         self.notch.setItemText(1,'NOTCH' if yaesu else tr('ui.e794646f29f66a94'))
         ready=self.ready()
         if self.controller is not self.main.radio:
-            self.controller=self.main.radio; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
+            self.controller=self.main.radio; self.state_observed=False; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
+        if not self.main._connected():
+            self.state_observed=False
+            self.connection_notice.setText(tr('v115fix2.control_connect'))
+        elif not self.state_observed:
+            self.connection_notice.setText(tr('v115fix2.control_loading'))
+        else:self.connection_notice.clear()
+        self.connection_notice.setVisible(bool(self.connection_notice.text()))
         if model!=self.mode_profile:
             self.mode_profile=model; self.mode_observed=self.mode_pending=None
             modes=(HamlibController(model).operating_modes() if model in HAMLIB_MODELS else
@@ -332,9 +340,10 @@ class ControlWindow(QDialog):
             self.busy=False
             if generation!=self.main.connection_generation or self.main.radio is not ctl: return
             if error:
-                self.states={}; self.target=None; self.note.setText(f"{tr('ui.4054f3e49958ddf8')}{error}"); self.main._radio_observed(None,error)
+                self.state_observed=False; self.states={}; self.target=None; self.note.setText(f"{tr('ui.4054f3e49958ddf8')}{error}"); self.main._radio_observed(None,error)
             else:
                 ok,freq,states,current_mode=result; self.states.update(states)
+                self.state_observed=bool(freq or current_mode or any(v is not None for v in states.values()))
                 self.mode_observed=current_mode
                 if self.pending is None: self.target=None
                 self.main._radio_observed(freq)

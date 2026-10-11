@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from .paths import ensure_runtime_dirs
+from . import __version__
 
 
 RIG_MODELS: dict[str, int] = {
@@ -69,7 +70,7 @@ from .macros import normal_qso_template
 DEFAULT_MACROS = normal_qso_template()
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "version": "1.14",
+    "version": __version__,
     "schema_version": 1,
     "zlog": {"enabled": False, "host": "127.0.0.1", "port": 23, "pc_name": "PSRTTY", "operator": "", "tx": 15, "time_basis": "UTC", "decimal": "."},
     "hamlog": {"enabled": False, "auto_save": False},
@@ -96,7 +97,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "auto_cq": {"count": 10, "interval_seconds": 7},
     "audio": {
         "input_device": "UNSET",
-        "output_device": "AUTO",
+        "output_device": "UNSET",
         "rx_gain": 0.5,
         "tx_gain": 0.35,
         "secondary": {"enabled": False, "device": "UNSET", "gain": 1.0},
@@ -111,6 +112,8 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "invert": False,
         "spectrum_width_hz": 1000,
         "auto_tune_tolerance_hz": 90,
+        "show_swr": True,
+        "show_pwr": True,
     },
     "ui": {
         "direct_idle_seconds": 2,

@@ -1,0 +1,17 @@
+# TX meter implementation, Ver1.15
+
+Read-only telemetry; no meter display changes RF power settings or keying.
+
+- CI-V: existing ALC 15 13 (BCD 0..255); SWR 15 12; measured power 15 11. Exact command/subcommand and valid BCD are required. Unsupported/invalid/timeout readings return None.
+- SWR/PWR numerical calibration points were verified against the upstream Hamlib Icom backend sources retrieved on 2026-10-11: https://github.com/Hamlib/Hamlib/tree/master/rigs/icom (ic7100.c, ic7300.c including IC-705/IC-905/IC-9700, ic7610.c, ic7760.c, ic785x.c, ic7200.c, ic7410.c, ic7600.c, ic7000.c, ic7700.c, ic7800.c, icom.c). Source calibration coordinates are recorded in psrtty/radio_meters.py. Linear interpolation is used only within documented coordinates. Models without verified coordinates remain unavailable; no raw ADC value is labeled as SWR.
+- Direct CI-V SWR/PWR covers those named models, including IC-7300MK2 using the IC-7300 meter scale. IC-9700 power on 1200 MHz uses the source backend factor 1/10; unknown frequency suppresses that power value.
+- Hamlib uses rig_get_level for ALC, SWR and measured RFPOWER_METER_WATTS, falling back to RFPOWER_METER*100 only if the first measured level is unsupported. It never substitutes the RFPOWER setting for measured output. See https://hamlib.sourceforge.net/html/rigctl.1.html and the bundled Hamlib source/licenses under lib/hamlib/.
+- ALC returned by Hamlib is normalized to the existing 0..120 scale. Top compact gauge uses existing ALC noise floor: <2 pre-onset, 2 onset, >2 excess. It is an operational indication, not a precise physical threshold instrument. During TX, pre-onset fill is a fixed visual cue at 85% of the onset-line distance; it is not measured headroom. Receive zero does not use this fill. Saved calibration continues to use actual gain*100, independently of the new UI slider.
+- New onset is recorded only at the onset reading or when readings cross from below onset, not from an arbitrary first high ALC reading.
+- Main readings are polled during receive and transmit together in one worker, rejected after TX/connection changes, retained across TX start/finish to avoid flicker. Each successful reading is cached for up to 2 seconds across temporary read failures. Known meter frames stay during the same connection; unavailable ALC becomes gray and unavailable TX SWR/PWR becomes --. Disconnect/reconnect clears capabilities and held values. Zero ALC/power is a valid reading. Radio-returned SWR during receive can reflect retained device readings; it does not establish a live antenna SWR measurement without RF. ALC has no hide option; SWR and PWR are controlled separately per profile, initially ON. Values must be finite and in range; unknown is never displayed as zero.
+- On TX completion, last valid SWR/PWR readings stay for about 2 seconds; RX readings cannot overwrite this hold. Afterwards RX displays SWR -- / PWR 0.0. A new TX cancels the hold.
+- PWR has one decimal place and no suffix. Native backend unit/scale differences and device firmware issues are not silently presented as confirmed watts.
+
+The underlying measurement of every physical radio/band and Windows audio interoperability still require real hardware verification.
+
+FIX4: SWR colors use unrounded values: >=1.8 orange, >=2.2 vermilion, >=2.8 red; PWR keeps its normal color. The red Audio check hint requires connected TX for >=1 second and a successful zero PWR reading from that TX less than 0.75 seconds old. A failed read clears the hint even when meter values are temporarily cached.

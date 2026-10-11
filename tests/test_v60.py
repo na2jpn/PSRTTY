@@ -94,14 +94,14 @@ class UI60Tests(unittest.TestCase):
             if connected:self.assertEqual(ctl.set_ptt.call_args.args,(False,))
         w.radio=None
     def test_sq_header_persistence_and_center_drag(self):
-        w=self.window;w.show();self.pump(.05)
+        w=self.window;w.show();self.pump(.6)
         self.assertEqual(w.decode_sq.currentText(),'4')
         self.assertEqual([w.decode_sq.itemText(i) for i in range(11)],['OFF']+list(map(str,range(1,11))))
         w.decode_sq.setCurrentIndex(7)
         self.assertEqual(w.store.data['ui']['decode_sq'],7);self.assertEqual(w.audio.decoder.sq_level,7)
         w.store.save.assert_called();self.assertLess(w.decode_sq.x(),w.decode_enabled.x())
         s=w.spectrum;before=(s.mark_hz,s.space_hz);center=QPoint(int(s._x(sum(before)/2)),6)
-        QTest.mouseMove(s,center);self.assertEqual(s.cursor().shape(),Qt.OpenHandCursor)
+        QTest.mouseMove(s,QPoint(1,45));QTest.mouseMove(s,center);self.assertEqual(s.cursor().shape(),Qt.OpenHandCursor)
         QTest.mousePress(s,Qt.LeftButton,pos=center);QTest.mouseMove(s,center+QPoint(35,0));QTest.mouseRelease(s,Qt.LeftButton,pos=center+QPoint(35,0))
         self.assertGreater(s.mark_hz,before[0]);self.assertAlmostEqual(s.space_hz-s.mark_hz,before[1]-before[0])
         self.assertIsNone(s.drag)

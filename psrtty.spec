@@ -15,6 +15,7 @@ a = Analysis(
            ('assets/psrtty.png', 'assets'),
            ('assets/psrtty.ico', 'assets'),
            ('assets/amateur_radio_100.png', 'assets'),
+           ('assets/audio_usb_examples.png', 'assets'),
            ('psrtty/data/contest_prefixes.json','psrtty/data'),
            ('psrtty/data/contest_prefixes_LICENSE.txt','psrtty/data'),
            ('psrtty/data/club_db.csv','psrtty/data'),

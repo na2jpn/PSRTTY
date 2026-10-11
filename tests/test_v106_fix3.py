@@ -174,7 +174,7 @@ class TimePrinterUI106Fix3Tests(unittest.TestCase):
         self.assertEqual(card.stamp_label.text(),instant.strftime('%H:%M:%S')+' UTC')
         configure('en')
         try:
-            for value,expected in [(None,'C tuning ---'),(4.1,'C tuning +4.1 Hz')]:
+            for value,expected in [(None,'C tuning -- Hz'),(4.1,'C tuning +4.1 Hz')]:
                 with patch.object(w.center_meter,'update',return_value=value):w._refresh_center_tuning()
                 self.assertEqual(w.center_tuning.text(),expected)
         finally:configure('ja')

@@ -284,6 +284,36 @@ class CIVController:
             except Exception:
                 return None
 
+    def _read_meter_raw(self, subcommand):
+        with self._lock:
+            if not self._control_ready(): return None
+            try:
+                self.ser.reset_input_buffer(); self.ser.write(self._frame(0x15, subcommand))
+                raw = self._read_response(0x15, timeout=.15)
+                if len(raw) != 9 or raw[4:6] != bytes([0x15,subcommand]): return None
+                a,b=raw[6:8]
+                digits=[a>>4,a&15,b>>4,b&15]
+                if any(d>9 for d in digits): return None
+                value=digits[0]*1000+digits[1]*100+digits[2]*10+digits[3]
+                return value if value <= 255 else None
+            except Exception: return None
+
+    def read_swr(self):
+        from .radio_meters import ICOM_TABLES, interpolate
+        points=ICOM_TABLES.get(self.model,{}).get('swr')
+        return interpolate(self._read_meter_raw(0x12),points) if points else None
+
+    def read_power(self):
+        from .radio_meters import ICOM_TABLES, interpolate
+        points=ICOM_TABLES.get(self.model,{}).get('pwr')
+        value=interpolate(self._read_meter_raw(0x11),points) if points else None
+        if self.model == 'IC-9700':
+            # The 1200 MHz power scale differs; never guess if frequency is unknown.
+            frequency=self.status.frequency_hz
+            if not frequency: return None
+            if frequency >= 1e9 and value is not None: value /= 10
+        return value
+
     def read_transmitting(self):
         from .radio_support import ICOM_EXTERNAL_PTT
         if self.model in ICOM_EXTERNAL_PTT:

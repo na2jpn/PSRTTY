@@ -79,7 +79,7 @@ class UI87Tests(unittest.TestCase):
 
     def test_green_alc_requires_observed_onset(self):
         dlg=SettingsDialog(self.store,self.window)
-        dlg.tx_gain.setValue(40);dlg._show_alc(0)
+        dlg.tx_gain.setValue(59);dlg._show_alc(0)
         self.assertNotIn('緑：',dlg.alc_note.text())
         dlg.alc_onset=45;dlg._show_alc(0)
         self.assertIn('緑：',dlg.alc_note.text())

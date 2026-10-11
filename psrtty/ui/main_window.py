@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import numpy as np
-from PySide6.QtCore import QObject, QTimer, Qt, QUrl, Signal
+from PySide6.QtCore import QObject, QTimer, Qt, QUrl, Signal, QEvent
 from PySide6.QtGui import QAction, QActionGroup, QDesktopServices, QFont, QFontMetrics, QIcon, QKeySequence, QShortcut
 from PySide6.QtWidgets import (
     QAbstractItemView, QApplication, QCheckBox, QComboBox, QFrame, QGridLayout, QGroupBox,
@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
         from ..rx_level import LowLevelNotice, LevelDisplay
         self.rx_level_hint = LowLevelNotice()
         self.rx_display = LevelDisplay()
-        self.alc_busy=False;self.main_alc=None;self.alc_last_poll=0.
+        self.alc_busy=False;self.main_alc=None;self.main_meters={};self.meter_updated=0.;self.alc_last_poll=0.
 
         self.bridge = AudioBridge()
         self.bridge.tx_finished.connect(lambda token, ok, msg: self._tx_finished(ok, msg, token))
@@ -275,10 +275,14 @@ class MainWindow(QMainWindow):
         viewport = QScrollArea(); viewport.setWidgetResizable(True)
         viewport.setFrameShape(QFrame.NoFrame); viewport.setWidget(central)
         self.setCentralWidget(viewport)
+        self.main_viewport = viewport.viewport()
+        self.main_viewport.installEventFilter(self)
         outer = QVBoxLayout(central); outer.setContentsMargins(10, 1, 10, 6); outer.setSpacing(4)
         accent = QFrame(); accent.setFixedHeight(4); accent.setObjectName("accentLine"); outer.addWidget(accent)
 
-        status = QHBoxLayout()
+        from .flow_layout import FlowLayout
+        status = FlowLayout()
+        self.header_flow = status
         self.rig_status = QPushButton(tr('ui.2303507cc0a35e6e')); self.rig_status.setObjectName("rigStatus")
         self.rig_status.clicked.connect(self._toggle_connection)
         self.rig_status.setToolTip(tr('ui.9eb451d9e1c1408d'))
@@ -299,19 +303,23 @@ class MainWindow(QMainWindow):
         self.sub_button.clicked.connect(self._show_sub)
         status.addWidget(self.sub_button)
         status.addSpacing(8)
-        self.center_tuning = QLabel(tr('ui.ffa8e34db44638c3'))
-        indicator_font = self.center_tuning.font()
-        indicator_font.setBold(True)
-        self.center_tuning.setFont(indicator_font)
-        metrics = QFontMetrics(indicator_font)
-        # Longest number plus one full-width character of breathing room,
-        # and the existing stylesheet's 7px side padding and borders.
-        self.center_tuning.setFixedWidth(
-            metrics.horizontalAdvance(tr('ui.cddc805ac2c06e24'))
-            + metrics.horizontalAdvance('あ') + 16)
-        self.center_tuning.setAlignment(Qt.AlignCenter)
+        self.center_tuning = QLabel(tr('ui.2bf4bf3a78a5303a')+'-- Hz')
+        self.center_tuning.setStyleSheet('QLabel { background:transparent; border:none; padding:0; font-weight:normal; }')
         self.center_tuning.setToolTip(tr('ui.e1877a282e98ada8'))
-        status.addWidget(self.center_tuning); status.addStretch(1)
+        from .tx_meters import ALCGauge, RadioMeterText
+        self.alc_gauge = ALCGauge()
+        self.radio_meter_text = RadioMeterText()
+        self.radio_meter_text.setStyleSheet('font-size:9pt; background:transparent; border:none; padding:0;')
+        meter_row=QHBoxLayout();meter_row.setContentsMargins(0,0,0,0);meter_row.setSpacing(6)
+        meter_row.addWidget(self.alc_gauge);meter_row.addWidget(self.radio_meter_text)
+        self.audio_check_notice=QLabel(tr('v115fix4.audio_check'))
+        self.audio_check_notice.setStyleSheet('color:#d00000; font-size:9pt;')
+        self.audio_check_notice.hide();meter_row.addWidget(self.audio_check_notice)
+        status.addLayout(meter_row)
+        status.addStretch(1)
+        self.alc_gauge.hide(); self.radio_meter_text.hide()
+        self.main_meters = {}
+        self.meter_updated = 0.
         from ..tuning import CenterTuning
         self.center_meter = CenterTuning()
         self.center_timer = QTimer(self); self.center_timer.setInterval(333)
@@ -319,9 +327,19 @@ class MainWindow(QMainWindow):
         self.audio_status = QLabel(tr('ui.1e76a5897ff2b86a'))
         self.profile_buttons = QGridLayout()
         self.profile_buttons.setSpacing(4)
-        status.addLayout(self.profile_buttons)
+        self.profile_widget = QWidget()
+        self.profile_widget.setLayout(self.profile_buttons)
         self._refresh_profile_buttons()
-        outer.addLayout(status)
+        self.header_widget = QWidget()
+        self.header_left = QWidget()
+        self.header_left.setLayout(status)
+        header_row = QHBoxLayout(self.header_widget)
+        header_row.setContentsMargins(0,0,0,0); header_row.setSpacing(12)
+        header_row.addWidget(self.header_left,0,Qt.AlignLeft)
+        header_row.addStretch(1)
+        header_row.addWidget(self.profile_widget,0,Qt.AlignRight | Qt.AlignVCenter)
+        self.header_widget.installEventFilter(self)
+        outer.addWidget(self.header_widget)
 
         main = QHBoxLayout(); main.setSpacing(10); outer.addLayout(main, 1)
         left = QVBoxLayout(); left.setSpacing(4); main.addLayout(left, 1)
@@ -329,28 +347,42 @@ class MainWindow(QMainWindow):
 
         spectrum_box = HintGroupBox("Audio Spectrum", tr('ui.8e40eee5e3473ce9'))
         spectrum_box.setToolTip(tr('ui.b20f3f9d77e2058c'))
+        self.spectrum_box = spectrum_box
+        spectrum_box.installEventFilter(self)
         sv = QVBoxLayout(spectrum_box); sv.setContentsMargins(8,8,8,7)
         self.spectrum = SpectrumWidget(); self.spectrum.frequency_clicked.connect(self._spectrum_click); self.spectrum.tones_dragged.connect(self._set_tones); self.spectrum.tones_committed.connect(self.store.save); sv.addWidget(self.spectrum)
-        controls = QHBoxLayout()
+        controls = QGridLayout(); controls.setContentsMargins(0,0,0,0); controls.setSpacing(6)
+        self.tone_flow = controls
+        self.tone_info = QWidget(); tone_info_layout=QHBoxLayout(self.tone_info)
+        tone_info_layout.setContentsMargins(0,0,0,0);tone_info_layout.setSpacing(8)
+        tone_info_layout.setSizeConstraint(QHBoxLayout.SetFixedSize)
         self.tone_label = QLabel(tr('ui.17e781c41ebfb115'))
-        controls.addWidget(self.tone_label); controls.addStretch(1)
-        self.level_heading=QLabel("RX");controls.addWidget(self.level_heading)
+        tone_info_layout.addWidget(self.tone_label);tone_info_layout.addWidget(self.center_tuning)
+        controls.addWidget(self.tone_info,0,0,Qt.AlignLeft)
+        self.rx_gain_controls=QWidget()
+        rx_controls=QHBoxLayout(self.rx_gain_controls);rx_controls.setContentsMargins(0,0,0,0);rx_controls.setSpacing(6)
+        self.level_heading=QLabel("RX");rx_controls.addWidget(self.level_heading)
+        rx_controls.setSizeConstraint(QHBoxLayout.SetFixedSize)
         self.level = QProgressBar(); self.level.setRange(0,100); self.level.setTextVisible(False)
         self.level.setFixedSize(85, 20); self.level.setToolTip(tr('ui.ab87f3c2cbea0e9a'))
         from ..rx_level import level_color
         self.level.setValue(0)
         self.level.setStyleSheet(f'QProgressBar::chunk {{ background: {level_color(0)}; }}')
-        controls.addWidget(self.level)
+        rx_controls.addWidget(self.level)
         self.rx_level_notice = QLabel('')
         self.rx_level_notice.setMinimumWidth(42)
         self.rx_level_notice.setToolTip(self.level.toolTip())
-        controls.addWidget(self.rx_level_notice)
-        controls.addWidget(QLabel(tr('ui.b683ae886f03f00b')))
+        rx_controls.addWidget(self.rx_level_notice)
+        rx_controls.addSpacing(12)
+        self.spectrum_gain_label=QLabel(tr('ui.b683ae886f03f00b'))
+        rx_controls.addWidget(self.spectrum_gain_label)
         self.spectrum_gain=QSlider(Qt.Horizontal); self.spectrum_gain.setRange(-30,40); self.spectrum_gain.setFixedWidth(90)
         self.spectrum_gain.setValue(int(self.store.data['ui'].get('spectrum_gain_db',0)))
         self.spectrum.set_gain(self.spectrum_gain.value()); self.spectrum_gain.valueChanged.connect(self._spectrum_gain_changed)
         self.spectrum_gain.setToolTip(tr('ui.8a7e06fec0d033a1'))
-        controls.addWidget(self.spectrum_gain); sv.addLayout(controls)
+        rx_controls.addWidget(self.spectrum_gain)
+        controls.addWidget(self.rx_gain_controls,0,1,Qt.AlignRight)
+        controls.setColumnStretch(0,1);sv.addLayout(controls)
 
         controls=QHBoxLayout(); controls.addWidget(QLabel(tr('ui.e4f2aba1737e928d')))
         self.shift_edit=QLineEdit(str(self.store.data['advanced']['shift_hz'])); self.shift_edit.setFixedWidth(86)
@@ -464,6 +496,12 @@ class MainWindow(QMainWindow):
         setb.setToolTip(tr('ui.840722efb8bcbc35'))
         row.addWidget(self.my_call,1); row.addWidget(setb); myl.addLayout(row); right.addWidget(my)
 
+        self.offline_tx = QCheckBox(tr('ui.b04be363d9447b0f'))
+        self.offline_tx.setChecked(False)
+        self.offline_tx.setToolTip(tr('ui.a043ee5a4f246ddd'))
+        self.offline_tx.toggled.connect(self._offline_tx_changed)
+        right.addWidget(self.offline_tx)
+
         auto_cq_box = QGroupBox('Auto CQ')
         cq = QVBoxLayout(auto_cq_box); cq.setContentsMargins(8, 6, 8, 6); cq.setSpacing(4)
         start_row = QHBoxLayout()
@@ -483,12 +521,6 @@ class MainWindow(QMainWindow):
         options.addStretch(1); options.addWidget(QLabel(tr('ui.4e3f4ca642258088'))); options.addWidget(self.cq_interval); options.addWidget(QLabel(tr('ui.9dcdc2b289b9d233')))
         self.cq_interval.setToolTip(tr('ui.ae55c90b64d1b323'))
         cq.addLayout(options); right.addWidget(auto_cq_box)
-
-        self.offline_tx = QCheckBox(tr('ui.b04be363d9447b0f'))
-        self.offline_tx.setChecked(False)
-        self.offline_tx.setToolTip(tr('ui.a043ee5a4f246ddd'))
-        self.offline_tx.toggled.connect(self._offline_tx_changed)
-        right.addWidget(self.offline_tx)
 
         macro_box = QGroupBox("TX MACRO")
         mv=QGridLayout(macro_box); self.macro_layout=mv; self.macro_buttons=[]; self.macro_previews=[]
@@ -582,10 +614,14 @@ class MainWindow(QMainWindow):
         self.audio.set_tx_gain(self.store.data["audio"]["tx_gain"])
         self.audio.configure_secondary(self.store.data['audio'].get('secondary'))
 
+    def _profile_columns(self):
+        return 3 if self.width() >= 1050 else 2 if self.width() >= 650 else 1
+
     def _refresh_profile_buttons(self, selected=None):
         while self.profile_buttons.count():
             item = self.profile_buttons.takeAt(0)
-            if item.widget(): item.widget().deleteLater()
+            if item.widget():
+                item.widget().hide(); item.widget().deleteLater()
         if selected is None: selected = self.store.data['active_profile']
         for i, profile in enumerate(self.store.data['profiles']):
             button = QPushButton(profile['name'])
@@ -596,7 +632,7 @@ class MainWindow(QMainWindow):
             else:
                 button.setStyleSheet('QPushButton { background: #e8e8e8; color: #454545; border: 2px solid #777777; font-weight: 700; padding: 2px; }')
             button.clicked.connect(lambda checked=False, index=i: self._switch_profile(index))
-            self.profile_buttons.addWidget(button, i // 3, i % 3)
+            self.profile_buttons.addWidget(button, i // self._profile_columns(), i % self._profile_columns())
 
     def _switch_profile(self, index):
         old = self.store.data['active_profile']
@@ -801,10 +837,9 @@ class MainWindow(QMainWindow):
         value = self.center_meter.update(frame, self.audio.sample_rate)
         from ..tuning import tuning_display
         text, color = tuning_display(value)
-        self.center_tuning.setText(text.replace('C同調 ',tr('ui.2bf4bf3a78a5303a'),1))
+        self.center_tuning.setText(text.replace('C同調 ',tr('ui.2bf4bf3a78a5303a'),1).replace('---','-- Hz'))
         self.center_tuning.setStyleSheet(
-            'QLabel { color:'+color+'; background:#fffdf6; border:1px solid #c88432;'
-            'border-radius:4px; padding:3px 7px; font-weight:bold; }')
+            'QLabel { color:'+color+'; background:transparent; border:none; padding:0; font-weight:normal; }')
 
     def _connected(self):
         return bool(self.radio and self.radio.status.connected and not self.connecting)
@@ -826,7 +861,7 @@ class MainWindow(QMainWindow):
             button.setEnabled(self._manual_tx_allowed())
         for shortcut in self.shortcuts[:9]:
             shortcut.setEnabled(self._manual_tx_allowed())
-        self.auto_cq_button.setEnabled(not self.antenna_tuning and ready and not self.auto_cq_active and self.active_tx_id is None)
+        self.auto_cq_button.setEnabled(self._manual_tx_allowed() and not self.auto_cq_active and self.active_tx_id is None)
         self.connect_action.setEnabled(not ready and not self.connecting)
         self.disconnect_action.setEnabled(ready or self.connecting)
         self.redetect_action.setEnabled(not self.connecting)
@@ -940,7 +975,8 @@ class MainWindow(QMainWindow):
         self.tx_sequence += 1
         token = self.tx_sequence
         self.active_tx_id = token
-        self.main_alc=None;self.alc_last_poll=0.
+        self._meter_hold_until=0.;self._meter_last_tx={};self.alc_last_poll=0.
+        self._meter_tx_started=time.monotonic();self._pwr_warning_read=None
         self.rx_level_hint.reset(); self._refresh_rx_level_notice()
         self.rx_idle_timer.stop(); self.rx_buffer = ''
         try:
@@ -975,8 +1011,9 @@ class MainWindow(QMainWindow):
             return  # Ignore stale callbacks from a previous TX.
         self.audio.set_decode_enabled(self.decode_enabled.isChecked())
         self.rx_idle_timer.stop(); self.rx_buffer = ''
+        self._hold_tx_meters()
         finished_id, self.active_tx_id = self.active_tx_id, None
-        self.main_alc=None;self.rx_level_hint.reset();self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
+        self.main_alc=None;self._paint_radio_meters();self.rx_level_hint.reset();self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
         if self.live_session is not None:
             text=''.join(self.live_session.records)
             if text:
@@ -1029,7 +1066,7 @@ class MainWindow(QMainWindow):
             self.auto_cq_button.setText(tr('ui.a6025b2115b43424') + shown)
 
     def _start_auto_cq(self):
-        if self.antenna_tuning or not self._connected() or self.auto_cq_active or self.active_tx_id is not None or self.audio._tx_active:
+        if not self._manual_tx_allowed() or self.auto_cq_active or self.active_tx_id is not None or self.audio._tx_active:
             return
         if not expand_macro(self.store.macros[0].get('text', ''), self._macro_values()):
             self.statusBar().showMessage(tr('ui.054187c36eb73f07'), 4000); return
@@ -1046,13 +1083,13 @@ class MainWindow(QMainWindow):
             return
         self.auto_cq_timer.stop(); self.auto_cq_deadline = None
         text = expand_macro(self.store.macros[0].get('text', ''), self._macro_values())
-        if not text or not self._connected() or not self._send_text(text):
+        if not text or not self._manual_tx_allowed() or not self._send_text(text):
             self._cancel_auto_cq(); return
         self.auto_cq_inflight = self.active_tx_id
         self._refresh_auto_cq_button()
 
     def _auto_cq_tick(self):
-        if not self.auto_cq_active or not self._connected():
+        if not self.auto_cq_active or not self._manual_tx_allowed():
             self._cancel_auto_cq(); return
         if self.auto_cq_deadline is not None and time.monotonic() >= self.auto_cq_deadline:
             self._auto_cq_send()
@@ -1360,8 +1397,10 @@ class MainWindow(QMainWindow):
         self.rx_level_notice.setStyleSheet(f'color: {TEXT_COLORS[band]}; font-weight: bold;')
 
     def _refresh_rx_level_notice(self):
+        self._poll_main_alc()
         if self.active_tx_id is not None or self.audio._tx_active:
-            self._paint_main_alc();self._poll_main_alc();return
+            self._paint_main_alc();self._paint_radio_meters();return
+        self._paint_radio_meters()
         last=self.rx_level_hint.last_level
         if last is None or time.monotonic()-last > .75:
             self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
@@ -1383,17 +1422,93 @@ class MainWindow(QMainWindow):
         now=time.monotonic()
         if self.alc_busy or now-self.alc_last_poll < .5:return
         if not self._connected() or not hasattr(self.radio,'read_alc'):
-            self.main_alc=None;return
+            self.main_alc=None;self.main_meters={};return
         if self.polling or (self.control_window and self.control_window.busy):return
         ctl=self.radio;generation=self.connection_generation;token=self.active_tx_id
-        if token is None:return
         self.alc_busy=True;self.alc_last_poll=now
+        def read():
+            result = {}
+            for key, method in [('alc','read_alc'), ('swr','read_swr'), ('pwr','read_power')]:
+                if key != 'alc' and not self.store.data['advanced'].get('show_'+key, True): continue
+                try:
+                    reader = getattr(ctl, method, None)
+                    result[key] = reader() if reader else None
+                except Exception: result[key] = None
+            return result
         def done(value,error):
             self.alc_busy=False
             if generation != self.connection_generation or token != self.active_tx_id or ctl is not self.radio:return
-            self.main_alc=None if error else value
-            self._paint_main_alc()
-        self.main_alc_job=BackgroundJob(self,ctl.read_alc,done)
+            self._ensure_meter_connection()
+            now=time.monotonic()
+            from ..radio_meters import valid_reading
+            current_power=valid_reading((value or {}).get('pwr')) if not error else None
+            self._pwr_warning_read=(current_power,now,token) if current_power is not None else None
+            for key,reading in ({} if error else value or {}).items():
+                reading=valid_reading(reading,minimum=1 if key=='swr' else 0)
+                if reading is not None:self._meter_samples[key]=(reading,now)
+            self.main_meters={key:reading for key,(reading,stamp) in self._meter_samples.items() if now-stamp<2}
+            self.main_alc=self.main_meters.get("alc")
+            self.meter_updated=now
+            if self.active_tx_id is not None or self.audio._tx_active:self._paint_main_alc()
+            self._paint_radio_meters()
+        self.main_alc_job=BackgroundJob(self,read,done)
+
+    def _ensure_meter_connection(self):
+        identity=(id(self.radio),self.connection_generation) if self._connected() else None
+        if identity!=getattr(self,'_meter_connection',None):
+            if getattr(self,'_meter_connection',None) is not None:
+                self.main_meters={};self.main_alc=None;self.meter_updated=0.
+            self._meter_connection=identity
+            self._meter_capabilities=set();self._meter_samples={}
+            self._meter_last_tx={};self._meter_hold_values={};self._meter_hold_until=0.;self._pwr_warning_read=None
+        # The initial disconnected state also needs these fields.
+        if not hasattr(self,'_meter_capabilities'):
+            self._meter_capabilities=set();self._meter_samples={}
+            self._meter_last_tx={};self._meter_hold_values={};self._meter_hold_until=0.;self._pwr_warning_read=None
+
+    def _hold_tx_meters(self):
+        self._ensure_meter_connection()
+        self._meter_hold_values={key:item for key,item in self._meter_last_tx.items() if time.monotonic()-item[1]<2}
+        self._meter_hold_until=time.monotonic()+2 if self._connected() and self._meter_hold_values else 0.
+
+    def _paint_radio_meters(self):
+        from ..radio_meters import valid_reading
+        self._ensure_meter_connection()
+        connected=self._connected();now=time.monotonic()
+        transmitting=self.active_tx_id is not None or self.audio._tx_active
+        fresh=connected and now-self.meter_updated<2
+        meters=self.main_meters if fresh else {}
+        values={key:valid_reading(meters.get(key),minimum=1 if key=='swr' else 0) for key in ('alc','swr','pwr')}
+        if connected:
+            self._meter_capabilities.update(key for key,value in values.items() if value is not None)
+        if transmitting:
+            self._meter_last_tx.update({key:(value,self._meter_samples.get(key,(value,self.meter_updated))[1]) for key,value in values.items() if key!='alc' and value is not None})
+        alc=values['alc']
+        self.alc_gauge.setVisible(connected and 'alc' in self._meter_capabilities)
+        if alc is not None:
+            from ..alc_display import calibration_onset
+            au=self.store.data['audio'];gain=float(au['tx_gain'])*100 if transmitting else 0.
+            self.alc_gauge.set_reading(alc,gain,calibration_onset(au,self.store.data['radio']),transmitting)
+        else:self.alc_gauge.set_unavailable()
+        rows=[];display_swr=None
+        holding=not transmitting and now<self._meter_hold_until
+        for key,label in [('swr','SWR'),('pwr','PWR')]:
+            if not connected or key not in self._meter_capabilities or not self.store.data['advanced'].get('show_'+key,True):continue
+            value=values[key]
+            if not transmitting:
+                held=self._meter_hold_values.get(key)
+                value=held[0] if holding and held is not None else None if key=='swr' else 0.
+            if key=='swr':display_swr=value
+            rows.append(f'{label} --' if value is None else f'{label} {value:.1f}')
+        text='\n'.join(rows)
+        if self.radio_meter_text.text()!=text:self.radio_meter_text.setText(text)
+        self.radio_meter_text.set_swr_value(display_swr)
+        reading=getattr(self,'_pwr_warning_read',None)
+        warning=bool(connected and transmitting and now-getattr(self,'_meter_tx_started',now)>=1 and reading is not None and reading[0]==0 and now-reading[1]<.75 and reading[2]==self.active_tx_id)
+        self.audio_check_notice.setVisible(warning)
+        self.radio_meter_text.setMinimumWidth(max(self.radio_meter_text.minimumWidth(),self.radio_meter_text.fontMetrics().horizontalAdvance('PWR 999.9')))
+        self.radio_meter_text.setVisible(bool(rows))
+        self._reflow_toolbar()
 
     def _spectrum_data(self,f,p): self.last_spectrum=(np.asarray(f),np.asarray(p)); self.spectrum.set_data(self.last_spectrum[0],self.last_spectrum[1])
 
@@ -1637,8 +1752,43 @@ class MainWindow(QMainWindow):
             self.window_restored = True
             QTimer.singleShot(0, self, lambda: restore_window(self, self.store.data["ui"].get("window"), self.reset_window))
 
+    def _queue_toolbar_reflow(self):
+        if getattr(self, '_toolbar_reflow_pending', False): return
+        self._toolbar_reflow_pending = True
+        QTimer.singleShot(0, self, self._finish_toolbar_reflow)
+
+    def _finish_toolbar_reflow(self):
+        self._toolbar_reflow_pending = False
+        self._reflow_toolbar()
+
+    def eventFilter(self, watched, event):
+        if watched in (getattr(self, 'spectrum_box', None),getattr(self,'header_widget',None),getattr(self,'main_viewport',None)) and event.type() == QEvent.Resize:
+            self._queue_toolbar_reflow()
+        return super().eventFilter(watched, event)
+
+    def _reflow_toolbar(self):
+        if hasattr(self, "header_flow"):
+            if hasattr(self,"header_widget"):
+                self.header_widget.setFixedWidth(max(200,self.main_viewport.width()-20))
+                width=max(100,self.header_widget.width()-self.profile_widget.sizeHint().width()-12)
+                self.header_left.setMaximumWidth(width)
+                self.header_flow.reflow(width)
+        if hasattr(self, "tone_flow"):
+            width=max(100,self.spectrum_box.contentsRect().width()-16)
+            wrapped=self.tone_info.sizeHint().width()+self.rx_gain_controls.sizeHint().width()+self.tone_flow.spacing()>width
+            self.tone_flow.removeWidget(self.rx_gain_controls)
+            if wrapped:self.tone_flow.addWidget(self.rx_gain_controls,1,0,1,2,Qt.AlignRight)
+            else:self.tone_flow.addWidget(self.rx_gain_controls,0,1,Qt.AlignRight)
+
     def resizeEvent(self, event):
         super().resizeEvent(event)
+        if hasattr(self, "profile_buttons"):
+            columns=self._profile_columns()
+            buttons=[self.profile_buttons.itemAt(i).widget() for i in range(self.profile_buttons.count())]
+            for index, button in enumerate(buttons):
+                if button: self.profile_buttons.addWidget(button,index//columns,index%columns)
+        self._reflow_toolbar()
+        self._queue_toolbar_reflow()
         if hasattr(self, "macro_buttons"):
             QTimer.singleShot(0, self, self._refresh_macros)
             QTimer.singleShot(0, self, self._refresh_latest_qsos)

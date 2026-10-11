@@ -167,7 +167,7 @@ class Profile105Tests(unittest.TestCase):
                 self.assertEqual(dialog.profile_tabs.count(), 6)
                 dialog.reject()
 
-    def test_settings_opens_profile_one_even_when_another_is_active(self):
+    def test_settings_opens_current_profile(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             with patch('psrtty.config.ensure_runtime_dirs', return_value={'config':root}), \
@@ -182,9 +182,9 @@ class Profile105Tests(unittest.TestCase):
                 store.data['profiles'].append(other)
                 store.activate_profile(1)
                 dialog = SettingsDialog(store)
-                self.assertEqual(dialog.profile_tabs.currentIndex(), 0)
-                self.assertEqual(dialog.profile_index, 0)
-                self.assertEqual(dialog.my_qth.text(), 'SOKA')
+                self.assertEqual(dialog.profile_tabs.currentIndex(), 1)
+                self.assertEqual(dialog.profile_index, 1)
+                self.assertEqual(dialog.my_qth.text(), 'TOKYO')
                 self.assertEqual(dialog.tabs.currentIndex(), 0)
                 dialog.profile_tabs.setCurrentIndex(1)
                 self.assertEqual(dialog.my_qth.text(), 'TOKYO')

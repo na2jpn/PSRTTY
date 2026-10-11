@@ -53,5 +53,10 @@ class UI109Fix3Tests(unittest.TestCase):
         self.assertEqual(self.window.level.value(),0);self.assertEqual(self.window.rx_level_notice.text(),'')
     def test_status_is_next_to_main_meter(self):
         self.window.show();self.settle(.5)
-        meter=self.window.level.geometry();label=self.window.rx_level_notice.geometry()
-        self.assertGreaterEqual(label.left(),meter.right());self.assertLess(abs(label.center().y()-meter.center().y()),10)
+        self.assertIs(self.window.level.parentWidget(),self.window.rx_level_notice.parentWidget())
+        for width in (1280,820,650):
+            self.window.resize(width,800)
+            fixture.UITests.pump(self,.1)
+            meter=self.window.level.geometry();label=self.window.rx_level_notice.geometry()
+            self.assertGreaterEqual(label.left(),meter.right())
+            self.assertLess(abs(label.center().y()-meter.center().y()),10)

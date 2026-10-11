@@ -54,7 +54,7 @@ class UI110Tests(unittest.TestCase):
     def test_main_and_audio_out_use_same_good_and_color(self):
         w=self.window;au=w.store.data['audio'];au['tx_gain']=.46
         au['alc_calibration']={'onset':50,'signature':signature(w.store.data['radio'],au['output_device'])}
-        d=SettingsDialog(self.store,w);d.alc_onset=50;d.tx_gain.setValue(46)
+        d=SettingsDialog(self.store,w);d.alc_onset=50;d.tx_gain.setValue(63)
         w.active_tx_id=1
         for value in (0,2,10):
             w.main_alc=value;w._paint_main_alc();d._show_alc(value)

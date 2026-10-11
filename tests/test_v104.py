@@ -79,13 +79,11 @@ class UI104Tests(unittest.TestCase):
     def test_defaults_warning_and_sub_manual_control(self):
         w=self.window;w.show();self.pump(.03)
         self.assertLess(w.scope_button.geometry().right(),w.sub_button.geometry().left())
-        self.assertLess(w.sub_button.geometry().right(),w.center_tuning.geometry().left())
+        self.assertIs(w.center_tuning.parent(),w.tone_info)
+        self.assertIs(w.tone_info.parent(),w.spectrum.parent())
         self.assertEqual(w.sub_button.parent(),w.scope_button.parent())
-        self.assertEqual(w.center_tuning.text(),'C同調 ---')
-        metrics=w.center_tuning.fontMetrics()
-        self.assertEqual(w.center_tuning.width(),
-                         metrics.horizontalAdvance('C同調 +24.9 Hz')
-                         +metrics.horizontalAdvance('あ')+16)
+        self.assertEqual(w.center_tuning.text(),'C同調 -- Hz')
+        self.assertFalse(w.center_tuning.font().bold())
         self.assertTrue(DEFAULT_CONFIG['ui']['clear_on_frequency'])
         self.assertFalse(w.auto_track.isChecked())
         self.assertIsNone(w.sub_window)

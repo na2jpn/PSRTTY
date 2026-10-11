@@ -71,7 +71,7 @@ class Language106Fix2Tests(unittest.TestCase):
         self.assertEqual(guide.tabs.count(), len(PAGES))
         for window in [guide, self.keep(HistoryDialog()), self.keep(AboutDialog()), self.keep(UpdateDialog())]:
             self.assert_english(window)
-        self.assertEqual(HISTORY_TEXT.count('\n・'), HISTORY_TEXT_EN.count('\n・'))
+        self.assertEqual(HISTORY_TEXT.count('\n・'), HISTORY_TEXT_EN.count('\n・') + HISTORY_TEXT_EN.count('\n•'))
         self.assertEqual(re.findall(r'Ver[0-9.]+', HISTORY_TEXT), re.findall(r'Ver[0-9.]+', HISTORY_TEXT_EN))
         i18n.configure('ja')
         japanese = self.keep(GuideWindow())
@@ -155,7 +155,8 @@ class Language106Fix2Tests(unittest.TestCase):
         i18n.configure('ja')
         for text, key in i18n.ALIASES.items():
             if key in ('about.body', 'history.body', 'language.title'): continue  # versioned documents/menu titles
-            self.assertEqual(i18n.tr(text), text)
+            expected = __import__("json").loads((Path(__file__).resolve().parents[1]/"language/ja.json").read_text(encoding="utf-8"))["strings"][key]
+            self.assertEqual(i18n.tr(text), expected)
 
     def test_radio_and_external_validation_messages(self):
         from psrtty.radio import validate_radio

@@ -80,7 +80,7 @@ class AudioEngine:
 
     def set_tx_gain(self, gain: float) -> None:
         # The output worker samples this value for each block, including test TX.
-        self.tx_gain = max(0.01, min(0.90, float(gain)))
+        self.tx_gain = max(0.0, min(0.90, float(gain)))
 
     def configure_secondary(self, settings):
         from .secondary_audio import normalize_settings

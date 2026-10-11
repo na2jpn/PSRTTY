@@ -31,7 +31,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.2484a596c240a475': 'Double-click to open the QSO log',
  'ui.17e781c41ebfb115': 'Mark 2125 Hz   Center 2210 Hz   Space 2295 Hz',
  'ui.2aedd9acecd6817d': 'Auto log after a successful transmission containing TU 73 / TU73.',
- 'ui.b04be363d9447b0f': 'Allow macros and manual transmission while disconnected',
+ 'ui.b04be363d9447b0f': 'Allow disconnected TX',
  'ui.d628ba5d9361f4d9': 'Fix the date / time for logging',
  'ui.fe56233372f95b70': 'Set the date / time after successful TX; add the QSO if auto log is ON.',
  'ui.415874df50b9566e': 'ADIF export',
@@ -337,13 +337,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                         'setting problem. Check the decoded text too.',
  'ui.09acce0bec978e52': 'Transmit: computer → radio\n'
                         'Select the playback device carrying TX audio (USB Audio, LINE OUT, speaker output, etc.).',
- 'ui.7baf25c906bf109b': 'The test turns PTT on and transmits RTTY audio. Start with a low level and adjust to just '
-                        'below the point where ALC begins to move. An active operating connection can be used '
-                        'directly. Otherwise, first complete the connection test in the Radio tab.',
+ 'ui.7baf25c906bf109b': 'TX level is 0–100: 0 mutes; lower levels offer finer adjustment. Existing actual gain is '
+                        'preserved. Use Connect beside the Audio OUT TX test to connect for testing. An already '
+                        'connected radio can be tested directly. Start low and adjust just before ALC begins. The TX '
+                        'test stops after 10 seconds. Closing settings ends a test connection.',
  'ui.9b5652a9d2212a19': 'ALC: not received',
  'ui.1e97c80054138853': 'ALC guide: not evaluated',
  'ui.7d3c34926543670f': 'If ALC cannot be read, check the ALC meter on the radio.',
- 'ui.4f2331557b0415ba': 'Press again to stop. Stops automatically after 10 seconds. Save after transmission stops.',
+ 'ui.4f2331557b0415ba': 'Connect the radio before testing transmission.',
  'ui.576351e2ada676f7': 'Lists active audio devices. Restart PSRTTY after adding a USB device.\n'
                         'Reselect devices saved by number in older versions. Auto uses the OS default device.',
  'ui.554478281f77814e': 'Normally, keep the default values. These settings change RTTY decoding and AFSK transmission.',
@@ -363,7 +364,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                         'the level to just below where ALC starts to move.',
  'ui.b0616e27bddaf033': 'Green: ALC guide (slightly below the onset level)',
  'ui.8b75f49df672a1a5': 'Adjust to just below ALC onset. Green appears after the onset level has been detected once.',
- 'ui.15cf5f8c1e1471fc': 'Run the connection test again in the Radio tab.',
+ 'ui.15cf5f8c1e1471fc': 'Connect the radio before testing transmission.',
  'ui.3013aa78f5fcae4d': 'Check the PTT method.',
  'ui.087d32aadb80dca2': 'Transmission stopped. You can save the audio level.',
  'ui.65af76f90e2a2ada': 'Connection test successful. You can adjust Audio OUT. Press Connect to start operating.',
@@ -387,8 +388,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.bbf151a4b9b7e113': 'Resets MARK to 2125 Hz while keeping the current shift.',
  'ui.39b930f3e1a79804': 'Adds the QSO after successful TX if the QSO fields have not changed.',
  'ui.ae55c90b64d1b323': 'Receive waiting time from the end of TX / PTT release until the next transmission',
- 'ui.a043ee5a4f246ddd': 'Audio output test. Does not operate PTT while disconnected. Auto CQ requires a radio '
-                        'connection.',
+ 'ui.a043ee5a4f246ddd': 'Allows macro, manual, direct and Auto CQ audio without a radio connection. CAT PTT is not '
+                        'operated while disconnected.',
  'ui.9c11f04298fc1e08': 'When using the sub decoder to find other stations in the CQ WW RTTY DX Contest, enter the '
                         '<span style="color:#b3261e;font-weight:bold">Single Operator Assisted</span> '
                         'category.<br><br>The JARL World Wide RTTY Contest allows RTTY skimmers and use of the sub '
@@ -428,20 +429,11 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.c1b650be472c26ef': 'The radio was disconnected to apply the settings.',
  'ui.d84bbf46e8b13c85': 'Prepare update',
  'ui.4b371b052cdb47bf': 'Start update',
- 'ui.8d5d64d2f5ed04a1': 'Select the COM and Audio devices used for FT8. Close the FT8 application to avoid COM / audio '
-                        'conflicts.\n'
-                        '\n'
-                        'Audio IN: radio → computer (USB Audio / LINE IN / microphone).\n'
-                        'Audio OUT: computer → radio (USB Audio / LINE OUT / speakers).\n'
-                        '\n'
-                        'Windows lists active WASAPI devices and saves device IDs. Reselect devices saved by number in '
-                        'older releases. Disconnected devices are not automatically replaced. Not set disables Audio '
-                        'IN; a configured input starts at launch independently of the radio connection. Auto uses the '
-                        'Windows default device. Restart PSRTTY after adding a USB device.\n'
-                        '\n'
-                        'Automatic LSB-D selection on connection is initially ON. Yaesu uses DATA-LSB / DATA-L. Set '
-                        'DATA input to USB on the radio. USB-D can be selected in Advanced settings (Yaesu: DATA-USB / '
-                        'DATA-U). Verify Mark/Space polarity on your radio.\n'
+ 'ui.8d5d64d2f5ed04a1': 'Explicitly select the radio recording device for Audio IN and playback device for Audio OUT. '
+                        'New settings start unselected. Existing Auto settings remain as Auto (legacy), unchanged by '
+                        'the update. After selecting a device, Auto cannot be selected again. Select audio devices '
+                        'separately for new profiles. Saving Audio IN restarts the input. Restart if a newly added USB '
+                        'device is absent from the list.\n'
                         '\n'
                         'Yaesu FT-991/A, FTX-1, FT-710, FTDX10, FTDX101D/MP, FTDX3000 and Kenwood TS-590SG, TS-890S, '
                         'TS-990S use Hamlib. Specify the CAT COM port and speed, then run the connection test. For '
@@ -995,16 +987,19 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'available, adjust the slider into the green Good range on the RX meter and save. A low reading '
                  'cannot distinguish no signal from a weak signal and does not necessarily mean incorrect settings. '
                  'Good does not guarantee decoding: check the received text.</li>\n'
-                 '<li><b>Confirm the radio connection</b><br>An active operating connection from the main window can '
-                 'be used for the Audio OUT test. Otherwise, first complete the connection test in the Radio tab. If '
-                 'you changed the selected radio settings after opening this window, restore settings matching the '
-                 'active connection, or save and reconnect.</li>\n'
-                 '<li><b>Adjust transmission in Audio OUT</b><br>Select the playback device carrying audio from the '
-                 'computer to the radio. Test tone + TX PTT actually transmits RTTY audio. Start at a low TX level and '
-                 'adjust the slider during transmission. If ALC is available, use the on-screen meter and green guide; '
-                 'otherwise watch the radio ALC meter. Set the level just below where ALC begins to move. Remaining '
-                 'seconds appear beside the button. Press again to stop, or wait for the automatic stop after 10 '
-                 'seconds. Then select Save audio level.</li>\n'
+                 '<li>Connect the radio before testing transmission. TX level is 0–100: 0 mutes; lower levels offer '
+                 'finer adjustment. Existing actual gain is preserved. Use Connect beside the Audio OUT TX test to '
+                 'connect for testing. An already connected radio can be tested directly. Start low and adjust just '
+                 'before ALC begins. The TX test stops after 10 seconds. Closing settings ends a test '
+                 'connection.</li>\n'
+                 '<li>Explicitly select the radio recording device for Audio IN and playback device for Audio OUT. New '
+                 'settings start unselected. Existing Auto settings remain as Auto (legacy), unchanged by the update. '
+                 'After selecting a device, Auto cannot be selected again. Select audio devices separately for new '
+                 'profiles. Saving Audio IN restarts the input. Restart if a newly added USB device is absent from the '
+                 'list. TX level is 0–100: 0 mutes; lower levels offer finer adjustment. Existing actual gain is '
+                 'preserved. Use Connect beside the Audio OUT TX test to connect for testing. An already connected '
+                 'radio can be tested directly. Start low and adjust just before ALC begins. The TX test stops after '
+                 '10 seconds. Closing settings ends a test connection.</li>\n'
                  '<li><b>If using external equipment</b><br>Enable External control, select a COM port separate from '
                  'CAT, choose RTS / DTR, invert polarity if necessary, and set the lead time before PTT (0.1–9.9 '
                  'seconds). Verify the equipment switching before transmitting.</li>\n'
@@ -1025,9 +1020,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'attempts to connect using the new profile; if this fails, it keeps that profile selected and shows '
                  'Disconnected. If already disconnected, it does not connect automatically. Check the radio button and '
                  'connect from there if needed.</li></ol>\n'
-                 '<h3>Auto CQ in contests</h3><p>Transmits F1 the selected number of times. Defaults: 10 '
-                 'transmissions, waiting 7 seconds after PTT release. A radio connection is required. See TX / Auto '
-                 'CQ.</p>\n'
+                 '<h3>Auto CQ in contests</h3><p>Allows macro, manual, direct and Auto CQ audio without a radio '
+                 'connection. CAT PTT is not operated while disconnected.</p>\n'
                  '<h3>IC-7760 (Ver1.08)</h3><p>Default CI-V address: B2. Select the USB CI-V COM port and set DATA1 '
                  'modulation input to USB on the radio. LSB-D/USB-D selects DATA1. Controls apply to the selected '
                  'receiver; check the transmit side on the radio.</p>\n'
@@ -1055,7 +1049,20 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'display</h3><p>Main RX and Audio IN now share five level colors and matching labels: gray shows no '
                  'text, light blue Low, green Good (30–79%), yellow High (80–89%) and red Over! (90% or more). Display '
                  'smoothing and band confirmation reduce flicker without changing audio input or decoding. Display '
-                 'gain only affects the waveform display.</p>',
+                 'gain only affects the waveform display.</p><h3>Ver1.15</h3><p>Select the matching Audio IN and OUT '
+                 'for each profile. CAT and audio are separate settings. A connected radio may have no receive audio '
+                 'or TX modulation if the audio device is wrong.</p><p>Explicitly select the radio recording device '
+                 'for Audio IN and playback device for Audio OUT. New settings start unselected. Existing Auto '
+                 'settings remain as Auto (legacy), unchanged by the update. After selecting a device, Auto cannot be '
+                 'selected again. Select audio devices separately for new profiles. Saving Audio IN restarts the '
+                 'input. Restart if a newly added USB device is absent from the list.</p><p>The ALC gauge appears when '
+                 'readings are available: cyan before onset, green at onset, orange above. During TX, the pre-onset '
+                 'cyan fill reaches 85% of the onset line as a visual cue, not measured headroom. SWR/PWR can be '
+                 'hidden separately in Advanced settings. SWR: orange from 1.8, vermilion from 2.2, red from 2.8. Last '
+                 'TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses one decimal and no unit. Known '
+                 'frames stay while connected; unavailable ALC is gray. After about 1 second of connected TX, a valid '
+                 'zero PWR reading shows “Check Audio settings!”. C tuning sits beside Space without a frame or bold '
+                 'type.</p>',
  'guide.1.title': 'Control',
  'guide.1.body': '<h2>Operating the radio</h2><p>Open <b>Control</b> beside the frequency. Only one window is opened; '
                  'pressing again brings it back near the main window.</p>\n'
@@ -1167,7 +1174,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'signal does not necessarily mean incorrect settings. Good does not guarantee successful decoding, '
                  'and Over! is not a measurement of actual audio clipping. Check the decoded text too.</p><p>The '
                  'display is smoothed to reduce jitter, so color and label changes may briefly lag. <b>Display gain '
-                 'adjusts only waveform height; it does not change receive audio volume.</b></p>',
+                 'adjusts only waveform height; it does not change receive audio volume.</b></p><p>The ALC gauge '
+                 'appears when readings are available: cyan before onset, green at onset, orange above. During TX, the '
+                 'pre-onset cyan fill reaches 85% of the onset line as a visual cue, not measured headroom. SWR/PWR '
+                 'can be hidden separately in Advanced settings. SWR: orange from 1.8, vermilion from 2.2, red from '
+                 '2.8. Last TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses one decimal and no '
+                 'unit. Known frames stay while connected; unavailable ALC is gray. After about 1 second of connected '
+                 'TX, a valid zero PWR reading shows “Check Audio settings!”. C tuning sits beside Space without a '
+                 'frame or bold type.</p>',
  'guide.3.title': 'TX / Auto CQ',
  'guide.3.body': '<h2>Macros and manual transmission</h2><p>Transmit with F1–F9 or the on-screen macro buttons. For '
                  'manual TX, enter text and press TX. <b>STOP / Esc</b> stops transmission. Both upper-right and '
@@ -1193,7 +1207,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '<h3>Testing while disconnected</h3><p>Allow macros and manual TX while disconnected starts OFF. When '
                  'ON, audio goes to Audio OUT without operating PTT. Even while disconnected, successful TU 73 / TU73 '
                  'TX can log a QSO if auto log is ON and a contact CALL is present. If frequency is unavailable, ADIF '
-                 'FREQ and BAND are omitted. <b>Auto CQ always requires a radio connection.</b></p>',
+                 'FREQ and BAND are omitted. </p><p>Allows macro, manual, direct and Auto CQ audio without a radio '
+                 'connection. CAT PTT is not operated while disconnected.</p>',
  'guide.4.title': 'QSO / logs',
  'guide.4.body': '<h2>Completing and saving a QSO</h2><p>If your transmitted text contains TU 73 or TU73, automatic '
                  'logging is considered after successful TX. This applies to macros and manual TX, not received text. '
@@ -1423,7 +1438,22 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-10  Ver1.14\n'
+ 'history.body': '2026-10-12  Ver1.15\n'
+                 '• Explicit audio selection for new settings; existing Auto and actual gain preserved.\n'
+                 '• Per-radio audio notice, Audio OUT Connect button and input reapply.\n'
+                 '• TX level 0–100 with finer low-end control.\n'
+                 '• Compact ALC, optional SWR/PWR, and plain C tuning beside Space.\n'
+                 '• Disconnected TX above Auto CQ now includes Auto CQ.\n'
+                 '• Wrapping layout and guides updated in all eight languages.\n'
+                 '• Profiles aligned right; RX meter and sensitivity grouped; larger settings window.\n'
+                 '• Silent multi-profile notice clarifies it is not an error and includes USB audio examples.\n'
+                 '• ALC stays visible when supported; cyan 85% before onset during TX. Last SWR/PWR held for about 2 '
+                 's.\n'
+                 '• SWR colors: orange ≥1.8, vermilion ≥2.2, red ≥2.8. Valid zero PWR during TX prompts an audio '
+                 'settings check.\n'
+                 '• USB input examples added to the setup guide.\n'
+                 '\n'
+                 '2026-10-10  Ver1.14\n'
                  '・ Direct TX idle now repeats LTRS; FIGS is restored when digits resume.\n'
                  '・ Auto STOP is selectable from 1–9 seconds, default 2; the choice is saved.\n'
                  '・ zLog integration now registers QSOs through Z-Server in real time, with connection settings, '
@@ -2109,4 +2139,44 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                     'number. Check the contest, station CALL and exchanges in zLog.',
  'zlink.queue_note': 'QSOs are retained on disconnect. IDs and contents are checked before retrying. Status confirms '
                      'server registration only; also check the zLog log. ADIF export remains available. TLS/login and '
-                     'reverse edit/delete synchronization are not supported.'}
+                     'reverse edit/delete synchronization are not supported.',
+ 'v115.audio_notice_title': 'Check audio devices for each radio',
+ 'v115.audio_notice': 'Select the matching Audio IN and OUT for each profile. CAT and audio are separate settings. A '
+                      'connected radio may have no receive audio or TX modulation if the audio device is wrong.\n'
+                      '\n'
+                      'Note: This notice appears when multiple Profiles are configured. It is not an error.',
+ 'v115.legacy_auto': 'Auto (legacy)',
+ 'v115.connect': 'Connect',
+ 'v115.connect_first': 'Connect the radio before testing transmission.',
+ 'v115.show_swr': 'Show SWR when available',
+ 'v115.show_pwr': 'Show PWR when available',
+ 'v115.offline': 'Allow disconnected TX',
+ 'v115.offline_hint': 'Allows macro, manual, direct and Auto CQ audio without a radio connection. CAT PTT is not '
+                      'operated while disconnected.',
+ 'v115.audio_help': 'Explicitly select the radio recording device for Audio IN and playback device for Audio OUT. New '
+                    'settings start unselected. Existing Auto settings remain as Auto (legacy), unchanged by the '
+                    'update. After selecting a device, Auto cannot be selected again. Select audio devices separately '
+                    'for new profiles. Saving Audio IN restarts the input. Restart if a newly added USB device is '
+                    'absent from the list.',
+ 'v115.tx_help': 'TX level is 0–100: 0 mutes; lower levels offer finer adjustment. Existing actual gain is preserved. '
+                 'Use Connect beside the Audio OUT TX test to connect for testing. An already connected radio can be '
+                 'tested directly. Start low and adjust just before ALC begins. The TX test stops after 10 seconds. '
+                 'Closing settings ends a test connection.',
+ 'v115.alc_hint': 'The ALC gauge appears when readings are available: cyan before onset, green at onset, orange above. '
+                  'During TX, the pre-onset cyan fill reaches 85% of the onset line as a visual cue, not measured '
+                  'headroom. SWR/PWR can be hidden separately in Advanced settings. SWR: orange from 1.8, vermilion '
+                  'from 2.2, red from 2.8. Last TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses '
+                  'one decimal and no unit. Known frames stay while connected; unavailable ALC is gray. After about 1 '
+                  'second of connected TX, a valid zero PWR reading shows “Check Audio settings!”. C tuning sits '
+                  'beside Space without a frame or bold type.',
+ 'v115.history': '• Explicit audio selection for new settings; existing Auto and actual gain preserved.\n'
+                 '• Per-radio audio notice, Audio OUT Connect button and input reapply.\n'
+                 '• TX level 0–100 with finer low-end control.\n'
+                 '• Compact ALC, optional SWR/PWR, and plain C tuning beside Space.\n'
+                 '• Disconnected TX above Auto CQ now includes Auto CQ.\n'
+                 '• Wrapping layout and guides updated in all eight languages.',
+ 'v115fix2.control_connect': 'Connect the radio before using these controls.',
+ 'v115fix2.control_loading': 'Reading radio status.',
+ 'v115fix4.audio_check': 'Check Audio settings!',
+ 'v115fix4.usb_check': 'With USB-Audio, check that the radio’s DATA audio input is also set to USB.',
+ 'v115fix4.usb_example_note': 'ICOM examples. Displays vary by model and firmware.'}

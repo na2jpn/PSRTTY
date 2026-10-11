@@ -40,7 +40,17 @@ class ScopeDSPTests(unittest.TestCase):
 
 class ScopeUITests(_Fixture):
     def test_toggle(self):
-        w=self.window;w.show();self.pump(.03);width=w.spectrum.width()
+        w=self.window;w.show()
+        # Startup timers and responsive rows can change geometry after show().
+        # Measure after those updates settle, so opening the tool is the trigger.
+        self.pump(.6)
+        previous=None
+        for _ in range(20):
+            width=w.spectrum.width()
+            self.pump(.05)
+            if width==w.spectrum.width()==previous:break
+            previous=width
+        width=w.spectrum.width()
         with patch.object(w,'disconnect_radio') as disconnect:
             w.scope_button.click();self.pump(.03);d=w.scope_window
             self.assertTrue(d.isVisible());self.assertTrue(w.audio.scope_enabled)

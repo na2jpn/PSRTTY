@@ -100,6 +100,9 @@ def _default_device_index(sd, kind):
 
 
 def resolve_device(sd, selection, kind):
+    if selection == "UNSET":
+        direction = "IN" if kind == "input" else "OUT"
+        raise ValueError(f"Audio {direction}: {tr('ui.6213305916949e4c')}")
     if selection in (None, '', 'AUTO'):
         if sys.platform == 'win32':
             apis = sd.query_hostapis()

@@ -1,12 +1,11 @@
-# PSRTTY 1.14 引継ぎ
+# PSRTTY 1.15 引継ぎ
 
-2026-10-10。基礎は1.13正本。全変更を統合したフル実装ソース。
-Windows: build-windows.ps1 → release/PSRTTY_1.14.zip。
+基礎: 1.14正本 SHA-256 97a1f978e8dad2087baac03553820858c521db6f9f71b0030b5bc25717d05565。
+正本日付: 2026-10-12。FIX1～FIX4を統合したフルソースです。
+バージョンは psrtty/__init__.py が中心です。Configも同じ変数を使用します。
 
-仕様 docs/VER114_JA.md、公開ソースの確認 docs/ZSERVER_SOURCE_REVIEW_114.md、検証 docs/VALIDATION_114.md。
-psrtty/live_tx.py: LTRS待機とFIGS復帰。psrtty/ui/direct_tx.py: 1～9秒STOP選択。
-psrtty/zserver_link.py: 通常TCP、永続キュー、サーバ読み戻し、再接続。UIはintegration_dialog.py。
-手動/TU73記録成功後に転送。既存ADIF・HAMLOG・プロファイル・送受信機能は継承。
-8言語、埋込み英語、ガイド・履歴を同時更新。
-未確認キューは使用者データとして保全。編集/削除/逆同期は行わない。
-WindowsのzLog/Z-Server実アプリ確認は未実施。利用者による確認前のフル実装版。
+変更と検証: VERSION_115.md、docs/VALIDATION_115.md。
+Audio IN個別保存で再適用しますが、Windows実機の入力問題の原因を断定していません。
+TX中のALC開始前は開始線までの85%を水色で表示します。実測した余裕量ではありません。SWR/PWRの最終TX値は2秒保持。
+SWR/PWRの変換仕様と未対応機種: docs/METERS_115.md。
+zLog/Z-Server、ダイレクト送信の仕様は1.14を維持します。

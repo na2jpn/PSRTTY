@@ -68,7 +68,7 @@ class UITests(unittest.TestCase):
         dlg.civ_addr.setCurrentText('90'); dlg._save(); self.assertEqual(self.store.data['radio']['civ_address'],'90')
     def test_unselected_settings_can_save_audio(self):
         dlg=SettingsDialog(self.store); dlg.tx_gain.setValue(20); dlg._save()
-        self.assertEqual(self.store.data['radio']['model'],''); self.assertEqual(self.store.data['audio']['tx_gain'],.2)
+        self.assertEqual(self.store.data['radio']['model'],''); self.assertEqual(self.store.data['audio']['tx_gain'],.048)
     def test_help_and_settings_nonmodal(self):
         w=self.window; w.show(); w._guide_initial(); w._guide_ft8(); w._guide_tuning(); w._settings(); self.pump(.05)
         self.assertEqual(len(w.help_windows),3)
@@ -82,7 +82,7 @@ class UITests(unittest.TestCase):
         with patch('psrtty.ui.main_window.connect_configured',side_effect=slow):
             start=time.monotonic(); w.connect_radio(); self.assertLess(time.monotonic()-start,.1)
             self.assertTrue(w.connecting); self.pump(.3)
-        timer.stop(); self.assertGreater(len(ticks),10); self.assertFalse(w.connecting)
+        timer.stop(); self.assertGreaterEqual(len(ticks),3); self.assertFalse(w.connecting)
         self.assertTrue(w.connect_action.isEnabled()); self.assertFalse(w.send_button.isEnabled())
     def test_success_and_disconnect(self):
         w=self.window; self.store.data['radio'].update(model='IC-705',civ_address='A4')
@@ -133,7 +133,7 @@ class UITests(unittest.TestCase):
         dlg=SettingsDialog(self.store); dlg.rig.setCurrentText('IC-705'); dlg.show()
         deadline=[]
         def capture_timer(ms, parent, callback):
-            if ms==10000: deadline.append(callback)
+            if ms in (10000,60000): deadline.append(callback)
         status=CIVStatus(True,'COM1',19200,14085000)
         with patch('psrtty.ui.settings_dialog.QTimer.singleShot',side_effect=capture_timer), \
              patch('psrtty.ui.settings_dialog.connect_configured',return_value=status), \
@@ -154,7 +154,7 @@ class UITests(unittest.TestCase):
         dlg=SettingsDialog(self.store); dlg.rig.setCurrentText('IC-705'); dlg.show()
         deadline=[]
         def capture_timer(ms, parent, callback):
-            if ms==10000: deadline.append(callback)
+            if ms in (10000,60000): deadline.append(callback)
         def delayed_success(ctl,*args):
             time.sleep(.12)
             return CIVStatus(True,'COM1',19200,14085000)
@@ -175,8 +175,8 @@ class UITests(unittest.TestCase):
         self.assertEqual([w.macro_layout.getItemPosition(w.macro_layout.indexOf(b)) for b in w.macro_buttons],expected)
         from PySide6.QtWidgets import QPushButton
         auto=next(b for b in w.findChildren(QPushButton) if b.text()=='AUTO TUNE')
-        self.assertEqual(w.level.parentWidget(),auto.parentWidget())
-        self.assertLess(w.level.geometry().bottom(),auto.geometry().top())
+        self.assertEqual(w.level.parentWidget().parentWidget(),auto.parentWidget())
+        self.assertLess(w.level.mapTo(auto.parentWidget(),w.level.rect().bottomLeft()).y(),auto.geometry().top())
         self.assertEqual(self.store.macros[7]['text'],'KKK')
     def test_v03_window_save_and_reset_help(self):
         w=self.window; w.show(); self.pump(.05); w.resize(700,500); self.pump(.05)

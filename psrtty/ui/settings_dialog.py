@@ -9,10 +9,11 @@ from PySide6.QtGui import QColor, QRegularExpressionValidator
 from PySide6.QtWidgets import (
     QCheckBox, QComboBox, QDialog, QDialogButtonBox, QDoubleSpinBox,
     QFormLayout, QHBoxLayout, QLabel, QMessageBox, QPushButton, QSlider,
-    QSpinBox, QTabWidget, QVBoxLayout, QWidget, QGroupBox, QLineEdit, QPlainTextEdit, QProgressBar,
+    QSpinBox, QTabWidget, QVBoxLayout, QWidget, QGroupBox, QLineEdit, QPlainTextEdit, QProgressBar, QScrollArea,
 )
 
 from ..audio_engine import AudioEngine
+from ..tx_level import level_to_gain, gain_to_level
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller, validate_radio
 from ..external_ptt import ExternalPTT, validate_external
@@ -41,16 +42,17 @@ class SettingsDialog(QDialog):
         self.connect_requested = False
         self.store = config_store
         self.working = deepcopy(config_store.data)
-        self.profile_index = 0
+        self.profile_index = config_store.data["active_profile"]
         self.active_profile_index = config_store.data['active_profile']
         self.working_profiles = deepcopy(config_store.data['profiles'])
         # The main window may have edited the active settings since the last save.
         # Show those live values if its Profile is selected without changing the store.
         self.working_profiles[self.active_profile_index].update(
             {key: deepcopy(config_store.data[key]) for key in PROFILE_KEYS})
-        self.working.update({key: deepcopy(self.working_profiles[0][key]) for key in PROFILE_KEYS})
+        self.working.update({key: deepcopy(self.working_profiles[self.profile_index][key]) for key in PROFILE_KEYS})
         self.setWindowTitle(tr('ui.e5c2ff2ea7d4fb50'))
-        self.resize(660, 600)
+        self.resize(820, 850)
+        self._initial_size_applied = False
 
         root = QVBoxLayout(self)
         intro = QLabel(
@@ -70,6 +72,7 @@ class SettingsDialog(QDialog):
         add_profile.setMinimumHeight(28)
         add_profile.clicked.connect(self._add_profile)
         self.profile_tabs.setCornerWidget(add_profile, Qt.TopRightCorner)
+        self.profile_tabs.setCurrentIndex(self.profile_index)
         self._rebuild_inner_tabs()
         self.profile_tabs.currentChanged.connect(self._profile_changed)
         self.profile_tabs.currentChanged.connect(self._update_profile_tab_colors)
@@ -97,6 +100,32 @@ class SettingsDialog(QDialog):
         self.level_timer = QTimer(self); self.level_timer.setInterval(100)
         self.level_timer.timeout.connect(self._refresh_rx_meter)
         self.level_timer.start()
+        self._profile_notice_shown = False
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        if not self._initial_size_applied:
+            self._initial_size_applied = True
+            screen = self.screen()
+            if screen:
+                available = screen.availableGeometry()
+                self.resize(min(820,max(300,available.width()-40)),min(850,max(300,available.height()-60)))
+        if len(self.working_profiles) > 1 and not self._profile_notice_shown:
+            self._profile_notice_shown = True
+            QTimer.singleShot(0, self, self._show_profile_notice)
+
+    def _show_profile_notice(self):
+        if self.isVisible():
+            from .audio_usb_help import ProfileAudioNotice
+            ProfileAudioNotice(self).exec()
+
+    def _tx_gain_value(self):
+        return self._original_tx_gain if self.tx_gain.value() == self._original_tx_level else level_to_gain(self.tx_gain.value())
+
+    def _remove_legacy_auto(self, combo):
+        if combo.currentData() != 'AUTO':
+            index = combo.findData('AUTO')
+            if index >= 0: combo.removeItem(index)
 
     def _build_basic_tab(self):
         tab = QWidget(); form = QFormLayout(tab)
@@ -132,6 +161,12 @@ class SettingsDialog(QDialog):
                        self._build_audio_in_tab, self._build_audio_out_tab,
                        self._build_external_tab, self._build_advanced_tab):
             method()
+        for index in range(self.tabs.count()):
+            page=self.tabs.widget(index); label=self.tabs.tabText(index)
+            self.tabs.removeTab(index)
+            scroll=QScrollArea(); scroll.setWidgetResizable(True); scroll.setFrameShape(QScrollArea.NoFrame)
+            scroll.setWidget(page); self.tabs.insertTab(index,scroll,label)
+        self.tabs.setCurrentIndex(0)
         self.tabs.currentChanged.connect(self._update_inner_tab_colors)
         self._update_inner_tab_colors()
         for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
@@ -159,11 +194,12 @@ class SettingsDialog(QDialog):
         self.working['external'].update(self._external_values())
         self.working['audio'].update(input_device=self.audio_in.currentData() or 'AUTO',
                                      output_device=self.audio_out.currentData() or 'AUTO',
-                                     rx_gain=self.rx_gain.value()/100, tx_gain=self.tx_gain.value()/100)
+                                     rx_gain=self.rx_gain.value()/100, tx_gain=self._tx_gain_value())
         self.working['advanced'].update(data_mode=self.data_mode.currentText(),
             rtty_baud=self.rtty_baud.value(), shift_hz=self.shift.value(),
             mark_hz=self.mark.value(), space_hz=self.space.value(), invert=self.invert.isChecked(),
-            spectrum_width_hz=self.spec_width.currentData(), auto_tune_tolerance_hz=self.tune_tol.value())
+            spectrum_width_hz=self.spec_width.currentData(), auto_tune_tolerance_hz=self.tune_tol.value(),
+            show_swr=self.show_swr.isChecked(), show_pwr=self.show_pwr.isChecked())
         from ..parser import normalize_call
         self.working['station_callsign'] = normalize_call(self.my_call.text())
         self.working['station'].update(qth=self.my_qth.text().strip(),
@@ -198,6 +234,9 @@ class SettingsDialog(QDialog):
         number = next(n for n in range(1, 10) if f'profile{n}' not in used)
         new = deepcopy(self.working_profiles[self.profile_index])
         new['name'] = f'Profile{number}'
+        new['audio']['input_device'] = 'UNSET'
+        new['audio']['output_device'] = 'UNSET'
+        new['audio'].pop('alc_calibration', None)
         self.working_profiles.append(new)
         page = QWidget(); page.setLayout(QVBoxLayout())
         page.layout().setContentsMargins(0, 2, 0, 0)
@@ -244,7 +283,7 @@ class SettingsDialog(QDialog):
             self.active_profile_index -= 1
         self.profile_index = 0
         self.working = deepcopy(self.store.data)
-        self.working.update({key: deepcopy(self.working_profiles[0][key]) for key in PROFILE_KEYS})
+        self.working.update({key: deepcopy(self.working_profiles[self.profile_index][key]) for key in PROFILE_KEYS})
         self._rebuild_inner_tabs()
         self._update_profile_tab_colors()
 
@@ -393,8 +432,8 @@ class SettingsDialog(QDialog):
         self.auto_mode.setText(tr('ui.5a1692fc86baebf3').format(mode=mode))
 
     def _audio_choices(self, combo, kind, selected):
-        if kind == 'input': combo.addItem(tr('ui.6213305916949e4c'), 'UNSET')
-        combo.addItem(tr('ui.36147b7e34df7ac8'), 'AUTO')
+        combo.addItem(tr('ui.6213305916949e4c'), 'UNSET')
+        if selected == 'AUTO': combo.addItem(tr('v115.legacy_auto'), 'AUTO')
         try:
             for choice, label in AudioEngine.devices(kind):
                 combo.addItem(label, choice)
@@ -409,6 +448,9 @@ class SettingsDialog(QDialog):
                 label = tr('ui.db352cdf32e298b2').format(selected=selected)
             combo.addItem(label, selected)
         self._select_data(combo, selected)
+        if not combo.property('legacyAutoConnected'):
+            combo.currentIndexChanged.connect(lambda _: self._remove_legacy_auto(combo))
+            combo.setProperty('legacyAutoConnected', True)
 
     def _build_audio_in_tab(self):
         tab = QWidget()
@@ -466,11 +508,13 @@ class SettingsDialog(QDialog):
         n3.setWordWrap(True); n3.setObjectName("helpText"); form.addRow("", n3)
 
         self.tx_gain = QSlider(Qt.Horizontal)
-        self.tx_gain.setRange(1, 90)
-        self.tx_gain.setValue(int(float(self.working["audio"]["tx_gain"]) * 100))
+        self.tx_gain.setRange(0, 100)
+        self._original_tx_gain = float(self.working["audio"]["tx_gain"])
+        self._original_tx_level = gain_to_level(self._original_tx_gain)
+        self.tx_gain.setValue(self._original_tx_level)
         self.tx_label = QLabel()
         self.tx_gain.valueChanged.connect(self._tx_gain_changed)
-        self.tx_label.setText(f"{self.tx_gain.value()}%")
+        self.tx_label.setText(str(self.tx_gain.value()))
         row2 = QHBoxLayout(); row2.addWidget(self.tx_gain, 1); row2.addWidget(self.tx_label)
         form.addRow(tr('ui.4cd82636e7230603'), row2)
         n4 = QLabel(tr('ui.7baf25c906bf109b'))
@@ -488,9 +532,11 @@ class SettingsDialog(QDialog):
         self.test_tx_button = QPushButton(tr('ui.e34d5bd94eb35240')); self.test_tx_button.setEnabled(False)
         self.test_tx_button.clicked.connect(self._toggle_test_tx)
         self.test_count_label = QLabel(tr('ui.2f3ee0fc058199a7'))
-        test_row=QHBoxLayout(); test_row.addWidget(self.test_tx_button); test_row.addWidget(self.test_count_label); test_row.addStretch(1)
+        self.audio_connect_button = QPushButton(tr('v115.connect'))
+        self.audio_connect_button.clicked.connect(self._test_radio)
+        test_row=QHBoxLayout(); test_row.addWidget(self.audio_connect_button); test_row.addWidget(self.test_tx_button); test_row.addWidget(self.test_count_label); test_row.addStretch(1)
         form.addRow('', test_row)
-        self.tx_test_note = QLabel(tr('ui.4f2331557b0415ba'))
+        self.tx_test_note = QLabel(tr('v115.connect_first'))
         self.tx_test_note.setWordWrap(True); self.tx_test_note.setObjectName('helpText'); form.addRow('', self.tx_test_note)
         self.save_out_button = QPushButton(tr('ui.6e82b2bf5e205f8f')); self.save_out_button.clicked.connect(self._save_audio_out)
         form.addRow('', self.save_out_button)
@@ -527,7 +573,7 @@ class SettingsDialog(QDialog):
             raise ValueError(tr('ui.f4cdea9046ecf0ce'))
         if [item['name'] for item in self.working_profiles] != [item['name'] for item in self.store.data['profiles']]:
             raise ValueError(tr('ui.4addcf30bcab9b5d'))
-        values = dict(output_device=deepcopy(self.audio_out.currentData() or 'AUTO'), tx_gain=self.tx_gain.value()/100)
+        values = dict(output_device=deepcopy(self.audio_out.currentData() or 'AUTO'), tx_gain=self._tx_gain_value())
         old = deepcopy(self.store.data)
         try:
             self.store.data['profiles'][self.profile_index]['audio'].update(deepcopy(values))
@@ -599,6 +645,8 @@ class SettingsDialog(QDialog):
         form.addRow(tr('ui.1f4b4a7dd5e867a6'), self.invert)
         form.addRow(tr('ui.b4810bd0256c51ef'), self.spec_width)
         form.addRow(tr('ui.c747e4873d78574c'), self.tune_tol)
+        self.show_swr = QCheckBox(tr('v115.show_swr')); self.show_swr.setChecked(adv.get('show_swr', True)); form.addRow(self.show_swr)
+        self.show_pwr = QCheckBox(tr('v115.show_pwr')); self.show_pwr.setChecked(adv.get('show_pwr', True)); form.addRow(self.show_pwr)
 
         def shift_changed(v):
             self.space.blockSignals(True); self.space.setValue(self.mark.value() + v); self.space.blockSignals(False)
@@ -626,6 +674,7 @@ class SettingsDialog(QDialog):
         self.mark.setValue(d["mark_hz"]); self.space.setValue(d["space_hz"])
         self.invert.setChecked(d["invert"]); self._select_data(self.spec_width, d["spectrum_width_hz"])
         self.tune_tol.setValue(d["auto_tune_tolerance_hz"])
+        self.show_swr.setChecked(True); self.show_pwr.setChecked(True)
 
     def _radio_values(self):
         values = dict(self.working['radio'])
@@ -664,14 +713,19 @@ class SettingsDialog(QDialog):
             parent.audio.set_rx_gain(value/100)
 
     def _tx_gain_changed(self, value):
-        self.tx_label.setText(f'{value}%')
+        self.tx_label.setText(str(value))
         parent = self.parent()
         if self.profile_index == self.store.data['active_profile'] and parent and hasattr(parent, 'audio'):
-            parent.audio.set_tx_gain(value/100)
+            parent.audio.set_tx_gain(self._tx_gain_value())
         if self.tx_testing: self._show_alc(self.alc_value)
 
     def _refresh_rx_meter(self):
         parent = self.parent()
+        if not self.tx_testing and not self.test_pending:
+            self._adopt_main_connection()
+            ready = bool(self.test_controller and self.test_controller.status.connected and self.verified_values == self._radio_values())
+            self.test_tx_button.setEnabled(ready)
+        self.audio_connect_button.setEnabled(not self.tx_testing and not self.test_pending)
         value = parent.level.value() if parent and hasattr(parent, 'level') else 0
         if parent and (parent.active_tx_id is not None or parent.audio._tx_active):
             value=round(parent.rx_display.percent)
@@ -694,7 +748,7 @@ class SettingsDialog(QDialog):
         self.store.data['audio'].update(input_device=self.audio_in.currentData() or 'AUTO', rx_gain=self.rx_gain.value()/100)
         self.working['audio'].update(self.store.data['audio'])
         self.store.save()
-        if parent and old != self.store.data['audio']['input_device']: parent._restart_audio_input()
+        if parent: parent._restart_audio_input()
         self.test_note.setText(tr('ui.65004674ef6f3b17'))
 
     def _save_audio_out(self):
@@ -705,7 +759,7 @@ class SettingsDialog(QDialog):
             self.tx_test_note.setText(tr('ui.f4cdea9046ecf0ce')); return
         if 'alc_calibration' in self.working['audio']:
             self.store.data['audio']['alc_calibration']=deepcopy(self.working['audio']['alc_calibration'])
-        self.store.data['audio'].update(output_device=self.audio_out.currentData() or 'AUTO', tx_gain=self.tx_gain.value()/100)
+        self.store.data['audio'].update(output_device=self.audio_out.currentData() or 'AUTO', tx_gain=self._tx_gain_value())
         self.working['audio'].update(self.store.data['audio'])
         self.store.save()
         self.tx_test_note.setText(tr('ui.66fc26834d7a8509'))
@@ -758,7 +812,7 @@ class SettingsDialog(QDialog):
             return
         self.alc_meter.setValue(min(120,value))
         self.alc_meter.setFormat(f'ALC {value} / 120')
-        gain=self.tx_gain.value()
+        gain=self._tx_gain_value()*100
         from ..alc_display import classify
         good, color = classify(value,gain,self.alc_onset)
         self.alc_good.setText(tr('ui.7fcb53e00458f9a5') if good else tr('ui.581dce38e3ecb48f'))
@@ -800,7 +854,7 @@ class SettingsDialog(QDialog):
         except ValueError as exc:
             self.tx_test_note.setText(tr(str(exc))); return
         ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
-            adv['mark_hz'],adv['space_hz'],adv['invert'],self.tx_gain.value()/100,
+            adv['mark_hz'],adv['space_hz'],adv['invert'],self._tx_gain_value(),
             on, off, lambda success,note:self.tx_test_finished.emit(success,note))
         if not ok:
             self.tx_test_note.setText(msg); return
@@ -823,8 +877,8 @@ class SettingsDialog(QDialog):
             self.alc_busy=False
             if ctl is not self.test_controller or not self.tx_testing: return
             if error: value=None
-            if value is not None and value >= 2 and self.alc_onset is None:
-                self.alc_onset=self.tx_gain.value()
+            if value is not None and value >= 2 and self.alc_onset is None and (value == 2 or self.alc_value is not None and self.alc_value < 2):
+                self.alc_onset=self._tx_gain_value()*100
                 from ..alc_display import signature
                 self.working['audio']['alc_calibration']={'onset':self.alc_onset,'signature':signature(self._radio_values(),self.audio_out.currentData())}
             self._show_alc(value)
@@ -920,7 +974,7 @@ class SettingsDialog(QDialog):
             if self.test_controller and not self.test_uses_main:
                 self.test_connection_generation += 1
                 generation=self.test_connection_generation
-                QTimer.singleShot(10000, self, lambda: self._expire_test_connection(generation))
+                QTimer.singleShot(60000, self, lambda: self._expire_test_connection(generation))
 
     def _expire_test_connection(self, generation):
         if generation != self.test_connection_generation or not self.test_controller or self.test_uses_main:return

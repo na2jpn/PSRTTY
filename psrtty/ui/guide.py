@@ -1,6 +1,8 @@
 from ..i18n import tr
 from .. import i18n
 from .guide_en import PAGES_EN
+from .audio_usb_help import usb_help_html
+import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QTabWidget, QTextBrowser, QPushButton
@@ -19,7 +21,17 @@ class GuideWindow(QDialog):
         self.resize(900,680); self.setMinimumSize(600,420)
         root=QVBoxLayout(self); self.tabs=QTabWidget(); root.addWidget(self.tabs)
         selected=[(tr(t),tr(b)) for t,b in i18n.GUIDE_KEYS]
-        for title,body in selected:
+        for index,(title,body) in enumerate(selected):
+            if index==0:
+                # Localized guides use either an audio heading or setup list items.
+                heading=re.search(r'<h[23][^>]*>[^<]*Audio OUT.*?</h[23]>\s*<p>.*?</p>',body,re.S)
+                if heading:body=body[:heading.end()]+usb_help_html()+body[heading.end():]
+                else:
+                    for match in re.finditer(r'<(li|p)>.*?</\1>',body,re.S):
+                        if 'Audio IN' in match.group() and 'Audio OUT' in match.group():
+                            closing=len(match.group(1))+3
+                            body=body[:match.end()-closing]+usb_help_html()+body[match.end()-closing:];break
+                    else:body=usb_help_html()+body
             browser=QTextBrowser(); font=QFont(); font.setPointSize(11); browser.setFont(font)
             style = STYLE
             if i18n.LANGUAGE == "th":
