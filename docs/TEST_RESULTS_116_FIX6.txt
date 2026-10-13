@@ -1,0 +1,5 @@
+PSRTTY 1.16 FIX6
+History/language regression: 3 tests, OK.
+8 language catalogues: 1171 entries each, OK.
+Receive display and FT-891 are separate history items in all 8 languages.
+Only history text and documentation changed. FIX5 full-suite result: 683 tests, OK (skipped=1).

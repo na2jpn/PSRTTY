@@ -409,6 +409,32 @@ class CIVController:
             except Exception:
                 return False
 
+    def set_usb_mod_input(self):
+        from .radio_support import USB_MOD_INPUT
+        spec=USB_MOD_INPUT.get(self.model)
+        with self._lock:
+            if not spec or not self.ser or not self.status.connected or self.cancel.is_set():return False
+            if self.read_transmitting() is not False:return False
+            mode=self.read_operating_mode()
+            if mode not in ('LSB','USB','LSB-D','USB-D'):return False
+            menu=spec[1 if mode.endswith('-D') else 0]
+            payload=bytes([0x1A,0x05])+menu
+            def read_input():
+                self.ser.reset_input_buffer();self.ser.write(self._frame(*payload))
+                raw=self._read_response(0x1A)
+                prefix=bytes([0xFE,0xFE,self.PC_ADDRESS,self.address])+payload
+                if len(raw)!=len(prefix)+2 or not raw.startswith(prefix) or raw[-1]!=0xFD:return None
+                return raw[-2]
+            try:
+                current=read_input()
+                if current is None:return False
+                if current==spec[2]:return True
+                if self.cancel.is_set() or self.read_transmitting() is not False:return False
+                self.ser.reset_input_buffer();self.ser.write(self._frame(*payload,spec[2]))
+                if self._read_response()!=bytes([0xFE,0xFE,self.PC_ADDRESS,self.address,0xFB,0xFD]):return False
+                return read_input()==spec[2] and not self.cancel.is_set()
+            except Exception:return False
+
     def operating_modes(self):
         return ('LSB-D', 'USB-D', 'LSB', 'USB')
 
@@ -464,9 +490,16 @@ def connect_configured(controller, settings, advanced):
     try:
         status = controller.connect(settings.get("com_port", "AUTO"), settings.get("cat_baud", "AUTO") if settings.get("ptt") == "CAT" else settings.get("civ_baud", "AUTO"))
         if status.connected and settings.get("auto_data_mode", True):
-            if not controller.set_data_mode(advanced.get("data_mode", "LSB-D")):
+            mode = advanced.get("data_mode", "LSB-D")
+            switched = controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)
+            if not switched:
                 controller.disconnect()
                 controller.status.message = tr('ui.44de90efe2737145')
+        from .radio_support import USB_MOD_INPUT
+        if controller.status.connected and settings.get('auto_usb_mod_input',False) is True and controller.model in USB_MOD_INPUT:
+            if not controller.set_usb_mod_input():
+                controller.disconnect()
+                controller.status.message=tr('v116.usb_mod_failed')
         if controller.cancel.is_set():
             controller.disconnect()
         return controller.status

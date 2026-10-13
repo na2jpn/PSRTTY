@@ -1,0 +1,6 @@
+PSRTTY 1.16 FIX5
+Full suite: 683 tests, OK (skipped=1).
+Display/filter regression: 19 tests, OK.
+8 language catalogues: 1171 entries each, OK.
+8 localized headers rendered and inspected; full Japanese ignore caption and control order verified.
+Radio hardware and Windows EXE not tested.

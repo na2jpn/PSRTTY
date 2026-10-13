@@ -157,7 +157,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.b000e357ff8c5615': 'PTT method',
  'ui.3ee76ae7045f1ff8': 'Connection test',
  'ui.c65cb3ae8835c7ef': 'Connection test failed',
- 'ui.a0a3d4182392ee0e': 'DATA mode on connection',
+ 'ui.a0a3d4182392ee0e': 'Mode on connect',
  'ui.e3dee3c5ad0acd89': 'Radio-specific settings',
  'ui.e2d5d5ad34fde522': 'Enable external control before PTT',
  'ui.8a74968e2d064881': 'External device COM port',
@@ -720,8 +720,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.db659a6990619517': 'Enter the CI-V address in hexadecimal.',
  'ui.449e04d36873e83e': 'No CI-V response confirmed.',
  'ui.fd85920654aed997': 'Unsupported DATA mode',
- 'ui.44de90efe2737145': 'Could not confirm DATA mode selection. Check model support and settings. Disable automatic '
-                        'mode selection if switching manually.',
+ 'ui.44de90efe2737145': 'Mode change could not be verified. Check rig support/settings, or turn automatic mode '
+                        'switching off for manual selection.',
  'ui.63a92aec569394f2': 'pyserial is not installed.',
  'ui.1806785467e549a8': 'No COM port found.',
  'ui.a73a47655509a292': 'Connection cancelled / timed out. Try specifying the COM port and speed manually.',
@@ -1062,7 +1062,19 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses one decimal and no unit. Known '
                  'frames stay while connected; unavailable ALC is gray. After about 1 second of connected TX, a valid '
                  'zero PWR reading shows “Check Audio settings!”. C tuning sits beside Space without a frame or bold '
-                 'type.</p>',
+                 'type.</p><p>Advanced settings offers LSB-D / USB-D / LSB / USB as the connection mode. Auto '
+                 'switching selects that mode on connection; OFF leaves the rig mode unchanged. Default LSB-D and '
+                 'saved settings remain. DATA ON/OFF may use different audio inputs: select USB for the state in use '
+                 'on the rig. Do not select RTTY mode.</p><p>Added ADIF UDP after QSO save. Integration settings '
+                 'provide ON/OFF, destination IP and port for Log4OM2 and other ADIF '
+                 'receivers.</p><h3>FT-891</h3><p>FT-891: USB is for CAT. Connect audio through an external sound '
+                 'interface and the DATA jack; select Audio IN/OUT explicitly. Use Enhanced COM and match the radio '
+                 'speed (4800–38400). Check DATA input and Mark/Space polarity.</p><h3>USB Audio</h3><p>IC-9700, '
+                 'IC-7300 and IC-705 offer USB audio input switching below automatic mode switching. Only the input '
+                 'for the actual mode is changed. First setup defaults ON; existing settings default OFF; profile '
+                 'copies retain the source setting. Set input on the radio for unsupported models. The changed input '
+                 'remains after disconnect.</p><p>Uses audio from the radio USB port, separate from USB sideband mode '
+                 '(SSB). Turn OFF when using ACC, LAN or another input.</p>',
  'guide.1.title': 'Control',
  'guide.1.body': '<h2>Operating the radio</h2><p>Open <b>Control</b> beside the frequency. Only one window is opened; '
                  'pressing again brings it back near the main window.</p>\n'
@@ -1181,7 +1193,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '2.8. Last TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses one decimal and no '
                  'unit. Known frames stay while connected; unavailable ALC is gray. After about 1 second of connected '
                  'TX, a valid zero PWR reading shows “Check Audio settings!”. C tuning sits beside Space without a '
-                 'frame or bold type.</p>',
+                 'frame or bold type.</p><p>Select Live or Buffered between the decode checkbox and its label. '
+                 'Buffered is the default; the selection is saved. A newline or about 1.5 s without signal finalizes '
+                 'the message. Buffered hides messages at or below the selected character limit before display; Live '
+                 'shows incoming text and removes short messages on finalization. Switching during reception preserves '
+                 'the text. Selection and automatic extraction start only after finalization; filtered messages are '
+                 'not extracted. Raw logging and printer output are independent of the display mode.</p>',
  'guide.3.title': 'TX / Auto CQ',
  'guide.3.body': '<h2>Macros and manual transmission</h2><p>Transmit with F1–F9 or the on-screen macro buttons. For '
                  'manual TX, enter text and press TX. <b>STOP / Esc</b> stops transmission. Both upper-right and '
@@ -1260,7 +1277,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'CALL, frequency, RST, SENT and RCVD. Delete asks for confirmation. The original ADIF is backed up '
                  'under logdata/backups before changes; recent QSOs update too.</p>\n'
                  '<p>Normal-QSO QTH / INFO uses {MYQTH}, {MYJCCJCG} and {MYTXT}. Additional text can include your name '
-                 'and other details.</p>',
+                 'and other details.</p><p>Added ADIF UDP after QSO save. Integration settings provide ON/OFF, '
+                 'destination IP and port for Log4OM2 and other ADIF receivers.</p>',
  'guide.5.title': 'Cabrillo export',
  'guide.5.body': '<h2>ADIF export</h2><p><b>File → Export ADIF</b>: select start / end times (selected JST / UTC zone) '
                  'and the operating callsign. Select at least one matching band and one QSO. Check the count and '
@@ -1315,7 +1333,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'the existing window to the front.</p>\n'
                  '<p><b>Help → Update PSRTTY</b> accepts a release ZIP, backs up settings and logs, updates and '
                  'restarts. Developer PATCH ZIPs cannot be used. If versions are too far apart for in-app updating, '
-                 'close PSRTTY and extract the new binary release ZIP over the existing folder.</p>',
+                 'close PSRTTY and extract the new binary release ZIP over the existing '
+                 'folder.</p><h3>FT-891</h3><p>FT-891: USB is for CAT. Connect audio through an external sound '
+                 'interface and the DATA jack; select Audio IN/OUT explicitly. Use Enhanced COM and match the radio '
+                 'speed (4800–38400). Check DATA input and Mark/Space polarity.</p><h3>USB Audio</h3><p>IC-9700, '
+                 'IC-7300 and IC-705 offer USB audio input switching below automatic mode switching. Only the input '
+                 'for the actual mode is changed. First setup defaults ON; existing settings default OFF; profile '
+                 'copies retain the source setting. Set input on the radio for unsupported models. The changed input '
+                 'remains after disconnect.</p><p>Uses audio from the radio USB port, separate from USB sideband mode '
+                 '(SSB). Turn OFF when using ACC, LAN or another input.</p>',
  'guide.7.title': 'Time / printer',
  'guide.7.body': '<h2>Time display (JST / UTC)</h2><p>View → Time display selects JST or UTC. Default JST; the '
                  'selection is saved. Conversion uses the PC clock independently of its time zone. It applies to '
@@ -1346,7 +1372,13 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'communication errors and queue limits remain visible without popups. Test printing and stopping also '
                  'show status while jobs remain. The separator above Test print divides settings from '
                  'actions.</p><h2>Special Thanks</h2><p>The button at the bottom of About PSRTTY opens a separate '
-                 'window thanking contributors to testing and development.</p>',
+                 'window thanking contributors to testing and development.</p><p>Select Live or Buffered between the '
+                 'decode checkbox and its label. Buffered is the default; the selection is saved. A newline or about '
+                 '1.5 s without signal finalizes the message. Buffered hides messages at or below the selected '
+                 'character limit before display; Live shows incoming text and removes short messages on finalization. '
+                 'Switching during reception preserves the text. Selection and automatic extraction start only after '
+                 'finalization; filtered messages are not extracted. Raw logging and printer output are independent of '
+                 'the display mode.</p>',
  'guide.8.title': 'HAMLOG / integrations',
  'guide.8.body': '<h2>HAMLOG and other integrations</h2>\n'
                  '<h3>HAMLOG target: Ver5.48</h3><p>Uses the Turbo HAMLOG/Win public API introduced in Ver5.27c. On '
@@ -1390,7 +1422,10 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'TS-590SG DATA/SSB width is adjusted by changing high cut while preserving low cut.</p><p>Hamlib '
                  '4.7.2 does not implement receive bandwidth control for TS-890S/TS-990S; use the radio controls for '
                  'width. NB/NR remain available. Controls are disabled during TX or when connection/state retrieval '
-                 'fails.</p>',
+                 'fails.</p><h3>ADIF UDP</h3><p>In Log4OM2, enable UDP Inbound service ADIF MESSAGE and use the same '
+                 'port. Initial example: 127.0.0.1 (same PC), port 2236. Adjust to the receiver settings.</p><p>Send '
+                 'each newly saved QSO once. Edits, deletions and old logs are not sent. UDP cannot confirm receipt or '
+                 'registration; no automatic retry. Send failures preserve the PSRTTY log.</p>',
  'guide.9.title': 'Direct TX',
  'guide.9.body': '<h2>1TX and direct TX</h2><p>Main 1TX sends one line and stops. Direct TX accepts two lines. TX '
                  'while typing defaults ON, with a 0.5-second correction delay. Pending text is blue-gray; sent text '
@@ -1405,7 +1440,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'the main window they focus an open direct window. Ctrl+F12/Shift+F12 open/close it. Clear and close '
                  'also stop TX. Color is not remote reception confirmation. Sent text enters the raw log and TX card; '
                  'use normal QSO recording. RX holds lines during MARK/LTRS/NUL idle and finalizes at a newline or 1.5 '
-                 'seconds without signal.</p>',
+                 'seconds without signal.</p><p>Select Live or Buffered between the decode checkbox and its label. '
+                 'Buffered is the default; the selection is saved. A newline or about 1.5 s without signal finalizes '
+                 'the message. Buffered hides messages at or below the selected character limit before display; Live '
+                 'shows incoming text and removes short messages on finalization. Switching during reception preserves '
+                 'the text. Selection and automatic extraction start only after finalization; filtered messages are '
+                 'not extracted. Raw logging and printer output are independent of the display mode.</p>',
  'about.body': '<h2>PSRTTY 1.14</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
@@ -1438,7 +1478,19 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-12  Ver1.15\n'
+ 'history.body': '2026-10-13  Ver1.16\n'
+                 '• Frequency polling alone changed to 0.5 s; meter timing retained, with no overlapping requests.\n'
+                 '• Added LSB/USB connection modes alongside LSB-D/USB-D. Automatic switching follows the selection; '
+                 'guidance updated in eight languages.\n'
+                 '• Added ADIF UDP after QSO save. Integration settings provide ON/OFF, destination IP and port for '
+                 'Log4OM2 and other ADIF receivers.\n'
+                 '• Choose Live or Buffered RX display. Default: Buffered; selection is saved. Short-text filtering '
+                 'applies on finalization.\n'
+                 '• Added FT-891 via Hamlib with audio connection guidance.\n'
+                 '• Added optional USB audio input switching for supported Icom models, with readback verification and '
+                 'existing profile preservation.\n'
+                 '\n'
+                 '2026-10-12  Ver1.15\n'
                  '• Explicit audio selection for new settings; existing Auto and actual gain preserved.\n'
                  '• Per-radio audio notice, Audio OUT Connect button and input reapply.\n'
                  '• TX level 0–100 with finer low-end control.\n'
@@ -1537,8 +1589,6 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '・Secondary volume ranges from 0–200% (default 100%); the slider turns red above 100%. The dedicated '
                  'window provides Save and Close without PTT or test controls. Secondary-output errors appear in the '
                  'status area while primary transmission continues.\n'
-                 '・Renamed the About button to Thanks. Added JH1PGF to Special Thanks and hamlife.jp under Media '
-                 'Thanks, preserving scrolling and existing acknowledgments.\n'
                  '・Fixed missing icons caused by an unreadable runtime PNG. Added explicit Windows application '
                  'identity and bundled a multi-size icon for runtime use to improve taskbar icon handling.\n'
                  '・Added English labels, guidance, setup instructions and release history for these changes.\n'
@@ -1560,8 +1610,6 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '・Added receive width control for FT-710, FTDX10, FTDX101D/MP and FTDX3000; corrected FT-991/FT-991A '
                  'and FTX-1 choices to model-specific tables. TS-590SG DATA/SSB width adjustment preserves low cut. '
                  'TS-890S/TS-990S bandwidth is not implemented in Hamlib 4.7.2 and must be controlled on the radio.\n'
-                 '・Made Special Thanks scrollable and added JQ7FIU and thanks to the developers of MMTTY, Turbo '
-                 'HAMLOG, zLog and related software.\n'
                  '\n'
                  '2026-10-02\u3000Ver1.06\n'
                  '・Main and auxiliary control windows now fit within the available screen area, including title bars '
@@ -1591,9 +1639,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'hidden. A separator divides settings from actions such as test printing.\n'
                  '・Updated the CQ Zone guidance: Check the CQ Zone of your actual operating location and set it in the '
                  'sent exchange. Japan is zone 25.\n'
-                 '・Added a centennial logo, support message and anniversary dates to About PSRTTY. Special Thanks is '
-                 'at the bottom left and Close at the bottom right. A separate window thanks contributing clubs and '
-                 'stations in Japanese or English.\n'
+                 '・Added a centennial logo, support message and anniversary dates to About PSRTTY. \n'
                  '・Added HAMLOG CSV export: 15 fields, no header, CP932, JST times ending in J. Exchanges go in '
                  'Remarks1; station CALL optionally goes in Remarks2.\n'
                  '・Improved the stability of menu operations on Windows.\n'
@@ -1785,7 +1831,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '2026-09-24\u3000Ver0.01\n'
                  '・Initial PSRTTY version: RTTY reception / transmission using ICOM CI-V and USB Audio.\n'
                  '・Included 45.45-baud / 170-Hz decoding, spectrum, AUTO TUNE, RX / TX cards and contest macros.\n'
-                 '・Added QSO saving to ADIF and RX / TX records to daily raw transcripts.\n',
+                 '・Added QSO saving to ADIF and RX / TX records to daily raw transcripts.',
  'language.load_notice': 'The language file could not be loaded. PSRTTY is using English.\n'
                          'Your selected language is preserved. Check the language folder.',
  'language.title': 'Display language',
@@ -2179,4 +2225,42 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v115fix2.control_loading': 'Reading radio status.',
  'v115fix4.audio_check': 'Check Audio settings!',
  'v115fix4.usb_check': 'With USB-Audio, check that the radio’s DATA audio input is also set to USB.',
- 'v115fix4.usb_example_note': 'ICOM examples. Displays vary by model and firmware.'}
+ 'v115fix4.usb_example_note': 'ICOM examples. Displays vary by model and firmware.',
+ 'udp.title': 'ADIF UDP settings',
+ 'udp.enabled': 'Send ADIF by UDP after saving a QSO',
+ 'udp.host': 'Destination IP',
+ 'udp.port': 'Destination port',
+ 'udp.guide': 'In Log4OM2, enable UDP Inbound service ADIF MESSAGE and use the same port. Initial example: 127.0.0.1 '
+              '(same PC), port 2236. Adjust to the receiver settings.',
+ 'udp.note': 'Send each newly saved QSO once. Edits, deletions and old logs are not sent. UDP cannot confirm receipt '
+             'or registration; no automatic retry. Send failures preserve the PSRTTY log.',
+ 'udp.idle': 'Enabled: send after the next QSO save',
+ 'udp.disabled': 'Disabled: no UDP transmission.',
+ 'udp.bad_settings': 'Check UDP settings.',
+ 'udp.bad_ip': 'Enter a valid IPv4 or IPv6 address.',
+ 'udp.bad_port': 'Port must be 1–65535.',
+ 'udp.too_large': 'QSO exceeds the UDP message size limit.',
+ 'udp.failed': 'UDP send failed ({call}): {error}. QSO saved in PSRTTY.',
+ 'udp.sent': 'UDP sent ({call} → {target}). Receipt/registration unconfirmed.',
+ 'v116.ft891_note': 'FT-891: USB is for CAT. Connect audio through an external sound interface and the DATA jack; '
+                    'select Audio IN/OUT explicitly. Use Enhanced COM and match the radio speed (4800–38400). Check '
+                    'DATA input and Mark/Space polarity.',
+ 'v116.usb_mod_auto': 'Switch modulation input to USB connection on connect',
+ 'v116.usb_mod_note': 'Uses audio from the radio USB port, separate from USB sideband mode (SSB). Turn OFF when using '
+                      'ACC, LAN or another input.',
+ 'v116.usb_mod_failed': 'USB audio input could not be verified. Disconnected. Check the radio input settings.',
+ 'v116.usb_mod_guide': 'IC-9700, IC-7300 and IC-705 offer USB audio input switching below automatic mode switching. '
+                       'Only the input for the actual mode is changed. First setup defaults ON; existing settings '
+                       'default OFF; profile copies retain the source setting. Set input on the radio for unsupported '
+                       'models. The changed input remains after disconnect.',
+ 'v116.rx_live': 'Live',
+ 'v116.rx_buffered': 'Buffered',
+ 'v116.rx_display_tip': 'Select the RX display mode. Default: Buffered. In Live mode, short messages disappear after '
+                        'finalization.',
+ 'v116.rx_display_guide': 'Select Live or Buffered between the decode checkbox and its label. Buffered is the default; '
+                          'the selection is saved. A newline or about 1.5 s without signal finalizes the message. '
+                          'Buffered hides messages at or below the selected character limit before display; Live shows '
+                          'incoming text and removes short messages on finalization. Switching during reception '
+                          'preserves the text. Selection and automatic extraction start only after finalization; '
+                          'filtered messages are not extracted. Raw logging and printer output are independent of the '
+                          'display mode.'}

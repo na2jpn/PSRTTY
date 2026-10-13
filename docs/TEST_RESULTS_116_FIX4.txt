@@ -1,0 +1,6 @@
+PSRTTY 1.16 FIX4
+Full suite: 676 tests, OK (skipped=1).
+USB input + existing mode tests: 16, OK.
+8 language catalogues: 1167 entries each, OK.
+Settings placement rendered and inspected.
+Radio hardware switching and Windows EXE not tested.

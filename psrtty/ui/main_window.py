@@ -60,22 +60,23 @@ class ReceiveCard(QFrame):
     def __init__(self, stamp: str, text: str, direction: str = "RX", font_size: int = 14, parent=None):
         super().__init__(parent)
         self.text_value = text
+        self.finalized = True
         self.when_utc = None
         self.setObjectName("txCard" if direction == "TX" else "rxCard")
         self.setCursor(Qt.PointingHandCursor)
         lay = QHBoxLayout(self); lay.setContentsMargins(8, 3, 8, 3); lay.setSpacing(6)
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Maximum)
         self.stamp_label=stamp_label=QLabel(stamp); stamp_label.setObjectName('cardTime')
-        direction_label=QLabel(direction); direction_label.setObjectName('cardTX' if direction=='TX' else 'cardRX')
+        self.direction_label=direction_label=QLabel(direction); direction_label.setObjectName('cardTX' if direction=='TX' else 'cardRX')
         for label in (stamp_label,direction_label,QLabel('|')):
             lay.addWidget(label,0,Qt.AlignTop)
-        body=QLabel(text); body.setTextFormat(Qt.PlainText); body.setWordWrap(True)
+        self.body=body=QLabel(text); body.setTextFormat(Qt.PlainText); body.setWordWrap(True)
         f=body.font(); f.setPointSize(font_size); body.setFont(f)
         body.setMinimumWidth(0); body.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Preferred)
         lay.addWidget(body,1)
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.LeftButton and self.finalized:
             self.clicked.emit(self.text_value)
         super().mousePressEvent(event)
 
@@ -134,6 +135,7 @@ class MainWindow(QMainWindow):
         self.call_locked = False
         self.call_frequency = None
         self.rx_buffer = ""
+        self.rx_live_card = None
         self.last_spectrum: tuple[np.ndarray, np.ndarray] | None = None
         from ..rx_level import LowLevelNotice, LevelDisplay
         self.rx_level_hint = LowLevelNotice()
@@ -177,7 +179,7 @@ class MainWindow(QMainWindow):
         self._set_radio_controls()
 
         self.rx_idle_timer = QTimer(self); self.rx_idle_timer.setSingleShot(True); self.rx_idle_timer.setInterval(250); self.rx_idle_timer.timeout.connect(self._check_rx_idle)
-        self.poll_timer = QTimer(self); self.poll_timer.setInterval(1200); self.poll_timer.timeout.connect(self._poll_radio)
+        self.poll_timer = QTimer(self); self.poll_timer.setInterval(500); self.poll_timer.timeout.connect(self._poll_radio)
         self.track_timer = QTimer(self); self.track_timer.setInterval(450)
         self.track_timer.timeout.connect(self._auto_track_tick); self.track_timer.start()
         self.track_pause_until = 0.; self.track_candidate = None; self.track_confirm = 0
@@ -246,6 +248,7 @@ class MainWindow(QMainWindow):
         integration = mb.addMenu(tr('ui.e73b7be6f0d5c286'))
         self._act(integration, tr('ui.2354935a4ee2b937'), self.integration.settings)
         self._act(integration, tr('ui.17cea206eaeefd06'), self._zlog_settings)
+        self._act(integration, tr('udp.title'), self.integration.udp_settings)
         language = mb.addMenu(tr('language.title'))
         self.language_group = QActionGroup(self); self.language_group.setExclusive(True)
         for code, label in (('ja', '日本語'), ('en', 'English'), ('ru','Русский'), ('zh','简体中文'), ('ko','한국어'), ('id','Bahasa Indonesia'), ('th','ไทย'), ('es','Español')):
@@ -401,7 +404,8 @@ class MainWindow(QMainWindow):
         position.setToolTip(tr('ui.bbf151a4b9b7e113'))
         sv.addLayout(controls); left.addWidget(spectrum_box)
 
-        self.decode_enabled=QCheckBox(tr('ui.830721dea3cefa67')); self.decode_enabled.setChecked(True)
+        self.decode_enabled=QCheckBox(); self.decode_enabled.setChecked(True)
+        self.decode_enabled.setAccessibleName(tr('ui.830721dea3cefa67'))
         self.decode_enabled.setToolTip(tr('ui.5e1805da5945b65e'))
         self.decode_enabled.toggled.connect(self._set_decode_enabled)
         self.decode_sq = QComboBox()
@@ -414,11 +418,20 @@ class MainWindow(QMainWindow):
         self.decode_ignore.setCurrentIndex(self.store.data['ui'].get('decode_ignore_chars',0))
         self.decode_ignore.setToolTip(tr('ui.f4485a2accdc8de2'))
         self.decode_ignore.currentIndexChanged.connect(self._set_decode_ignore)
+        self.decode_display = QComboBox()
+        self.decode_display.addItem(tr('v116.rx_live'), 'live')
+        self.decode_display.addItem(tr('v116.rx_buffered'), 'buffered')
+        self.decode_display.setCurrentIndex(self.decode_display.findData(self.store.data['ui'].get('decode_display_mode', 'buffered')))
+        self.decode_display.setToolTip(tr('v116.rx_display_tip'))
+        self.decode_display.currentIndexChanged.connect(self._set_decode_display)
+        self.decode_label = QLabel(tr('ui.830721dea3cefa67'))
+        self.decode_ignore_label = QLabel(tr('ui.061c37bfacafe1e5'))
         header = QWidget(); header_row = QHBoxLayout(header)
         header_row.setContentsMargins(4,0,4,0); header_row.setSpacing(5)
         header_row.addWidget(QLabel(tr('ui.63b5540273c96796'))); header_row.addWidget(self.decode_sq)
         header_row.addWidget(self.decode_enabled)
-        header_row.addWidget(self.decode_ignore); header_row.addWidget(QLabel(tr('ui.061c37bfacafe1e5')))
+        header_row.addWidget(self.decode_display); header_row.addWidget(self.decode_label)
+        header_row.addWidget(self.decode_ignore); header_row.addWidget(self.decode_ignore_label)
         cards_box = HeaderControlGroupBox(tr('ui.830721dea3cefa67'), header)
         self.decode_group = cards_box
         cards_layout = QVBoxLayout(cards_box); cards_layout.setContentsMargins(5,max(12,header.sizeHint().height()),5,5)
@@ -731,7 +744,7 @@ class MainWindow(QMainWindow):
     def _set_decode_sq(self, index):
         level = self.decode_sq.itemData(index)
         self.audio.set_decode_sq(level)
-        self.rx_idle_timer.stop(); self.rx_buffer = ''
+        self._discard_rx_preview()
         self.store.data['ui']['decode_sq'] = level
         self.store.save()
 
@@ -744,10 +757,24 @@ class MainWindow(QMainWindow):
             self.decode_ignore.blockSignals(True);self.decode_ignore.setCurrentIndex(old);self.decode_ignore.blockSignals(False)
             self.statusBar().showMessage(tr('ui.ae3f75d4c4aa2850')+' '+tr(str(exc)),8000)
 
+    def _set_decode_display(self, index):
+        old = self.store.data['ui'].get('decode_display_mode', 'buffered')
+        self.store.data['ui']['decode_display_mode'] = self.decode_display.itemData(index)
+        try:
+            self.store.save()
+        except Exception as exc:
+            self.store.data['ui']['decode_display_mode'] = old
+            self.decode_display.blockSignals(True)
+            self.decode_display.setCurrentIndex(self.decode_display.findData(old))
+            self.decode_display.blockSignals(False)
+            self.statusBar().showMessage(tr('ui.ae3f75d4c4aa2850')+' '+tr(str(exc)),8000)
+            return
+        self._paint_rx_preview()
+
     def _set_decode_enabled(self, enabled):
         self.audio.set_decode_enabled(enabled)
         self.rx_level_hint.reset(); self._refresh_rx_level_notice()
-        self.rx_idle_timer.stop(); self.rx_buffer=''
+        self._discard_rx_preview()
 
     def _rx_char(self, ch):
         if not self.decode_enabled.isChecked() or self.active_tx_id is not None: return
@@ -761,6 +788,7 @@ class MainWindow(QMainWindow):
             return
         self.rx_last_char_time=time.monotonic()
         self.rx_buffer += ch
+        self._paint_rx_preview()
         if len(self.rx_buffer)>300: self._finalize_rx_card()
         else: self.rx_idle_timer.start()
 
@@ -770,14 +798,46 @@ class MainWindow(QMainWindow):
         if time.monotonic()-last < 1.5:self.rx_idle_timer.start()
         else:self._finalize_rx_card()
 
-    def _finalize_rx_card(self):
+    def _discard_rx_preview(self):
+        self.rx_idle_timer.stop();self.rx_buffer=''
+        self._remove_rx_preview()
+
+    def _remove_rx_preview(self):
+        card,self.rx_live_card=self.rx_live_card,None
+        if card is not None:
+            self.cards_layout.removeWidget(card);card.hide();card.deleteLater()
+
+    def _paint_rx_preview(self):
+        if self.store.data['ui'].get('decode_display_mode', 'buffered') != 'live':
+            self._remove_rx_preview()
+            return
+        text=' '.join(self.rx_buffer.split())
+        if not text:return
+        if self.rx_live_card is None:
+            self.rx_live_card=self._add_card(text,'RX')
+            self.rx_live_card.finalized=False
+            self.rx_live_card.direction_label.setText('RX…')
+            self.rx_live_card.setCursor(Qt.ArrowCursor)
+        else:
+            self.rx_live_card.text_value=text;self.rx_live_card.body.setText(text)
+            QTimer.singleShot(20, lambda: self.cards_scroll.verticalScrollBar().setValue(self.cards_scroll.verticalScrollBar().maximum()))
+
+    def _finalize_rx_card(self, extract=True):
         text=" ".join(self.rx_buffer.split()); self.rx_buffer=""
+        self.rx_idle_timer.stop()
+        card,self.rx_live_card=self.rx_live_card,None
+        show=bool(text and self.decode_enabled.isChecked() and len(text)>self.store.data['ui'].get('decode_ignore_chars',0))
+        if card is not None:
+            if show:
+                card.text_value=text;card.body.setText(text);card.finalized=True;card.direction_label.setText('RX');card.setCursor(Qt.PointingHandCursor)
+            else:
+                self.cards_layout.removeWidget(card);card.hide();card.deleteLater()
         if not text or not self.decode_enabled.isChecked(): return
         self.transcript.append("RX " + text)
         self.printer.submit("RX",text,zone=self.store.data["ui"].get("time_zone","JST"))
         if len(text)<=self.store.data['ui'].get('decode_ignore_chars',0):return
-        self._add_card(text,"RX")
-        self._consider_auto_extract(text)
+        if card is None:self._add_card(text,"RX")
+        if extract:self._consider_auto_extract(text)
 
     def _add_card(self,text,direction):
         zone=self.store.data['ui'].get('time_zone','JST')
@@ -788,6 +848,7 @@ class MainWindow(QMainWindow):
             item=self.cards_layout.takeAt(0); w=item.widget();
             if w: w.deleteLater()
         QTimer.singleShot(20, lambda: self.cards_scroll.verticalScrollBar().setValue(self.cards_scroll.verticalScrollBar().maximum()))
+        return card
 
     def _card_selected(self,text):
         parsed=parse_exchange(text,self.my_call.text(), cqww=self.store.data.get("macro_template") == CQWW_TEMPLATE_NAME)
@@ -978,7 +1039,7 @@ class MainWindow(QMainWindow):
         self._meter_hold_until=0.;self._meter_last_tx={};self.alc_last_poll=0.
         self._meter_tx_started=time.monotonic();self._pwr_warning_read=None
         self.rx_level_hint.reset(); self._refresh_rx_level_notice()
-        self.rx_idle_timer.stop(); self.rx_buffer = ''
+        self._finalize_rx_card(extract=False)
         try:
             if live_session is None:
                 ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg), allow_secondary_only=offline and self.offline_tx.isChecked())
@@ -1010,7 +1071,7 @@ class MainWindow(QMainWindow):
         if token is not None and token != self.active_tx_id:
             return  # Ignore stale callbacks from a previous TX.
         self.audio.set_decode_enabled(self.decode_enabled.isChecked())
-        self.rx_idle_timer.stop(); self.rx_buffer = ''
+        self._discard_rx_preview()
         self._hold_tx_meters()
         finished_id, self.active_tx_id = self.active_tx_id, None
         self.main_alc=None;self._paint_radio_meters();self.rx_level_hint.reset();self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
@@ -1978,7 +2039,7 @@ class MainWindow(QMainWindow):
         self.printer_status.setToolTip(tr('ui.808a48de5106639a')+'\n'+state['detail']+'\n'+tr('ui.34fb155752f22403').format(sent=state['sent'],skipped=state['skipped']))
 
     def closeEvent(self,event):
-        if self.integration.busy:
+        if self.integration.busy or self.integration.udp_pending:
             event.ignore()
             QTimer.singleShot(100, self.close)
             return

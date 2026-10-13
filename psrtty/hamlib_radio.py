@@ -20,6 +20,7 @@ HAMLIB_MODELS = {
     'FT-817 / FT-817ND': (1020, 'Yaesu FT-817 / FT-817ND'),
     'FT-818ND': (1041, 'Yaesu FT-818ND'),
     'FT-857 / FT-857D': (1022, 'Yaesu FT-857 / FT-857D'),
+    'FT-891': (1036, 'Yaesu FT-891'),
     'FT-991 / FT-991A': (1035, 'Yaesu FT-991 / FT-991A'),
     'FTX-1': (1051, 'Yaesu FTX-1 Field / Optima'),
     'FT-710': (1049, 'Yaesu FT-710'),
@@ -328,6 +329,8 @@ class HamlibController(CIVController):
                         widths = [v for v in widths if v not in (2200,2300)] + [2250,2450]
             else:
                 return None
+            if self.model == 'FT-891':
+                widths = ([100,200,300,400,500,800,1200,1400,1700,2000,2400] if mode.value in data_modes else [200,400,600,850,1100,1350,1500,1650,1800,1950,2100,2250,2500,2600,2700,2800,2900,3000])
             widths = sorted(set(widths + [width.value]))
             return dict(kind='HAMLIB', mode=mode.value, value=width.value,
                         options=[(v, f'{v} Hz') for v in widths], narrow=None)

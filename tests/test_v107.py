@@ -228,7 +228,7 @@ class UI107Tests(unittest.TestCase):
             g = GuideWindow(self.window); self.assertTrue(any('HAMLOG' in g.tabs.tabText(i) for i in range(g.tabs.count())))
             thanks = SpecialThanksDialog(self.window); thanks.resize(420,260); thanks.show(); self.pump(.02)
             self.assertGreater(thanks.scroll.verticalScrollBar().maximum(), 0)
-            self.assertIn('JG2AJK\nJA3LVJ\nJF3RRP\nJP3GMO\nJQ7FIU\n7K2COL', thanks.names.text())
+            self.assertIn('JG2AJK\nJA3LVJ\nJF3RRP\nJP3GMO\nJK4JMO\nJQ7FIU\n7K2COL', thanks.names.text())
             self.assertIn('zLog', thanks.closing_message.text())
             for dialog in (d,g,thanks): dialog.close()
         configure('ja')

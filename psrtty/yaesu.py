@@ -107,6 +107,17 @@ class YaesuController(CIVController):
             except Exception:
                 return False
 
+    def set_operating_mode(self, mode):
+        if mode not in ('LSB-D', 'USB-D', 'LSB', 'USB'):return False
+        if mode.endswith('-D'):return self.set_data_mode(mode)
+        with self._lock:
+            if not self._control_ready() or self.read_transmitting() is not False:return False
+            try:
+                digit = '1' if mode == 'LSB' else '2'
+                self.ser.write(f'MD0{digit};'.encode('ascii'))
+                return self._query('MD0;', 'MD0') == f'MD0{digit};'
+            except Exception:return False
+
     def read_transmitting(self):
         with self._lock:
             if not self._control_ready(): return None

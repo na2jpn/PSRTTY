@@ -23,6 +23,8 @@ class IntegrationController(QObject):
         self.dialog = None
         self.zlog_dialog = None
         self.zlink = ZServerLink(main.paths['var'] / 'zserver-outbox.json')
+        self.udp_dialog=None;self.udp_pending=0
+        self.udp_status=tr('udp.idle') if main.store.data.get('udp_adif',{}).get('enabled') else tr('udp.disabled')
         self._last_zstatus = None
         self.z_timer = QTimer(self); self.z_timer.setInterval(500)
         self.z_timer.timeout.connect(self.poll_zlog); self.z_timer.start()
@@ -33,6 +35,29 @@ class IntegrationController(QObject):
         if self.dialog is None:
             self.dialog = HamlogSettingsDialog(self, self.main)
         self.dialog.show(); self.dialog.raise_(); self.dialog.activateWindow()
+
+    def udp_settings(self):
+        from .udp_adif_dialog import UdpAdifDialog
+        if self.udp_dialog is None:self.udp_dialog=UdpAdifDialog(self,self.main)
+        self.udp_dialog.reload();self.udp_dialog.show();self.udp_dialog.raise_();self.udp_dialog.activateWindow()
+
+    def _record_udp(self,qso):
+        from ..udp_adif import options_checked,send_qso,UdpError
+        options=deepcopy(self.main.store.data.get('udp_adif',{}))
+        if not options.get('enabled'):return
+        try:options=options_checked(options)
+        except UdpError as exc:
+            self.udp_status=tr('udp.failed').format(call=qso.call,error=tr(exc.key))
+            self.main.statusBar().showMessage(self.udp_status,10000);return
+        qso=deepcopy(qso);self.udp_pending+=1
+        def done(result,error):
+            self.udp_pending-=1
+            detail=tr(error.key) if isinstance(error,UdpError) else str(error)
+            self.udp_status=tr('udp.failed').format(call=qso.call,error=detail) if error else tr('udp.sent').format(call=qso.call,target=result)
+            if self.udp_dialog:self.udp_dialog.refresh_status()
+            if not self.main.closing:self.main.statusBar().showMessage(self.udp_status,10000)
+        try:self.udp_job=BackgroundJob(self,lambda:send_qso(qso,options),done)
+        except Exception as exc:done(None,exc)
 
     def zlog_settings(self):
         if self.zlog_dialog is None:self.zlog_dialog = ZLogSettingsDialog(self.main)
@@ -55,6 +80,7 @@ class IntegrationController(QObject):
     def close(self):
         self.z_timer.stop();self.zlink.close()
         if self.zlog_dialog:self.zlog_dialog.close()
+        if self.udp_dialog:self.udp_dialog.close()
 
     def run(self, work, done):
         if self.busy:
@@ -68,6 +94,7 @@ class IntegrationController(QObject):
         return True
 
     def record(self, qso):
+        self._record_udp(qso)
         try:self.zlink.enqueue(deepcopy(qso))
         except Exception as exc:
             detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)

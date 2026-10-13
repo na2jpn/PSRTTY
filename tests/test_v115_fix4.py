@@ -51,8 +51,8 @@ class Fix4Tests(unittest.TestCase):
         w._paint_radio_meters();self.assertTrue(w.audio_check_notice.isHidden())
         w._pwr_warning_read=(0,now,w.active_tx_id);w.radio.status.connected=False;w._paint_radio_meters();self.assertTrue(w.audio_check_notice.isHidden())
     def test_thanks_order_and_unique_entries(self):
-        wanted=('JG2AJK','JA3LVJ','JF3RRP','JP3GMO','JQ7FIU');start=CALLSIGNS.index('JG2AJK')
-        self.assertEqual(CALLSIGNS[start:start+5],wanted)
+        wanted=('JG2AJK','JA3LVJ','JF3RRP','JP3GMO','JK4JMO','JQ7FIU');start=CALLSIGNS.index('JG2AJK')
+        self.assertEqual(CALLSIGNS[start:start+len(wanted)],wanted)
         for name in wanted:self.assertEqual(CALLSIGNS.count(name),1)
     def test_illustration_in_notice_and_audio_guide_all_languages(self):
         from PySide6.QtGui import QTextDocument

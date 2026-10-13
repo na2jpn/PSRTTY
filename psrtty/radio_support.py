@@ -5,8 +5,16 @@ LEGACY_FREQUENCY = {'IC-735', 'IC-820H', 'IC-821H'}
 LEGACY_MODE = set(ICOM_EXTERNAL_PTT) | {'IC-756PRO', 'IC-756PROII', 'IC-756PROIII', 'IC-746', 'IC-910 / IC-910H', 'IC-7800'}
 CAT_CABLE_MODELS = {'FT-817 / FT-817ND', 'FT-818ND', 'FT-857 / FT-857D'}
 
+# (DATA OFF menu address, DATA ON menu address, USB value), per CI-V guide.
+USB_MOD_INPUT = {
+    'IC-7300': (bytes.fromhex('00 66'), bytes.fromhex('00 67'), 3),
+    'IC-9700': (bytes.fromhex('01 15'), bytes.fromhex('01 16'), 3),
+    'IC-705': (bytes.fromhex('01 18'), bytes.fromhex('01 19'), 1),
+}
+
 def connection_note(model):
     from .i18n import tr
+    if model == 'FT-891':return tr('v116.ft891_note')
     if model in ICOM_EXTERNAL_PTT:
         return tr('ui.c79c269d9e540a84')
     if model in ICOM_EXTERNAL_AUDIO:

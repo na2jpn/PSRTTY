@@ -87,7 +87,7 @@ class CIVTests(unittest.TestCase):
         def connect(*args): ctl.status=CIVStatus(True); return ctl.status
         with patch.object(ctl,'connect',side_effect=connect), patch.object(ctl,'set_data_mode',return_value=False):
             st=connect_configured(ctl,DEFAULT_CONFIG['radio'],DEFAULT_CONFIG['advanced'])
-        self.assertFalse(st.connected); self.assertIn('DATA',st.message)
+        self.assertFalse(st.connected); self.assertIn('モード',st.message)
 
     def test_no_mode_command_when_disabled(self):
         ctl=CIVController(0xA4); ctl.status=CIVStatus(True)

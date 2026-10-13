@@ -173,6 +173,7 @@ class SettingsDialog(QDialog):
             combo.currentIndexChanged.connect(self._test_controls_changed)
         self.civ_addr.currentTextChanged.connect(self._test_controls_changed)
         self.auto_mode.toggled.connect(self._test_controls_changed)
+        self.auto_usb_input.toggled.connect(self._test_controls_changed)
         if self.profile_index == self.active_profile_index:
             self._adopt_main_connection()
         else:
@@ -327,6 +328,13 @@ class SettingsDialog(QDialog):
         self.stopbits_label = QLabel(tr('ui.2897a2b4ec27d731')); f.addRow(self.stopbits_label, self.stopbits)
         self.auto_mode = QCheckBox(); self.auto_mode.setChecked(self.working['radio'].get('auto_data_mode', True))
         f.addRow(self.auto_mode)
+        self.auto_usb_input=QCheckBox(tr('v116.usb_mod_auto'))
+        self.auto_usb_input.setChecked(self.working['radio'].get('auto_usb_mod_input',False) is True)
+        f.addRow(self.auto_usb_input)
+        self.usb_input_note=QLabel(tr('v116.usb_mod_note'))
+        self.usb_input_note.setWordWrap(True);self.usb_input_note.setStyleSheet('color: #777777;')
+        note_font=self.usb_input_note.font();note_font.setPointSize(max(8,note_font.pointSize()-1));self.usb_input_note.setFont(note_font)
+        f.addRow(self.usb_input_note)
         self.cat_note = QLabel(tr('ui.95a6d1cca4557c83'))
         self.cat_note.setWordWrap(True); self.cat_note.setObjectName('helpText'); f.addRow(self.cat_note)
         form.addRow(self.specific)
@@ -396,7 +404,9 @@ class SettingsDialog(QDialog):
         self.connect_button.setEnabled(bool(model))
         for widget in (self.address_label, self.civ_addr, self.address_note): widget.setVisible(not yaesu)
         for widget in (self.stopbits_label, self.stopbits): widget.setVisible(False)
-        self.cat_note.setVisible(yaesu)
+        self.cat_note.setVisible(yaesu and model != 'FT-891')
+        from ..radio_support import USB_MOD_INPUT
+        self.auto_usb_input.setVisible(model in USB_MOD_INPUT);self.usb_input_note.setVisible(model in USB_MOD_INPUT)
         from ..radio_support import LEGACY_MODE, connection_note, ICOM_EXTERNAL_PTT
         if not initial and model in LEGACY_MODE: self.auto_mode.setChecked(False)
         if not initial and not yaesu:
@@ -410,6 +420,7 @@ class SettingsDialog(QDialog):
                 self.ptt.setItemData(index, '外部接続'); self.ptt.setItemText(index, tr('ui.c66e3b1994a02069'))
         self.baud.clear(); self.baud.addItem(tr('ui.36147b7e34df7ac8'), 'AUTO')
         speeds = [115200, 38400, 19200, 9600, 4800] if yaesu else [115200, 57600, 38400, 19200, 9600, 4800]
+        if model == 'FT-891':speeds=[38400,19200,9600,4800]
         for speed in speeds: self.baud.addItem(str(speed), str(speed))
         self._select_data(self.baud, saved.get('cat_baud' if yaesu else 'civ_baud', 'AUTO'))
         self.baud_label.setText(tr('ui.040c990b28af8cdc') if yaesu else tr('ui.282ae772aeb81bab'))
@@ -425,7 +436,8 @@ class SettingsDialog(QDialog):
     def _mode_caption(self, *_):
         mode = self.data_mode.currentText() if hasattr(self, 'data_mode') else self.working['advanced'].get('data_mode', 'LSB-D')
         model=self.rig.currentData()
-        if model=='TS-990S':mode=('LSB-D1' if mode=='LSB-D' else 'USB-D1')
+        if mode in ('LSB','USB'):pass
+        elif model=='TS-990S':mode=('LSB-D1' if mode=='LSB-D' else 'USB-D1')
         elif model.startswith('TS-'):mode=('LSB-DATA' if mode=='LSB-D' else 'USB-DATA')
         elif model in HAMLIB_MODELS:
             mode = ('DATA-L' if mode == 'LSB-D' else 'DATA-U') if model == 'FTX-1' else ('DATA-LSB' if mode == 'LSB-D' else 'DATA-USB')
@@ -633,7 +645,7 @@ class SettingsDialog(QDialog):
         self._select_data(self.spec_width, int(adv["spectrum_width_hz"]))
         self.tune_tol = QSpinBox(); self.tune_tol.setRange(20, 250); self.tune_tol.setValue(int(adv["auto_tune_tolerance_hz"])); self.tune_tol.setSuffix(" Hz")
 
-        self.data_mode = QComboBox(); self.data_mode.addItems(["LSB-D", "USB-D"])
+        self.data_mode = QComboBox(); self.data_mode.addItems(["LSB-D", "USB-D", "LSB", "USB"])
         self.data_mode.setCurrentText(adv.get("data_mode", "LSB-D"))
         self.data_mode.currentTextChanged.connect(self._mode_caption)
         self._mode_caption()
@@ -681,7 +693,7 @@ class SettingsDialog(QDialog):
         yaesu = self.rig.currentData() in HAMLIB_MODELS
         values.update(model=self.rig.currentData() or '', civ_address=self.civ_addr.currentText().strip().upper(),
                       com_port=self.com.currentData() or 'AUTO', ptt=self.ptt.currentData() or self.ptt.currentText(),
-                      auto_data_mode=self.auto_mode.isChecked())
+                      auto_data_mode=self.auto_mode.isChecked(),auto_usb_mod_input=self.auto_usb_input.isChecked())
         values['cat_baud' if yaesu else 'civ_baud'] = self.baud.currentData() or 'AUTO'
         if yaesu: values['cat_stopbits'] = self.stopbits.currentData()
         return values

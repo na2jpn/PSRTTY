@@ -73,6 +73,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "version": __version__,
     "schema_version": 1,
     "zlog": {"enabled": False, "host": "127.0.0.1", "port": 23, "pc_name": "PSRTTY", "operator": "", "tx": 15, "time_basis": "UTC", "decimal": "."},
+    "udp_adif": {"enabled": False, "host": "127.0.0.1", "port": 2236},
     "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
@@ -81,6 +82,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "model": "",
         "civ_address": "",
         "auto_data_mode": True,
+        "auto_usb_mod_input": True,
         "com_port": "AUTO",
         "civ_baud": "AUTO",
         "ptt": "CI-V",
@@ -122,6 +124,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "latest_qso_count": 4,
         "decode_sq": 4,
         "decode_ignore_chars": 0,
+        "decode_display_mode": "buffered",
         "wheel_reverse": False,
         "spectrum_gain_db": 0,
         "rx_card_font_size": 12,
@@ -178,6 +181,7 @@ class ConfigStore:
                           if isinstance(DEFAULT_CONFIG[key], dict) and isinstance(item.get(key), dict)
                           else deepcopy(item.get(key, DEFAULT_CONFIG[key])) for key in PROFILE_KEYS}
                 values["name"] = profile_name(item.get("name")) or f"Profile{len(profiles)+1}"
+                values['radio']['auto_usb_mod_input'] = item.get('radio',{}).get('auto_usb_mod_input') is True
                 tones = item.get("rx_tones")
                 values["rx_tones"] = deepcopy(tones) if isinstance(tones, list) and len(tones) == 2 else None
                 profiles.append(values)
@@ -220,10 +224,12 @@ class ConfigStore:
                 raw = json.loads(self.config_path.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
                     self.data = _merge(DEFAULT_CONFIG, raw)
+                    self.data['radio']['auto_usb_mod_input'] = raw.get('radio',{}).get('auto_usb_mod_input') is True
                     profile_records = raw.get('profiles')
                     previous_font = raw.get("ui", {}).get("rx_card_font_size")
             except Exception:
                 self.data = deepcopy(DEFAULT_CONFIG)
+                self.data['radio']['auto_usb_mod_input'] = False
         if self.macro_path.exists():
             try:
                 raw = json.loads(self.macro_path.read_text(encoding="utf-8"))
@@ -241,6 +247,9 @@ class ConfigStore:
             profile['audio']['secondary'] = normalize_secondary(profile['audio'].get('secondary'))
         self.data['audio']['secondary'] = deepcopy(self.data['profiles'][self.data['active_profile']]['audio']['secondary'])
 
+        from .udp_adif import options_checked as udp_options_checked, DEFAULT_OPTIONS as UDP_DEFAULTS
+        try:self.data['udp_adif']=udp_options_checked(self.data.get('udp_adif',UDP_DEFAULTS))
+        except ValueError:self.data['udp_adif']=deepcopy(UDP_DEFAULTS)
         hamlog = self.data.get('hamlog')
         if not isinstance(hamlog, dict): hamlog = {}
         self.data['hamlog'] = {key: hamlog.get(key) is True for key in ('enabled', 'auto_save')}
@@ -254,6 +263,8 @@ class ConfigStore:
         if not 1<=ui['direct_idle_seconds']<=9:ui['direct_idle_seconds']=2
         try: ui['decode_ignore_chars'] = max(0, min(10, int(ui.get('decode_ignore_chars', 0))))
         except (TypeError, ValueError, OverflowError): ui['decode_ignore_chars'] = 0
+        if ui.get('decode_display_mode') not in ('buffered', 'live'):
+            ui['decode_display_mode'] = 'buffered'
         if ui.get('time_zone') not in ('JST', 'UTC'): ui['time_zone'] = 'JST'
         if ui.get('language') not in ('ja', 'en', 'ru', 'zh', 'ko', 'id', 'th', 'es'):
             ui['language'] = 'ja'
