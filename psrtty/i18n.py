@@ -152,7 +152,7 @@ def install_qt_translation():
         def isEmpty(self):
             return False
         def translate(self, context, sourceText, disambiguation=None, n=-1):
-            if context in ('QPlatformTheme', 'QDialogButtonBox', 'QFileDialog', 'QFileSystemModel'):
+            if context in ('QPlatformTheme', 'QDialogButtonBox', 'QMessageBox', 'QFileDialog', 'QFileSystemModel'):
                 key = _QT_SOURCES.get(sourceText.replace('&', ''))
                 if key is not None:
                     return tr(key)

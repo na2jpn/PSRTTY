@@ -214,6 +214,16 @@ class HamlibController(CIVController):
             if on and not ok:self.lib.rig_set_ptt(self.handle,VFO,0)
             return ok
 
+    def set_fsk_mode(self, mode='RTTY'):
+        if mode not in ('RTTY','RTTY-R'):return False
+        with self._lock:
+            if not self.handle or not self.status.connected or self.cancel.is_set():return False
+            if self.read_transmitting() is not False:return False
+            value=self.lib.rig_parse_mode(b'RTTY' if mode=='RTTY' else b'RTTYR')
+            if not value or self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
+            actual=ctypes.c_uint64();width=ctypes.c_long()
+            return self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(actual),ctypes.byref(width))==0 and actual.value==value
+
     def set_data_mode(self,mode='LSB-D'):
         if mode not in ('LSB-D','USB-D'):return False
         with self._lock:
@@ -247,12 +257,15 @@ class HamlibController(CIVController):
             if not self.handle or not self.status.connected:return None
             actual=ctypes.c_uint64(); width=ctypes.c_long()
             if self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(actual),ctypes.byref(width))!=0:return None
+            for token,label in ((b'RTTY','RTTY'),(b'RTTYR','RTTY-R')):
+                if self.lib.rig_parse_mode(token)==actual.value:return label
             for mode in self.operating_modes():
                 token=self._mode_token(mode)
                 if token and self.lib.rig_parse_mode(token.encode('ascii'))==actual.value:return mode
             return None
 
     def set_operating_mode(self,mode):
+        if mode in ('RTTY','RTTY-R'):return self.set_fsk_mode(mode)
         if mode not in self.operating_modes():return False
         with self._lock:
             if not self.handle or not self.status.connected or self.cancel.is_set():return False

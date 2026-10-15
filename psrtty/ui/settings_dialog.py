@@ -24,7 +24,11 @@ from .background import BackgroundJob
 from ..config import DEFAULT_CONFIG, RIG_MODELS, PROFILE_KEYS, profile_name
 
 
-class SettingsDialog(QDialog):
+from .fsk_settings import FSKSettingsMixin
+from ..fsk_models import modes_for
+from ..fsk import enabled as fsk_enabled
+
+class SettingsDialog(FSKSettingsMixin, QDialog):
     before_save = Signal()
     tx_test_finished = Signal(bool, str)
     def __init__(self, config_store, parent=None):
@@ -112,9 +116,12 @@ class SettingsDialog(QDialog):
             if screen:
                 available = screen.availableGeometry()
                 self.resize(min(820,max(300,available.width()-40)),min(850,max(300,available.height()-60)))
-        if len(self.working_profiles) > 1 and not self._profile_notice_shown:
+        if self._needs_profile_audio_notice() and not self._profile_notice_shown:
             self._profile_notice_shown = True
             QTimer.singleShot(0, self, self._show_profile_notice)
+
+    def _needs_profile_audio_notice(self):
+        return sum(p.get("radio", {}).get("tx_method", "afsk") != "fsk" for p in self.working_profiles) >= 2
 
     def _show_profile_notice(self):
         if self.isVisible():
@@ -154,6 +161,8 @@ class SettingsDialog(QDialog):
 
     def _rebuild_inner_tabs(self):
         page = self.profile_tabs.widget(self.profile_index)
+        if hasattr(self,'_afsk_hidden'):
+            self._afsk_hidden.deleteLater();del self._afsk_hidden
         if hasattr(self, 'tabs'):
             page.layout().removeWidget(self.tabs)
             self.tabs.deleteLater()
@@ -199,7 +208,10 @@ class SettingsDialog(QDialog):
         self.working['audio'].update(input_device=self.audio_in.currentData() or 'AUTO',
                                      output_device=self.audio_out.currentData() or 'AUTO',
                                      rx_gain=self.rx_gain.value()/100, tx_gain=self._tx_gain_value())
-        self.working['advanced'].update(data_mode=self.data_mode.currentText(),
+        if fsk_enabled(self.working):
+            self.working['fsk'].update(self._fsk_values())
+            self.working['radio']['fsk_mode']=self.working['fsk']['mode']
+        self.working['advanced'].update(data_mode=(self.working['advanced']['data_mode'] if fsk_enabled(self.working) else self.data_mode.currentText()),
             rtty_baud=self.rtty_baud.value(), shift_hz=self.shift.value(),
             mark_hz=self.mark.value(), space_hz=self.space.value(), invert=self.invert.isChecked(),
             spectrum_width_hz=self.spec_width.currentData(), auto_tune_tolerance_hz=self.tune_tol.value(),
@@ -239,6 +251,7 @@ class SettingsDialog(QDialog):
         number = next(n for n in range(1, 10) if f'profile{n}' not in used)
         new = deepcopy(self.working_profiles[self.profile_index])
         new['name'] = f'Profile{number}'
+        new['radio']['tx_method']='afsk'
         new['audio']['input_device'] = 'UNSET'
         new['audio']['output_device'] = 'UNSET'
         new['audio'].pop('alc_calibration', None)
@@ -351,6 +364,7 @@ class SettingsDialog(QDialog):
         form.addRow("", self.connect_button)
         self.rig.currentIndexChanged.connect(self._rig_changed)
         self._rig_changed(initial=True)
+        self._fsk_switch_button(form)
         self.tabs.addTab(tab, tr('ui.45bf10f170732eed'))
 
     def _build_external_tab(self):
@@ -461,7 +475,7 @@ class SettingsDialog(QDialog):
         for widget in (self.stopbits_label, self.stopbits): widget.setVisible(False)
         self.cat_note.setVisible(yaesu and model not in ('FT-891','FT-950','FT-450'))
         from ..radio_support import USB_MOD_INPUT
-        self.auto_usb_input.setVisible(model in USB_MOD_INPUT);self.usb_input_note.setVisible(model in USB_MOD_INPUT)
+        self.auto_usb_input.setVisible(model in USB_MOD_INPUT and not fsk_enabled(self.working));self.usb_input_note.setVisible(model in USB_MOD_INPUT and not fsk_enabled(self.working))
         from ..radio_support import LEGACY_MODE, connection_note, ICOM_EXTERNAL_PTT
         if not initial and model in LEGACY_MODE: self.auto_mode.setChecked(False)
         if not initial and not yaesu:
@@ -495,7 +509,8 @@ class SettingsDialog(QDialog):
     def _mode_caption(self, *_):
         mode = self.data_mode.currentText() if hasattr(self, 'data_mode') else self.working['advanced'].get('data_mode', 'LSB-D')
         model=self.rig.currentData()
-        if mode in ('LSB','USB'):pass
+        if fsk_enabled(self.working):mode=self.working['fsk'].get('mode','RTTY') if mode not in ('RTTY','RTTY-R') else mode
+        elif mode in ('LSB','USB'):pass
         elif model=='FT-450':mode=('USER-L' if mode=='LSB-D' else 'USER-U')
         elif model=='FT-950':mode=('PKT-LSB' if mode=='LSB-D' else 'PKT-USB')
         elif model=='TS-990S':mode=('LSB-D1' if mode=='LSB-D' else 'USB-D1')
@@ -622,7 +637,10 @@ class SettingsDialog(QDialog):
 
         note = QLabel(self.audio_error or tr('ui.576351e2ada676f7'))
         note.setWordWrap(True); note.setObjectName('helpText'); form.addRow(note)
-        self.tabs.addTab(tab, 'Audio OUT')
+        if fsk_enabled(self.working):
+            tab.setParent(self);tab.hide();self._afsk_hidden=tab
+            self._build_fsk_tab()
+        else:self.tabs.addTab(tab, 'Audio OUT')
 
     def _open_secondary_audio(self):
         from .secondary_audio_dialog import SecondaryAudioDialog
@@ -712,8 +730,8 @@ class SettingsDialog(QDialog):
         self._select_data(self.spec_width, int(adv["spectrum_width_hz"]))
         self.tune_tol = QSpinBox(); self.tune_tol.setRange(20, 250); self.tune_tol.setValue(int(adv["auto_tune_tolerance_hz"])); self.tune_tol.setSuffix(" Hz")
 
-        self.data_mode = QComboBox(); self.data_mode.addItems(["LSB-D", "USB-D", "LSB", "USB"])
-        self.data_mode.setCurrentText(adv.get("data_mode", "LSB-D"))
+        self.data_mode = QComboBox(); self.data_mode.addItems(modes_for(self.working["radio"].get("model")) if fsk_enabled(self.working) else ["LSB-D", "USB-D", "LSB", "USB"])
+        self.data_mode.setCurrentText(self.working["fsk"].get("mode","RTTY") if fsk_enabled(self.working) else adv.get("data_mode", "LSB-D"))
         self.data_mode.currentTextChanged.connect(self._mode_caption)
         self._mode_caption()
         form.addRow(tr('ui.a0a3d4182392ee0e'), self.data_mode)
@@ -737,7 +755,7 @@ class SettingsDialog(QDialog):
         reset.clicked.connect(self._reset_advanced)
         root.addWidget(reset)
         root.addStretch(1)
-        self.tabs.addTab(tab, tr('ui.9652fd780df9e978'))
+        self.tabs.addTab(tab, tr('fsk.advanced') if fsk_enabled(self.working) else tr('ui.9652fd780df9e978'))
 
     @staticmethod
     def _select_data(combo: QComboBox, value):
@@ -748,7 +766,7 @@ class SettingsDialog(QDialog):
 
     def _reset_advanced(self):
         d = DEFAULT_CONFIG["advanced"]
-        self.data_mode.setCurrentText(d["data_mode"])
+        self.data_mode.setCurrentText('RTTY' if fsk_enabled(self.working) else d["data_mode"])
         self.rtty_baud.setValue(d["rtty_baud"]); self.shift.setValue(d["shift_hz"])
         self.mark.setValue(d["mark_hz"]); self.space.setValue(d["space_hz"])
         self.invert.setChecked(d["invert"]); self._select_data(self.spec_width, d["spectrum_width_hz"])
@@ -763,6 +781,8 @@ class SettingsDialog(QDialog):
                       auto_data_mode=self.auto_mode.isChecked(),auto_usb_mod_input=self.auto_usb_input.isChecked())
         values['cat_baud' if yaesu else 'civ_baud'] = self.baud.currentData() or 'AUTO'
         if yaesu: values['cat_stopbits'] = self.stopbits.currentData()
+        if fsk_enabled(self.working):
+            values['fsk_mode']=self._fsk_values()['mode']
         return values
 
     def _test_controls_changed(self, *_):
@@ -933,16 +953,21 @@ class SettingsDialog(QDialog):
                 lambda: self.test_controller is ctl and ctl.status.connected)
         except ValueError as exc:
             self.tx_test_note.setText(tr(str(exc))); return
-        ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
-            adv['mark_hz'],adv['space_hz'],adv['invert'],self._tx_gain_value(),
-            on, off, lambda success,note:self.tx_test_finished.emit(success,note))
+        if fsk_enabled(self.working):
+            from ..fsk import start_fsk
+            ok,msg=start_fsk(parent.audio,ctl,self._radio_values(),self._fsk_values(),adv,on,off,
+                lambda success,note:self.tx_test_finished.emit(success,note),text=text,external=self._external_values(),sequencer=sequencer)
+        else:
+            ok,msg=parent.audio.send_text(text,self.audio_out.currentData(),adv['rtty_baud'],
+                adv['mark_hz'],adv['space_hz'],adv['invert'],self._tx_gain_value(),
+                on, off, lambda success,note:self.tx_test_finished.emit(success,note))
         if not ok:
             self.tx_test_note.setText(msg); return
         self.tx_testing=True; self.test_deadline=time.monotonic()+10
         self.test_tx_button.setText(tr('ui.aa5a54ec36936dd5'))
         self.test_count_label.setText(tr('ui.59c8551120be3c6c'))
         self.save_out_button.setEnabled(False)
-        self.tx_test_note.setText(tr('ui.3dd8bb2ff31785ed'))
+        self.tx_test_note.setText(tr('fsk.test_note') if fsk_enabled(self.working) else tr('ui.3dd8bb2ff31785ed'))
         self.countdown.start()
 
     def _tick_test_tx(self):
@@ -950,6 +975,7 @@ class SettingsDialog(QDialog):
         self.test_count_label.setText(f"{tr('ui.f79606416528fb2b')}{int(remaining + 0.999)}{tr('ui.9dcdc2b289b9d233')}" if remaining else tr('ui.02099d7931da52b4'))
         if remaining <= 0:
             self._stop_test_tx(); return
+        if fsk_enabled(self.working):return
         if self.alc_busy or not self.test_controller or not hasattr(self.test_controller,'read_alc'): return
         ctl=self.test_controller
         self.alc_busy=True
@@ -972,7 +998,7 @@ class SettingsDialog(QDialog):
 
     def _test_tx_finished(self, success, message):
         self.tx_testing=False; self.countdown.stop()
-        self.test_tx_button.setText(tr('ui.e34d5bd94eb35240'))
+        self.test_tx_button.setText(tr('fsk.test') if fsk_enabled(self.working) else tr('ui.e34d5bd94eb35240'))
         self.test_count_label.setText(tr('ui.ca4d973c0b006b75'))
         self.save_out_button.setEnabled(True)
         self.alc_meter.setValue(0); self.alc_meter.setFormat(tr('ui.07534165f419d0c6'))
@@ -1110,6 +1136,12 @@ class SettingsDialog(QDialog):
             QMessageBox.warning(self, tr('ui.c66e3b1994a02069'), tr(str(exc))); return
         call_edited = self.basic_call_changed()
         if not self._capture_profile(): return
+        try:
+            from ..fsk import validate
+            for profile in self.working_profiles:
+                if fsk_enabled(profile):validate(profile['radio'],profile['fsk'],profile['external'])
+        except ValueError as exc:
+            QMessageBox.warning(self,tr('fsk.title'),str(exc));return
         self.before_save.emit()
         active = self.active_profile_index
         # Keep edits made to the main-window callsign while this dialog was open.

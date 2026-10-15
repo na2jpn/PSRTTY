@@ -8,7 +8,6 @@
 ・初期設定ガイドに「HAMLOGなど連携」タブを追加し、対応対象バージョンと操作方法を日英で記載しました。
 ・対応表のYaesu・Kenwood全機種へHamlib経由のNB・NRの取得・変更を広げました。YaesuはDNRと表示し、変更後の状態を確認します。
 ・FT-710、FTDX10、FTDX101D／MP、FTDX3000の受信フィルター幅に対応し、FT-991／FT-991A・FTX-1の選択肢を機種別の仕様に合わせました。TS-590SGのDATA／SSBは低域カットを維持して受信幅を変更します。TS-890S・TS-990Sの受信幅はHamlib 4.7.2未実装のため本体操作となります。
-・スペシャルサンクスをスクロール可能にし、JQ7FIUとMMTTY・Turbo HAMLOG・zLogなどの開発者への謝辞を追加しました。
 
 2026-10-03  Ver1.07
 ・Added Integration between View and Language, with HAMLOG and zLog Reiwa integration settings.
@@ -18,7 +17,6 @@
 ・Added a bilingual HAMLOG / integrations setup-guide tab, including target versions and operating instructions.
 ・Extended Hamlib NB/NR read/write to all listed Yaesu and Kenwood models, with state readback. Yaesu uses the DNR label.
 ・Added receive width control for FT-710, FTDX10, FTDX101D/MP and FTDX3000; corrected FT-991/FT-991A and FTX-1 choices to model-specific tables. TS-590SG DATA/SSB width adjustment preserves low cut. TS-890S/TS-990S bandwidth is not implemented in Hamlib 4.7.2 and must be controlled on the radio.
-・Made Special Thanks scrollable and added JQ7FIU and thanks to the developers of MMTTY, Turbo HAMLOG, zLog and related software.
 
 RTTYプリンターの処理と設定は1.06正本から変更していません。
 全ソース版です。Windows EXEは同梱しません。Windowsで build-windows.ps1 を実行してください。

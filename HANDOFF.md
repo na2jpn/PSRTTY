@@ -1,34 +1,24 @@
-# PSRTTY 1.17 引継ぎ — 2026-10-15
+# PSRTTY 1.18 正本引継ぎ — 2026-10-15
 
-フルソース: PSRTTY_1.17_CANONICAL_SOURCE.zip
-仕様: VERSION_117.md。検証: docs/VALIDATION_117_CANONICAL.md。FIX1・FIX2統合済み。
-バージョンの正本は psrtty/__init__.py。
+正本フルソース：PSRTTY_1.18_CANONICAL_SOURCE.zip。1.18のFIX1～FIX7を統合済み。差分の追加適用は不要。
+バージョンの正本は psrtty/__init__.py。仕様 VERSION_118.md、履歴 CHANGELOG.md・UPDATE_HISTORY.txt・language/*.json のhistory.body。
+Gitリリースノート docs/RELEASE_NOTES_118.md、検証 docs/VALIDATION_118_CANONICAL.md。
 
-Windows音量はpsrtty/windows_volume.py、UIはpsrtty/ui/windows_volume.py。選択endpoint IDと自プロセスのsessionだけを対象にし、ProfileにWindows音量を保存・復元しません。
-外部PTTテストは設定画面のExternalPTTインスタンスで制御。各終了経路でOFF。通常送信は従来のtx_keying.pyを共有します。
-手動モデルIDはEXTERNAL-MANUAL。CAT/CI-Vは一切使用せず、周波数不明で以前の無線機の周波数をログへ流用しません。
-全QSO削除はlog_delete.py。ADIFのみ対象。原文ログ・既存バックアップは保持。バックアップ必須・検証後のみ移動、失敗時復元。
-FT-950=1028、FT-450=1027。外部音声、RS-232C CAT（2stop/handshake None）。
-Webガイドは別ZIP（63項目、8言語）。アプリのソースへ混在させません。
-開発ルールdocs/DEVELOPMENT_RULES.mdを維持。サンクスは履歴・リリースノートに記録しません。
+FSK本体 psrtty/fsk.py、機種別能力 psrtty/fsk_models.py、資料 psrtty/fsk_manuals.py。
+設定 psrtty/ui/fsk_settings.py、機種別説明 fsk_help.py・fsk_yaesu.py、接続条件による色分けと短文 fsk_notice.py。
+標準はAFSK。切替はProfile単位で、元のAFSK設定を保持。マクロ・Auto CQ・ダイレクト送信で同じFSK送信経路を使用する。
+FSK対応45項目：ICOM32、Kenwood3、Yaesu10。直接FSK非対応23項目ではAFSKを案内。
+USBケーブル1本で使用可能な16項目は黒、外部機器・別途音声接続が必要な29項目は青、直接FSK非対応23項目のみ赤。
+FT-891はUSB CAT/FSKだが受信音声の別接続が必要なので青。USBケーブル接続の説明とSSBのUSBモードを混同しない。
+無線機のUSB SEND／USB Keying等のメニュー名、デバイス名、USB／USB-DATA等のモード名は改変しない。
 
-以下は1.16から引き継いだ既存仕様です。
+送信経路はMainWindow._send_textで方式を振り分け。AudioEngineの停止・スレッド管理とLiveTextの送信済管理を共有する。
+FSKは音声出力を開かず、無線機接続・モード読返しを確認してからPTT。終了／失敗時に解除。
+ICOMのUSBキーイング対象のみCI-Vハンドル共用可。Kenwood／Yaesuは別COM。外部専用COMは別信号線でFSK/PTTを一つのハンドルで制御できる。
+メーカー取扱説明書を実装根拠とし、対応機種は通常機能として案内。実機検証記録は検証資料へ残し、利用者画面へ暫定ラベルを付けない。
 
-# PSRTTY 1.16 正本引継ぎ — 2026-10-13
-
-正本ファイル: PSRTTY_1.16_CANONICAL_SOURCE.zip
-1.15最終正本を基に、1.16の機能とFIX1～FIX6をすべて反映しています。
-中心バージョン変数は psrtty/__init__.py。公開日は2026-10-13。
-
-- 周波数ポーリングは0.5秒。未完了要求は重ねず、メーターポーリングは維持。
-- 接続時モードはLSB-D／USB-D／LSB／USB。自動切替ONは選択モードに従い、OFFは本体モードを変更しません。
-- ADIF UDPは共通設定。初期OFF。QSOの保存成功後に1件送信し、ACK・自動再送はありません。
-- 受信表示はメインのチェックと「デコード」の間で「逐次／まとめて」を選択。初期値は「まとめて」。選択保存、文字数による確定時の除外、途中切替の文字保持を実装。
-- FT-891はHamlib 1036。USBはCAT用で、音声は外部接続。
-- CI-VのUSB音声入力切替はIC-9700・IC-7300・IC-705のみ。初回ON、既存Profileは未設定ならOFF、コピーは設定を継承。実モードに対応した入力を読み返して確認します。
-- UI・案内・履歴は8言語。受信表示とFT-891追加は独立した履歴項目。
-
-開発ルールは docs/DEVELOPMENT_RULES.md を必ず確認してください。
-仕様は VERSION_116.md、検証は docs/VALIDATION_116.md。
-Windows EXEビルド、USB入力切替の無線機実機動作、FT-891実機動作、Log4OM2本体とのUDP相互運用はこの環境では未確認です。利用者から受信表示の動作確認OKの報告あり。
-今後の開発はこの正本を基準にしてください。
+MACRO配色 psrtty/macro_colors.py・psrtty/ui/macro_colors_dialog.py。ui.macro_colorsに保存し、Profileとは独立。
+言語はja/en/ru/zh/ko/id/th/es、各1313項目。変更後は validate_languages.py --generate と validate_languages.py を実行する。
+Windowsでは build-windows.ps1。設定・ログは配布物へ入れず、更新時に既存のconfig・logdata・varを保持する。
+サンクスは履歴・CHANGELOG・リリースノートへ記載せず、掲載時期を付けない。ウェブ用は必ず別ZIP。
+詳細ルール docs/DEVELOPMENT_RULES.md。

@@ -33,6 +33,7 @@ class ExternalPTT:
         validate_external(self.config, radio_port)
         self.cancel = cancel
         self.serial = None
+        self.borrowed_serial = None
 
     def before_ptt(self):
         if not self.config.get('enabled', False):
@@ -42,12 +43,15 @@ class ExternalPTT:
         line = self.config['line'].lower()
         active = not bool(self.config.get('reversed', False))
         try:
-            device = serial.Serial(port=None, timeout=.1, write_timeout=.3,
-                                   rtscts=False, dsrdtr=False)
-            setattr(device, line, not active)
+            device = self.borrowed_serial
+            if device is None:
+                device = serial.Serial(port=None, timeout=.1, write_timeout=.3,
+                                       rtscts=False, dsrdtr=False)
+                setattr(device, line, not active)
             self.serial = device
-            device.port = self.config['com_port']
-            device.open()
+            if self.borrowed_serial is None:
+                device.port = self.config['com_port']
+                device.open()
             setattr(device, line, active)
             duration = 0 if self.config.get('role') == 'ptt' else float(self.config['delay_seconds'])
             if self.cancel is not None:
@@ -68,5 +72,5 @@ class ExternalPTT:
         try:
             setattr(device, self.config['line'].lower(), bool(self.config.get('reversed', False)))
         finally:
-            device.close()
+            if device is not self.borrowed_serial:device.close()
         return True

@@ -18,7 +18,7 @@ class ProfileAudioNotice(QDialog):
         layout=QVBoxLayout(self);self.browser=QTextBrowser()
         if i18n.LANGUAGE == 'th':
             self.browser.document().setDefaultStyleSheet('body { font-family:"Leelawadee UI", "Noto Sans Thai", "Tahoma", sans-serif; }')
-        self.browser.setHtml('<p>'+escape(tr('v115.audio_notice'))+'</p>'+usb_help_html())
+        self.browser.setHtml('<p>'+escape(tr('v115.audio_notice'))+'</p>'+usb_help_html()+'<p>'+escape(tr('fsk.notice'))+'</p>')
         layout.addWidget(self.browser)
         buttons=QDialogButtonBox(QDialogButtonBox.Ok);buttons.accepted.connect(self.accept);layout.addWidget(buttons)
         available=self.screen().availableGeometry()

@@ -216,6 +216,7 @@ class MainWindow(QMainWindow):
 
         view = mb.addMenu(tr('ui.17efc6654ed280c7'))
         self._act(view, tr('ui.9bce269cb36c4072'), self._show_qso_log)
+        self._act(view, tr('colors.title'), self._macro_colors)
         width = view.addMenu(tr('ui.b4810bd0256c51ef'))
         self.width_group = QActionGroup(self); self.width_group.setExclusive(True)
         for hz, label in [(500,"500 Hz"),(1000,"1 kHz"),(2000,"2 kHz"),(3000,"3 kHz")]:
@@ -721,7 +722,14 @@ class MainWindow(QMainWindow):
         self.call_locked = bool(normalize_call(text))
         self._refresh_macros()
 
+    def _macro_colors(self):
+        from .macro_colors_dialog import MacroColorsDialog
+        dlg=MacroColorsDialog(self.store,self)
+        if dlg.exec():self._refresh_macros()
+
     def _refresh_macros(self):
+        from ..macro_colors import apply
+        apply(self.macro_buttons,self.store.data['ui'].get('macro_colors'))
         vals=self._macro_values()
         for i,m in enumerate(self.store.macros):
             preview=expand_macro(m.get("text",""), vals)
@@ -906,7 +914,7 @@ class MainWindow(QMainWindow):
         return bool(self.radio and self.radio.status.connected and not self.connecting)
 
     def _manual_tx_allowed(self):
-        return not self.antenna_tuning and not self.closing and not self.connecting and (self._connected() or self.offline_tx.isChecked())
+        return not self.antenna_tuning and not self.closing and not self.connecting and (self._connected() or (self.offline_tx.isChecked() and self.store.data['radio'].get('tx_method')!='fsk'))
 
     def _offline_tx_changed(self):
         if not self.offline_tx.isChecked() and not self._connected(): self._stop_tx()
@@ -1041,7 +1049,15 @@ class MainWindow(QMainWindow):
         self.rx_level_hint.reset(); self._refresh_rx_level_notice()
         self._finalize_rx_card(extract=False)
         try:
-            if live_session is None:
+            from ..fsk import enabled as fsk_enabled, start_fsk
+            if fsk_enabled(self.store.data):
+                if offline:raise ValueError(tr('fsk.connected'))
+                if live_session is not None:
+                    self._cancel_auto_cq();self.live_session=live_session
+                ok,msg=start_fsk(self.audio,ctl,self.store.data['radio'],self.store.data['fsk'],a,on,off,
+                    lambda ok,msg:self.bridge.tx_finished.emit(token,ok,msg),text=text,session=live_session,
+                    progress=lambda epoch,count,ch:self.bridge.direct_progress.emit(token,epoch,count,ch),external=self.store.data['external'],sequencer=sequencer)
+            elif live_session is None:
                 ok,msg=self.audio.send_text(text,au["output_device"],a["rtty_baud"],a["mark_hz"],a["space_hz"],a["invert"],au["tx_gain"],on,off,lambda ok, msg: self.bridge.tx_finished.emit(token, ok, msg), allow_secondary_only=offline and self.offline_tx.isChecked())
             else:
                 self._cancel_auto_cq()
@@ -1483,6 +1499,7 @@ class MainWindow(QMainWindow):
 
     def _poll_main_alc(self):
         now=time.monotonic()
+        if self.audio._tx_active and self.store.data['radio'].get('tx_method')=='fsk':return
         if self.alc_busy or now-self.alc_last_poll < .5:return
         if not self._connected() or not hasattr(self.radio,'read_alc'):
             self.main_alc=None;self.main_meters={};return

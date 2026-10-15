@@ -78,7 +78,9 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
     "station_callsign": "",
     "station": {"qth": "", "jcc_jcg": "", "text": ""},
+    "fsk": {"port": "RADIO", "line": "DTR", "invert": False, "mode": "RTTY"},
     "radio": {
+        "tx_method": "afsk",
         "model": "",
         "civ_address": "",
         "auto_data_mode": True,
@@ -135,7 +137,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     },
 }
 
-PROFILE_KEYS = ("station_callsign", "station", "radio", "external", "audio", "advanced")
+PROFILE_KEYS = ("station_callsign", "station", "radio", "external", "audio", "advanced", "fsk")
 from .printer import DEFAULT_PRINTER, normalize_settings
 DEFAULT_CONFIG['printer'] = deepcopy(DEFAULT_PRINTER)
 DEFAULT_CONFIG['active_profile'] = 0

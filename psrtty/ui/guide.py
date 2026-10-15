@@ -2,6 +2,7 @@ from ..i18n import tr
 from .. import i18n
 from .guide_en import PAGES_EN
 from .audio_usb_help import usb_help_html
+from .fsk_help import icom_guide_html,kenwood_guide_html,yaesu_guide_html
 import re
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont
@@ -22,6 +23,7 @@ class GuideWindow(QDialog):
         root=QVBoxLayout(self); self.tabs=QTabWidget(); root.addWidget(self.tabs)
         selected=[(tr(t),tr(b)) for t,b in i18n.GUIDE_KEYS]
         for index,(title,body) in enumerate(selected):
+            if i18n.GUIDE_KEYS[index][0]=="guide.fsk.title":body+=icom_guide_html()+kenwood_guide_html()+yaesu_guide_html()
             if index==0:
                 # Localized guides use either an audio heading or setup list items.
                 heading=re.search(r'<h[23][^>]*>[^<]*Audio OUT.*?</h[23]>\s*<p>.*?</p>',body,re.S)
@@ -32,7 +34,7 @@ class GuideWindow(QDialog):
                             closing=len(match.group(1))+3
                             body=body[:match.end()-closing]+usb_help_html()+body[match.end()-closing:];break
                     else:body=usb_help_html()+body
-            browser=QTextBrowser(); font=QFont(); font.setPointSize(11); browser.setFont(font)
+            browser=QTextBrowser(); browser.setOpenExternalLinks(True); font=QFont(); font.setPointSize(11); browser.setFont(font)
             style = STYLE
             if i18n.LANGUAGE == "th":
                 style = style.replace('"Yu Gothic UI", sans-serif', '"Leelawadee UI", "Noto Sans Thai", "Tahoma", sans-serif')

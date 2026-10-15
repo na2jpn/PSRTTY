@@ -390,6 +390,24 @@ class CIVController:
                 return False
 
 
+    def set_fsk_mode(self, mode='RTTY'):
+        from .fsk_models import modes_for
+        from .radio_support import LEGACY_MODE
+        if mode not in modes_for(self.model):return False
+        with self._lock:
+            if not self._control_ready() or self.read_transmitting() is not False:return False
+            try:
+                self.ser.reset_input_buffer()
+                payload=(0x06, 0x04 if mode=='RTTY' else 0x08)
+                if self.model not in LEGACY_MODE and self.model!="IC-703":payload+=(0x01,)
+                self.ser.write(self._frame(*payload))
+                raw=self._read_response(timeout=.5)
+                if len(raw)<6 or raw[4]!=0xFB:return False
+                self.ser.reset_input_buffer();self.ser.write(self._frame(0x04))
+                raw=self._read_response(0x04)
+                return len(raw)>=7 and raw[5]==(0x04 if mode=='RTTY' else 0x08)
+            except Exception:return False
+
     def set_data_mode(self, mode: str = "LSB-D") -> bool:
         """Select SSB and DATA ON using the model-specific command; FIL1."""
         if mode not in ("LSB-D", "USB-D"):
@@ -445,6 +463,7 @@ class CIVController:
                 self.ser.reset_input_buffer()
                 self.ser.write(self._frame(0x04))
                 raw=self._read_response(0x04)
+                if len(raw)>=7 and raw[5] in (0x04,0x08):return 'RTTY' if raw[5]==0x04 else 'RTTY-R'
                 if len(raw)<7 or raw[5] not in (0x00,0x01):return None
                 side='LSB' if raw[5]==0x00 else 'USB'
                 sub=0x04 if self.model=='IC-7200' else 0x06
@@ -457,6 +476,7 @@ class CIVController:
                 return None
 
     def set_operating_mode(self, mode):
+        if mode in ('RTTY','RTTY-R'):return self.set_fsk_mode(mode)
         if mode not in self.operating_modes():return False
         with self._lock:
             if not self.ser or not self.status.connected or self.cancel.is_set():return False
@@ -492,13 +512,13 @@ def connect_configured(controller, settings, advanced):
         cat = settings.get('model') in HAMLIB_MODELS or settings.get('ptt') == 'CAT'
         status = controller.connect(settings.get("com_port", "AUTO"), settings.get("cat_baud", "AUTO") if cat else settings.get("civ_baud", "AUTO"))
         if status.connected and settings.get("auto_data_mode", True):
-            mode = advanced.get("data_mode", "LSB-D")
-            switched = controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)
+            mode = settings.get("fsk_mode", "RTTY") if settings.get("tx_method")=="fsk" else advanced.get("data_mode", "LSB-D")
+            switched = controller.set_fsk_mode(mode) if settings.get("tx_method")=="fsk" else controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)
             if not switched:
                 controller.disconnect()
                 controller.status.message = tr('ui.44de90efe2737145')
         from .radio_support import USB_MOD_INPUT
-        if controller.status.connected and settings.get('auto_usb_mod_input',False) is True and controller.model in USB_MOD_INPUT:
+        if controller.status.connected and settings.get('tx_method')!='fsk' and settings.get('auto_usb_mod_input',False) is True and controller.model in USB_MOD_INPUT:
             if not controller.set_usb_mod_input():
                 controller.disconnect()
                 controller.status.message=tr('v116.usb_mod_failed')

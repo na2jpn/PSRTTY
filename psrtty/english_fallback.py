@@ -1082,7 +1082,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'controls.</p><h3>Manual with external PTT</h3><p>No CAT/CI-V. Set frequency and mode on the radio. '
                  'Enable External connection and select Radio PTT control. Frequency and meters are '
                  'unavailable.</p><h3>External connection test</h3><p>Hold to check that the radio enters TX. No audio '
-                 'is sent. Release to turn OFF; automatic OFF after 3 seconds.</p>',
+                 'is sent. Release to turn OFF; automatic OFF after 3 seconds.</p><h3>FSK keying mode</h3><p>Transmit '
+                 'settings differ in FSK keying mode. Please read the FSK keying output tab.</p><p>IC-7300: share '
+                 'CI-V, DTR keying; set USB Keying (RTTY)=DTR. With CI-V PTT, set USB SEND=OFF; with RTS PTT, set USB '
+                 'SEND=RTS. Set USB Keying (CW)=OFF. Configure these on the radio.</p><p>FT-891: CAT uses Enhanced '
+                 'COM; keying must use a separate Standard COM. Match 10-05 RTTY SHIFT PORT to DTR/RTS. Feed receive '
+                 'audio from SCU-17 or another interface to Audio IN.</p>',
  'guide.1.title': 'Control',
  'guide.1.body': '<h2>Operating the radio</h2><p>Open <b>Control</b> beside the frequency. Only one window is opened; '
                  'pressing again brings it back near the main window.</p>\n'
@@ -1486,7 +1491,24 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-15  Ver1.17\n'
+ 'history.body': '2026-10-15  Ver1.18\n'
+                 '・Added per-Profile FSK keying transmission. AFSK remains the default and existing AFSK settings are '
+                 'preserved.\n'
+                 '・Configure the FSK COM port, DTR/RTS, polarity and RTTY mode. Connection and transmission tests are '
+                 'available; reception continues through Audio IN.\n'
+                 '・FSK supports 32 ICOM entries, three Kenwood models and 10 Yaesu entries, with model-specific '
+                 'connections, radio settings and manufacturer references.\n'
+                 '・Connection guidance is black for a USB cable connection, blue when external equipment is required '
+                 'and red for radios without native FSK. USB cable wording distinguishes it from SSB USB mode.\n'
+                 '・Added an FSK tab to the initial setup guide. Connection/test controls appear above the '
+                 'instructions. The audio notice appears when two or more Profiles use AFSK.\n'
+                 '・Added MACRO button colors under View. Choose the standard colors or three named presets for F1–F9 '
+                 'text and backgrounds.\n'
+                 '・Colors support RGB entry and a color picker. Saved settings persist after restart; discarding '
+                 'unsaved changes requires confirmation.\n'
+                 '・Updated settings, confirmation dialogs, setup guides and history in eight languages.\n'
+                 '\n'
+                 '2026-10-15  Ver1.17\n'
                  'Added Windows app volume and mute controls to Audio OUT.\n'
                  'Added Windows input device volume and mute controls to Audio IN.\n'
                  'Volume can be checked without transmitting; unavailable values show a reason and differ from zero.\n'
@@ -1535,7 +1557,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '・Auto STOP releases PTT after all pending text finishes and two seconds pass without new input. New '
                  'input resets the wait; the 0.5-second correction delay and in-flight characters prevent stopping.\n'
                  '・Increased Direct TX input text by one point and updated guidance in all eight languages.\n'
-                 '・Added a separator above Update in Help and a website button beside Thanks in About.\n'
+                 '・Added a separator above Update in Help and an official website button in About.\n'
                  '\n'
                  '2026-10-09  Ver1.12\n'
                  '・Added Indonesian, Thai and Spanish, expanding display languages to eight. UI, guides, descriptions, '
@@ -2204,10 +2226,11 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                      'server registration only; also check the zLog log. ADIF export remains available. TLS/login and '
                      'reverse edit/delete synchronization are not supported.',
  'v115.audio_notice_title': 'Check audio devices for each radio',
- 'v115.audio_notice': 'Select the matching Audio IN and OUT for each profile. CAT and audio are separate settings. A '
-                      'connected radio may have no receive audio or TX modulation if the audio device is wrong.\n'
+ 'v115.audio_notice': 'Select the radio audio devices in Audio IN/OUT for each AFSK Profile. CAT and audio devices are '
+                      'separate settings. A successful CAT connection does not ensure correct receive or transmit '
+                      'audio.\n'
                       '\n'
-                      'Note: This notice appears when multiple Profiles are configured. It is not an error.',
+                      'This guidance appears when two or more Profiles use AFSK. It is not an error.',
  'v115.legacy_auto': 'Auto (legacy)',
  'v115.connect': 'Connect',
  'v115.connect_first': 'Connect the radio before testing transmission.',
@@ -2323,4 +2346,181 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v117fix2.service': 'Check the Windows audio service.',
  'v117fix2.mixed': 'PSRTTY audio sessions have different settings; controls are disabled.',
  'v117fix2.read': 'Cannot read Windows volume.',
- 'v117fix2.write': 'Cannot change Windows volume.'}
+ 'v117fix2.write': 'Cannot change Windows volume.',
+ 'colors.title': 'MACRO button colors',
+ 'colors.name': 'Preset name',
+ 'colors.text': 'Text color',
+ 'colors.background': 'Button color',
+ 'colors.standard': 'Standard',
+ 'colors.preset': 'Preset {number}',
+ 'colors.cancel': 'Cancel',
+ 'colors.save': 'Save',
+ 'colors.note': '#RRGGBB values. Click a sample to choose a color. Standard is read-only.',
+ 'colors.discard': 'Changes have not been saved. Discard them?',
+ 'colors.invalid': 'Enter colors as #RRGGBB (six hexadecimal digits).',
+ 'fsk.title': 'FSK keying mode',
+ 'fsk.output': 'FSK keying output',
+ 'fsk.advanced': 'Advanced (FSK mode)',
+ 'fsk.to_fsk': 'Switch to FSK keying mode',
+ 'fsk.to_afsk': 'Switch to normal mode (AFSK)',
+ 'fsk.port': 'Serial connection',
+ 'fsk.port_select': 'Select a port',
+ 'fsk.shared': 'Share radio CI-V connection',
+ 'fsk.line': 'Keying line',
+ 'fsk.invert': 'Invert keying polarity',
+ 'fsk.busy': 'Cannot switch during transmission, connection, or testing.',
+ 'fsk.support': 'Select the radio model you use. No switch is needed for normal AFSK operation. Check the manufacturer '
+                'manual for FSK inputs and connections.',
+ 'fsk.invalid': 'Check the FSK settings.',
+ 'fsk.port_note': 'Select the keying COM port explicitly.',
+ 'fsk.conflict': 'FSK conflicts with the PTT/external port or line.',
+ 'fsk.connected': 'Connect the radio before FSK transmission.',
+ 'fsk.timing': 'Stopped after a keying timing overrun. Check PC load.',
+ 'fsk.mode_failed': 'Transmission blocked: RTTY mode could not be confirmed.',
+ 'fsk.confirm': 'FSK replaces the normal Audio OUT tones (AFSK) with control signals on the serial connection selected '
+                'under FSK keying output.\n'
+                '\n'
+                'A supported radio and matching radio keying settings are required. Reception still uses Audio IN.\n'
+                'Use the radio RTTY mode, rather than LSB/LSB-D. Mode names vary by radio.\n'
+                '\n'
+                'Switch the selected Profile to FSK keying mode?',
+ 'fsk.confirm_afsk': 'Return this Profile to AFSK, using its retained Audio OUT and AFSK settings?',
+ 'fsk.note': 'Serial keying for TX; Audio IN for RX. Neither primary nor secondary Audio OUT is used. Check radio RTTY '
+             'mode, 170 Hz shift and Mark frequency. Keying polarity is independent of RX inversion.',
+ 'fsk.ic7300': 'IC-7300: share CI-V, DTR keying; set USB Keying (RTTY)=DTR. With CI-V PTT, set USB SEND=OFF; with RTS '
+               'PTT, set USB SEND=RTS. Set USB Keying (CW)=OFF. Configure these on the radio.',
+ 'fsk.ft891': 'FT-891: CAT uses Enhanced COM; keying must use a separate Standard COM. Match 10-05 RTTY SHIFT PORT to '
+              'DTR/RTS. Feed receive audio from SCU-17 or another interface to Audio IN.',
+ 'fsk.test': 'FSK test + PTT',
+ 'fsk.test_note': 'Sending RY via FSK. STOP or the 10-second limit ends the test.',
+ 'fsk.method': 'Transmit method',
+ 'fsk.yes': 'Yes, use FSK keying',
+ 'fsk.no': 'No, keep standard mode',
+ 'fsk.afsk_yes': 'Yes, return to AFSK',
+ 'fsk.afsk_no': 'No, keep FSK',
+ 'fskhelp.settings': 'Radio settings',
+ 'fskhelp.item': 'Radio item / connection',
+ 'fskhelp.value': 'Setting / matching',
+ 'fskhelp.rtty_key': 'USB Keying (RTTY)',
+ 'fskhelp.cw_key': 'USB Keying (CW)',
+ 'fskhelp.mode': 'Operating mode',
+ 'fskhelp.shift': 'RTTY shift',
+ 'fskhelp.mark': 'RTTY Mark frequency',
+ 'fskhelp.check_manual': 'Check supported terminals/settings in the radio manual',
+ 'fskhelp.initial': '(initial example)',
+ 'fskhelp.enhanced': 'FT-891 Enhanced COM',
+ 'fskhelp.standard': 'FT-891 Standard COM, separate from CAT',
+ 'fskhelp.ptt': 'PTT (TX/RX switching)',
+ 'fskhelp.cat_ptt': 'Set PSRTTY PTT to CAT',
+ 'fskhelp.external_ptt': 'Match the selected PTT method; do not overlap the FSK line',
+ 'fskhelp.rx_audio': 'Receive audio from SCU-17 or another interface to Audio IN',
+ 'fskhelp.ic_note': 'IC-7300 example. Match DTR/RTS to the keying line above. For CI-V PTT use USB SEND=OFF; for '
+                    'RTS/DTR PTT select that line, separate from FSK. Configure the radio manually.',
+ 'fskhelp.ft_note': 'Use Enhanced/Standard COM from the FT-891 USB cable connection, not the SCU-17 COM ports. Match '
+                    '10-05 to PSRTTY DTR/RTS. Frequencies/shift above are standard examples. RX audio needs a separate '
+                    'connection; the radio has no USB audio. Configure radio settings manually.',
+ 'fskhelp.ab_title': 'For radios with A/B ports',
+ 'fskhelp.civ_side': 'Shared CI-V port',
+ 'fskhelp.ab_note': 'A/B identifies a port; DTR/RTS identifies its line. When sharing CI-V, select the same A/B side '
+                    'for USB Keying (RTTY). CI-V on B depends on the model/port-function setting. The original IC-7300 '
+                    'has no A/B choice: select DTR/RTS only.',
+ 'fskhelp.polarity': 'Keying polarity mapping',
+ 'fskhelp.inversion': 'PSRTTY inversion',
+ 'fskhelp.normal': 'Not inverted',
+ 'fskhelp.reversed': 'Inverted',
+ 'fskhelp.polarity_note': 'This table maps PSRTTY control signals. It is independent of A/B selection and RX decoding '
+                          'inversion. Start without inversion, then match the radio/interface polarity.',
+ 'fskhelp.input': 'FSK input / keying',
+ 'fskhelp.no_overlap': 'Do not assign the same line to PTT and FSK',
+ 'fskhelp.generic_mode': 'Radio-supported RTTY/FSK mode',
+ 'fskhelp.rx_generic': 'Use the usual receive audio input',
+ 'fskhelp.generic': 'Model-specific menu names/values are not confirmed here. Check FSK input, keying and PTT in the '
+                    'radio manual. Required external interfaces vary by model.',
+ 'guide.fsk.title': 'FSK keying mode',
+ 'fsk.notice': 'Transmit settings differ in FSK keying mode. Please read the FSK keying output tab.',
+ 'guide.fsk.body': '<h2>FSK keying mode</h2><h3>AFSK and FSK</h3><p>Standard AFSK sends two audio tones through Audio '
+                   'OUT. FSK switches Mark and Space using DTR/RTS on the selected serial port. FSK transmission does '
+                   'not use Audio OUT, secondary audio output or their gain controls.</p><h3>Connection '
+                   'roles</h3><p>CI-V/CAT controls frequency and mode; Audio IN supplies received audio for decoding; '
+                   'FSK output keys characters; PTT switches transmit and receive. Radio selection, control connection '
+                   'and Audio IN settings are still needed. USB audio availability depends on the '
+                   'radio.</p><h3>Per-profile switching</h3><p>Use Switch to FSK keying mode on the Radio tab. Only '
+                   'the selected Profile changes. Returning to AFSK reuses its saved settings. Check supported radios '
+                   'and connections in the settings window.</p><h3>Radio settings</h3><p>Use a radio RTTY/FSK mode. '
+                   'Settings differ from AFSK modes such as LSB-D. Check keying input, shift, Mark frequency and '
+                   'polarity. Although 170 Hz shift and 2125 Hz Mark are common, check the manual and your operating '
+                   'requirements.</p><h3>COM ports and DTR/RTS</h3><p>The COM port selects the connection; DTR/RTS '
+                   'selects a signal line. Share CAT only when both radio and software support it. Do not assign the '
+                   'same line to PTT and FSK. A/B and Enhanced/Standard roles vary by radio; do not identify them by '
+                   'COM number order.</p><h3>Polarity and reception</h3><p>FSK output inversion exchanges the signal '
+                   'polarity for Mark and Space. It is separate from receive inversion. Match the radio/interface. '
+                   'Received audio still enters through Audio IN.</p><h3>Testing and precautions</h3><p>Connect a '
+                   'suitable load, use low power and check the frequency is clear before connecting and using FSK test '
+                   '+ PTT. Check with a short RY sequence, then verify STOP returns to receive. Stop at the radio if '
+                   'transmission persists. Follow the manual for wiring and electrical levels; do not connect generic '
+                   'serial signals directly to an FSK input.</p>',
+ 'fsk3.afsk_only': 'The manufacturer manual specifies AFSK operation for this model. Native direct FSK keying is not '
+                   'supported; use normal AFSK mode.',
+ 'fsk3.external': 'The manufacturer manual uses the ACC RTTY keying input for FSK. A separate serial port and a '
+                  'suitable FSK interface are required. A USB socket does not mean FSK is available with only a USB '
+                  'cable. Never connect RS-232 signals directly to ACC.',
+ 'fsk3.usb': 'The manufacturer manual requires USB Keying (RTTY) to match the software signal line. CAT sharing '
+             'requires the radio built-in USB virtual COM port; a REMOTE CI-V cable does not supply FSK. Keep PTT and '
+             'FSK on different lines.',
+ 'fsk3.unverified': 'Select the radio model you use. No switch is needed for normal AFSK operation. Check the '
+                    'manufacturer manual for FSK inputs and connections.',
+ 'fsk3.separate': 'Use a separate FSK COM port from CAT for this model. Check the connection and avoid PTT signal '
+                  'conflicts.',
+ 'fsk3.manual': 'Manufacturer reference: manual / USB port settings',
+ 'fsk3.usb_group': 'Radios usable with a USB cable connection',
+ 'fsk3.acc_group': 'External FSK interface required (ACC input)',
+ 'fsk3.afsk_group': 'No native direct FSK: use AFSK',
+ 'fsk3.scope': 'Classification follows standard connections and operation in manufacturer manuals. Modifications and '
+               'external audio converters are excluded. FSK support does not imply operation using only a USB cable. '
+               'Radio-side settings are not changed automatically.',
+ 'fsk3.usb12': 'IC-7851 uses USB1/USB2, not A/B. Match USB Keying (RTTY) to USB1 DTR/RTS or USB2 DTR/RTS for the '
+               'actual FSK COM port. Set USB SEND to OFF for CI-V PTT, or to a separate signal line for line-based '
+               'PTT.',
+ 'fsk3.legacy': 'This older model uses RTTY only. Check radio settings for shift, Mark frequency and polarity. Receive '
+                'inversion and FSK output inversion are separate.',
+ 'fsk3.shared_ptt': 'With external control set to radio PTT, a dedicated FSK COM can share different lines, for '
+                    'example FSK=DTR and PTT=RTS. Keep this port separate from CAT and never assign both functions to '
+                    'one line.',
+ 'fsk4.external': 'According to the manufacturer manual, FSK enters ACC2 pin 2 (RTTY). A USB cable alone cannot key '
+                  'FSK on this model. Use DTR/RTS on a dedicated COM through a compatible FSK interface. Never wire '
+                  'RS-232 levels directly to the radio input.',
+ 'fsk4.usb': 'According to the manufacturer manual, TS-890S supports RTS/DTR RTTY keying over the virtual COM of a USB '
+             'cable connection. Use separate CAT and FSK COM ports in PSRTTY and configure USB Keying on the radio. '
+             'External FSK via ACC2 pin 2 is also possible, but cannot be used together with USB RTTY Keying.',
+ 'fsk4.modes': 'PSRTTY RTTY / RTTY-R corresponds to FSK / FSK-R on the radio, not SSB LSB-DATA / USB-DATA.',
+ 'fsk4.standard': 'Virtual Standard COM (command control)',
+ 'fsk4.enhanced': 'Virtual Enhanced COM (select a different COM from CAT)',
+ 'fsk4.ports': 'The table uses Standard for CAT and Enhanced for FSK. Do not infer roles from COM numbers. In Device '
+               'Manager, Location paths ending (1) identify Standard and (2) Enhanced. Assign RTTY Keying to only one '
+               'signal.',
+ 'fsk4.polarity': 'On ACC2, polarity Off means grounding pin 2 sends Mark; On means Space. Interface inversion can '
+                  'change the relation to PSRTTY DTR/RTS ON/OFF. Check radio polarity and PSRTTY inversion using an RY '
+                  'test.',
+ 'fsk5.usb': 'Following the manufacturer manual, connect the radio with a USB cable and use Enhanced COM for CAT and '
+             'Standard COM for FSK keying. Select separate CAT and FSK COM ports. Match radio input selection, PTT, '
+             'shift and polarity to the table.',
+ 'fsk5.external': 'Use a compatible external FSK interface to pin 4 (FSK IN) and pin 2 (GND) of the rear 6-pin '
+                  'connector. Select a COM separate from CAT. Never connect RS-232 levels directly to the radio.',
+ 'fsk5.enhanced': 'Enhanced COM via USB cable (CAT)',
+ 'fsk5.standard': 'Standard COM via USB cable (separate from CAT)',
+ 'fsk5.pair': 'Assign different signals to FSK and PTT. PC KEYING / RPTT SELECT in the table is the PTT side; the '
+              'DTR/RTS selected in PSRTTY is the FSK side. For FSK on DTR, use RTS for the PTT side; for FSK on RTS, '
+              'use DTR. Even with CAT PTT, do not assign the FSK signal to PTT. Do not infer Enhanced/Standard from '
+              'COM numbers.',
+ 'fsk5.modes': 'PSRTTY RTTY / RTTY-R corresponds to radio RTTY-L / RTTY-U (RTTY-LSB / RTTY-USB), not the AFSK DATA '
+               'modes.',
+ 'fsk5.scu17': 'Use SCU-17 Standard COM or a compatible FSK interface COM. SCU-17 defaults to FSK=DTR, PTT=RTS; '
+               'internal switch S1001 can swap them. Match the actual switch setting. An ordinary Digirig audio cable '
+               'does not replace an FSK output. Connect receive audio to Audio IN.',
+ 'fsk5.polarity': 'The table shows PSRTTY control-signal logic. Match radio POLARITY TX / TX polarity and interface '
+                  'inversion, then verify Mark/Space with the RY test. RX decoding inversion is a separate setting.',
+ 'fsk5.ft450_mode': 'Set D TYPE=RTTY. The radio uses DATA + LSB (DATA + USB for reverse); select RTTY / RTTY-R in '
+                    'PSRTTY.',
+ 'fsk6.usb': 'Connect the radio to the PC with one USB cable to use FSK. See FSK keying output for the radio settings.',
+ 'fsk6.audio': 'FT-891 controls CAT and FSK through a USB cable connection. Feed receive audio to Audio IN through an '
+               'audio interface such as SCU-17 or a suitable audio connection.'}

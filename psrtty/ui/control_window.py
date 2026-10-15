@@ -181,10 +181,14 @@ class ControlWindow(QDialog):
             self.connection_notice.setText(tr('v115fix2.control_loading'))
         else:self.connection_notice.clear()
         self.connection_notice.setVisible(bool(self.connection_notice.text()))
-        if model!=self.mode_profile:
-            self.mode_profile=model; self.mode_observed=self.mode_pending=None
+        mode_profile=(model,self.main.store.data['radio'].get('tx_method','afsk'))
+        if mode_profile!=self.mode_profile:
+            self.mode_profile=mode_profile; self.mode_observed=self.mode_pending=None
             modes=(HamlibController(model).operating_modes() if model in HAMLIB_MODELS else
                    ('LSB-D','USB-D','LSB','USB') if model.startswith('IC-') or model=='その他ICOM' else ())
+            if self.main.store.data['radio'].get('tx_method')=='fsk':
+                from ..fsk_models import modes_for
+                modes=modes_for(model)
             for button in self.mode_buttons.values():
                 self.mode_grid.removeWidget(button);button.deleteLater()
             self.mode_buttons={}

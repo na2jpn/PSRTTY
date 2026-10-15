@@ -2,7 +2,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QDialogButtonBox, QScrollArea, QWidget, QApplication
 from ..i18n import tr
 
-CALLSIGNS = ('JG1QZW','JG1RFE','JH1DUK','JH1PGF','JJ1JPE','JN1ATL','JG2AJK','JA3LVJ','JF3RRP','JP3GMO','JK4JMO','JQ7FIU','7K2COL','7M2FTR')
+CALLSIGNS = ('JG1QZW','JG1RFE','JH1DUK','JH1PGF','JJ1JPE','JN1ATL','JP1PPB','JG2AJK','JA3LVJ','JF3RRP','JM3LGF','JP3GMO','JK4JMO','JQ7FIU','7K2COL','7M2FTR')
 
 class SpecialThanksDialog(QDialog):
     def __init__(self, parent=None):
