@@ -110,6 +110,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
         if not math.isfinite(baud) or not 30<=baud<=300:raise ValueError(tr('fsk.invalid'))
         if not controller.status.connected:raise ValueError(tr('fsk.connected'))
     except Exception as exc:return False,str(exc)
+    engine._fsk_mode_confirmed=None
     engine._tx_active=True;engine._tx_cancel.clear();engine.secondary_notice=''
     def worker():
         success=False;message=tr('ui.63e1879b6cfd6a0e');timer=False
@@ -120,6 +121,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
             if engine._tx_cancel.is_set():return
             if not controller.set_fsk_mode(options.get('mode','RTTY')):
                 raise RuntimeError(tr('fsk.mode_failed'))
+            engine._fsk_mode_confirmed=options.get('mode','RTTY')
             if not ptt_on or ptt_on() is not True:raise RuntimeError(tr('ui.5eef7dde3c3c7e95'))
             if engine._tx_cancel.wait(.12):return
             if sys.platform=='win32':
@@ -164,6 +166,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
             if timer:
                 import ctypes
                 ctypes.windll.winmm.timeEndPeriod(1)
+            engine._fsk_mode_confirmed=None
             engine._tx_active=False
             finished(success,message)
     engine._tx_thread=threading.Thread(target=worker,daemon=True);engine._tx_thread.start()

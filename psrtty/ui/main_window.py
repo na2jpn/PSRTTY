@@ -1467,6 +1467,7 @@ class MainWindow(QMainWindow):
         self._paint_rx_level()
 
     def _paint_rx_level(self):
+        self.level.setTextVisible(False)
         self.level_heading.setText("RX");self.level.setRange(0,100)
         self.rx_level_notice.setToolTip(self.level.toolTip())
         from ..rx_level import LABELS, COLORS, TEXT_COLORS
@@ -1485,6 +1486,16 @@ class MainWindow(QMainWindow):
             self.rx_display.reset();self.level.setValue(0);self._paint_rx_level()
 
     def _paint_main_alc(self):
+        if self.store.data['radio'].get('tx_method')=='fsk':
+            confirmed=self._fsk_mode_is_confirmed()
+            color='#208341' if confirmed else '#a59d92'
+            self.level_heading.setText('TX');self.level.setRange(0,120);self.level.setValue(0)
+            self.level.setTextVisible(True);self.level.setFormat('FSK' if confirmed else '--')
+            self.level.setStyleSheet(f'QProgressBar {{ color: {color}; background: #fffdf9; border: 1px solid {color}; text-align: center; }}')
+            self.rx_level_notice.setText('')
+            self.rx_level_notice.setToolTip(tr('v120.fsk_hint') if confirmed else '')
+            return
+        self.level.setTextVisible(False)
         from ..alc_display import classify,calibration_onset
         au=self.store.data['audio'];value=self.main_alc
         good,color=classify(value,float(au['tx_gain'])*100,calibration_onset(au,self.store.data['radio']))
@@ -1499,16 +1510,24 @@ class MainWindow(QMainWindow):
 
     def _poll_main_alc(self):
         now=time.monotonic()
-        if self.audio._tx_active and self.store.data['radio'].get('tx_method')=='fsk':return
+        fsk=self.store.data['radio'].get('tx_method')=='fsk'
+        transmitting=self.active_tx_id is not None or self.audio._tx_active
         if self.alc_busy or now-self.alc_last_poll < .5:return
-        if not self._connected() or not hasattr(self.radio,'read_alc'):
+        if not self._connected() or (not fsk and not hasattr(self.radio,'read_alc')):
             self.main_alc=None;self.main_meters={};return
         if self.polling or (self.control_window and self.control_window.busy):return
         ctl=self.radio;generation=self.connection_generation;token=self.active_tx_id
         self.alc_busy=True;self.alc_last_poll=now
         def read():
             result = {}
+            if fsk:
+                if transmitting:
+                    result['_fsk_mode']=self.audio._fsk_mode_confirmed
+                else:
+                    try:result['_fsk_mode']=ctl.read_operating_mode()
+                    except Exception:result['_fsk_mode']=None
             for key, method in [('alc','read_alc'), ('swr','read_swr'), ('pwr','read_power')]:
+                if fsk and key=='alc':continue
                 if key != 'alc' and not self.store.data['advanced'].get('show_'+key, True): continue
                 try:
                     reader = getattr(ctl, method, None)
@@ -1517,13 +1536,16 @@ class MainWindow(QMainWindow):
             return result
         def done(value,error):
             self.alc_busy=False
-            if generation != self.connection_generation or token != self.active_tx_id or ctl is not self.radio:return
+            if generation != self.connection_generation or token != self.active_tx_id or ctl is not self.radio or fsk!=(self.store.data['radio'].get('tx_method')=='fsk'):return
             self._ensure_meter_connection()
             now=time.monotonic()
             from ..radio_meters import valid_reading
+            if fsk:
+                self._fsk_mode_observed=((value or {}).get('_fsk_mode'),now) if not error else (None,now)
             current_power=valid_reading((value or {}).get('pwr')) if not error else None
             self._pwr_warning_read=(current_power,now,token) if current_power is not None else None
             for key,reading in ({} if error else value or {}).items():
+                if key not in ('alc','swr','pwr'):continue
                 reading=valid_reading(reading,minimum=1 if key=='swr' else 0)
                 if reading is not None:self._meter_samples[key]=(reading,now)
             self.main_meters={key:reading for key,(reading,stamp) in self._meter_samples.items() if now-stamp<2}
@@ -1540,11 +1562,20 @@ class MainWindow(QMainWindow):
                 self.main_meters={};self.main_alc=None;self.meter_updated=0.
             self._meter_connection=identity
             self._meter_capabilities=set();self._meter_samples={}
+            self._fsk_mode_observed=(None,0.)
             self._meter_last_tx={};self._meter_hold_values={};self._meter_hold_until=0.;self._pwr_warning_read=None
         # The initial disconnected state also needs these fields.
         if not hasattr(self,'_meter_capabilities'):
             self._meter_capabilities=set();self._meter_samples={}
             self._meter_last_tx={};self._meter_hold_values={};self._meter_hold_until=0.;self._pwr_warning_read=None
+
+    def _fsk_mode_is_confirmed(self):
+        self._ensure_meter_connection()
+        if not self._connected() or self.store.data['radio'].get('tx_method')!='fsk':return False
+        if self.active_tx_id is not None or self.audio._tx_active:
+            return self.audio._fsk_mode_confirmed in ('RTTY','RTTY-R')
+        mode,stamp=getattr(self,'_fsk_mode_observed',(None,0.))
+        return mode in ('RTTY','RTTY-R') and time.monotonic()-stamp<2
 
     def _hold_tx_meters(self):
         self._ensure_meter_connection()
@@ -1564,8 +1595,10 @@ class MainWindow(QMainWindow):
         if transmitting:
             self._meter_last_tx.update({key:(value,self._meter_samples.get(key,(value,self.meter_updated))[1]) for key,value in values.items() if key!='alc' and value is not None})
         alc=values['alc']
-        self.alc_gauge.setVisible(connected and 'alc' in self._meter_capabilities)
-        if alc is not None:
+        fsk=self.store.data['radio'].get('tx_method')=='fsk'
+        self.alc_gauge.setVisible(connected and (fsk or 'alc' in self._meter_capabilities))
+        if fsk:self.alc_gauge.set_fsk(self._fsk_mode_is_confirmed())
+        elif alc is not None:
             from ..alc_display import calibration_onset
             au=self.store.data['audio'];gain=float(au['tx_gain'])*100 if transmitting else 0.
             self.alc_gauge.set_reading(alc,gain,calibration_onset(au,self.store.data['radio']),transmitting)
@@ -1584,7 +1617,7 @@ class MainWindow(QMainWindow):
         if self.radio_meter_text.text()!=text:self.radio_meter_text.setText(text)
         self.radio_meter_text.set_swr_value(display_swr)
         reading=getattr(self,'_pwr_warning_read',None)
-        warning=bool(connected and transmitting and now-getattr(self,'_meter_tx_started',now)>=1 and reading is not None and reading[0]==0 and now-reading[1]<.75 and reading[2]==self.active_tx_id)
+        warning=bool(not fsk and connected and transmitting and now-getattr(self,'_meter_tx_started',now)>=1 and reading is not None and reading[0]==0 and now-reading[1]<.75 and reading[2]==self.active_tx_id)
         self.audio_check_notice.setVisible(warning)
         self.radio_meter_text.setMinimumWidth(max(self.radio_meter_text.minimumWidth(),self.radio_meter_text.fontMetrics().horizontalAdvance('PWR 999.9')))
         self.radio_meter_text.setVisible(bool(rows))

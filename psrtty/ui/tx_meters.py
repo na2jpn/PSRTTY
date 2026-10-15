@@ -9,9 +9,12 @@ class ALCGauge(QWidget):
         super().__init__(parent)
         self.setFixedSize(125,26)
         self.position=0.; self.color='#70cde5'
+        self.fsk=None
         self.setToolTip(tr('v115.alc_hint'))
     def sizeHint(self): return QSize(125,26)
     def set_reading(self, value, gain, onset, transmitting=False):
+        self.fsk=None
+        self.setToolTip(tr('v115.alc_hint'))
         threshold=.35
         if value < 2:
             self.color='#70cde5'
@@ -24,9 +27,24 @@ class ALCGauge(QWidget):
             self.color='#e88919'
         self.update()
     def set_unavailable(self):
+        self.fsk=None
+        self.setToolTip(tr('v115.alc_hint'))
         self.position=0.;self.color="#a59d92";self.update()
+    def set_fsk(self, confirmed):
+        self.fsk=bool(confirmed);self.position=0.
+        self.color='#208341' if confirmed else '#a59d92'
+        self.setToolTip(tr('v120.fsk_hint') if confirmed else '')
+        self.update()
     def paintEvent(self,event):
         painter=QPainter(self); painter.setRenderHint(QPainter.Antialiasing)
+        if self.fsk is not None:
+            from PySide6.QtCore import Qt
+            rect=QRectF(29,5,94,16)
+            painter.setPen(QPen(QColor('#c8a87f'),1));painter.setBrush(QColor('#fffdf9'))
+            painter.drawRoundedRect(rect,3,3)
+            painter.setPen(QColor(self.color))
+            painter.drawText(rect,Qt.AlignCenter,'FSK' if self.fsk else '--')
+            return
         painter.setPen(QColor('#604b37')); painter.drawText(0,18,'ALC')
         rect=QRectF(29,5,94,16)
         painter.setPen(QPen(QColor('#c8a87f'),1)); painter.setBrush(QColor('#fffdf9')); painter.drawRoundedRect(rect,3,3)

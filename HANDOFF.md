@@ -1,3 +1,19 @@
+# PSRTTY 1.20 正本引継ぎ — 2026-10-16
+
+正本：PSRTTY_1.20_CANONICAL_SOURCE.zip。1.19正本の全機能にFSKメーター修正を統合。
+バージョン：psrtty/__init__.py。仕様 VERSION_120.md、検証 docs/VALIDATION_120.md。
+
+FSK時もSWR/PWRをBackgroundJobで取得する。ALCの取得を省き、音量調整の良否判定やAudio設定チェック警告は表示しない。
+AudioEngine._fsk_mode_confirmedは送信開始時のモード読返し成功後に設定、送信終了・エラーで解除。
+受信中はモードを定期取得し、有効な確認から2秒以内だけFSK表示。切断・世代変更時は確認情報を破棄。
+ALCGaugeのFSK表示は枠内の緑文字。通常AFSK時は従来のゲージ表示。
+SWR/PWRの表示スイッチと送信終了後2秒保持は共通仕様。
+
+開発方針：1.20を一区切りにし、不具合がなければIC-7710発売まで更新を休止する可能性あり。
+今後もThanksへの追加を更新履歴・リリースノート・日付付き記録に書かない。ウェブ用ソースは別ZIP。
+
+以下は継承元の構成記録。
+
 # PSRTTY 1.19 正本引継ぎ — 2026-10-15
 
 正本：PSRTTY_1.19_CANONICAL_SOURCE.zip。1.18正本にフィルター保持修正を統合。

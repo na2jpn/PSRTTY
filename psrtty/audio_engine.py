@@ -44,6 +44,7 @@ class AudioEngine:
         self.sub_worker = None  # Optional worker. Audio callback never waits for it.
         self._tx_lock = threading.Lock()
         self._tx_active = False
+        self._fsk_mode_confirmed = None
         self._tx_cancel = threading.Event()
         self._tx_thread = None
         self.secondary_settings = {}

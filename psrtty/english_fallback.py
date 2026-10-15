@@ -1491,7 +1491,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-15  Ver1.19\n'
+ 'history.body': '2026-10-16  Ver1.20\n'
+                 '• Fixed SWR/PWR readings during FSK transmission on supported radios. Display switches and the '
+                 '2-second hold after TX remain available.\n'
+                 '• In FSK configuration, a verified RTTY/RTTY-R mode is shown as green “FSK” instead of an ALC '
+                 'gauge.\n'
+                 '• Audio-level ALC polling and the audio-settings warning are omitted in FSK mode.\n'
+                 '\n'
+                 '2026-10-15  Ver1.19\n'
                  '• FSK transmission now keeps the selected filter by leaving an already selected RTTY/RTTY-R mode '
                  'unchanged on ICOM, Yaesu and Kenwood radios.\n'
                  '• Removed forced FIL1 selection on ICOM. When a mode change is needed, transmission starts only '
@@ -2529,4 +2536,6 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                     'PSRTTY.',
  'fsk6.usb': 'Connect the radio to the PC with one USB cable to use FSK. See FSK keying output for the radio settings.',
  'fsk6.audio': 'FT-891 controls CAT and FSK through a USB cable connection. Feed receive audio to Audio IN through an '
-               'audio interface such as SCU-17 or a suitable audio connection.'}
+               'audio interface such as SCU-17 or a suitable audio connection.',
+ 'v120.fsk_hint': 'FSK keying: no audio-level adjustment using ALC is needed. Set power on the radio and check PWR and '
+                  'SWR.'}
