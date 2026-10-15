@@ -392,15 +392,24 @@ class CIVController:
 
     def set_fsk_mode(self, mode='RTTY'):
         from .fsk_models import modes_for
-        from .radio_support import LEGACY_MODE
         if mode not in modes_for(self.model):return False
         with self._lock:
             if not self._control_ready() or self.read_transmitting() is not False:return False
             try:
+                # A mode write with FIL1 overrides the operator's FIL2/FIL3.
+                # Read first: an already selected RTTY mode needs no write at all.
+                target = 0x04 if mode == 'RTTY' else 0x08
                 self.ser.reset_input_buffer()
-                payload=(0x06, 0x04 if mode=='RTTY' else 0x08)
-                if self.model not in LEGACY_MODE and self.model!="IC-703":payload+=(0x01,)
-                self.ser.write(self._frame(*payload))
+                self.ser.write(self._frame(0x04))
+                current = self._read_response(0x04)
+                if len(current) < 7 or current[4] != 0x04:
+                    return False
+                if current[5] == target:
+                    return True
+                # Omit the optional filter byte when changing mode, allowing the
+                # radio to use its remembered filter for the destination mode.
+                self.ser.reset_input_buffer()
+                self.ser.write(self._frame(0x06, target))
                 raw=self._read_response(timeout=.5)
                 if len(raw)<6 or raw[4]!=0xFB:return False
                 self.ser.reset_input_buffer();self.ser.write(self._frame(0x04))

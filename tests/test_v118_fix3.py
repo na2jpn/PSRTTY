@@ -41,10 +41,10 @@ class CapabilityTests(unittest.TestCase):
                 code=4 if mode=='RTTY' else 8;address=RIG_MODELS[model]
                 ctl=CIVController(address,model=model);ctl.ser=Mock();ctl.status.connected=True
                 reply=bytes([254,254,224,address,4,code,253])
-                with patch.object(ctl,'read_transmitting',return_value=False),patch.object(ctl,'_read_response',side_effect=[bytes([254,254,224,address,251,253]),reply]):
+                with patch.object(ctl,'read_transmitting',return_value=False),patch.object(ctl,'_read_response',side_effect=[bytes([254,254,224,address,4,0,1,253]),bytes([254,254,224,address,251,253]),reply]):
                     self.assertTrue(ctl.set_fsk_mode(mode),(model,mode))
-                payload=(6,code) if model in LEGACY_MODE or model=='IC-703' else (6,code,1)
-                self.assertEqual(ctl.ser.write.call_args_list[0].args[0],ctl._frame(*payload),(model,mode))
+                payload=(6,code)
+                self.assertEqual(ctl.ser.write.call_args_list[1].args[0],ctl._frame(*payload),(model,mode))
         for model in AFSK_ONLY|NO_REVERSE:
             ctl=CIVController(RIG_MODELS[model],model=model);ctl.ser=Mock();ctl.status.connected=True
             self.assertFalse(ctl.set_fsk_mode('RTTY-R'));ctl.ser.write.assert_not_called()

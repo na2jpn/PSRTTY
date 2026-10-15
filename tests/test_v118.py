@@ -124,9 +124,9 @@ class FSKModeTests(unittest.TestCase):
         from psrtty.civ import CIVController
         for mode,value in [('RTTY',4),('RTTY-R',8)]:
             ctl=CIVController(0x94,model='IC-7300');ctl.ser=Mock();ctl.status.connected=True
-            with patch.object(ctl,'read_transmitting',return_value=False),patch.object(ctl,'_read_response',side_effect=[bytes.fromhex('FE FE E0 94 FB FD'),bytes([254,254,224,148,4,value,1,253])]):
+            with patch.object(ctl,'read_transmitting',return_value=False),patch.object(ctl,'_read_response',side_effect=[bytes.fromhex('FE FE E0 94 04 00 01 FD'),bytes.fromhex('FE FE E0 94 FB FD'),bytes([254,254,224,148,4,value,1,253])]):
                 self.assertTrue(ctl.set_fsk_mode(mode))
-            self.assertEqual(ctl.ser.write.call_args_list[0].args[0],ctl._frame(6,value,1))
+            self.assertEqual(ctl.ser.write.call_args_list[1].args[0],ctl._frame(6,value))
     def test_icom_unknown_tx_or_bad_mode_never_keys(self):
         from psrtty.civ import CIVController
         ctl=CIVController(0x94,model='IC-7300');ctl.ser=Mock();ctl.status.connected=True

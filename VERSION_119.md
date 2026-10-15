@@ -1,0 +1,10 @@
+# PSRTTY Ver1.19 — 2026-10-15
+
+- FSK送信開始時、すでに設定済みのRTTY／RTTY-Rモードを再設定せず、選択中のフィルターを維持するよう修正しました。ICOM・Yaesu・Kenwoodに適用しています。
+- ICOM機でFIL2／FIL3がFIL1へ戻る原因となっていた、FIL1の固定指定を廃止しました。
+- モード切替が必要な場合は、切替後のモードを確認してから送信します。
+
+1.18の全機能を含みます。
+
+実装：psrtty/civ.py・psrtty/hamlib_radio.py。回帰テスト：tests/test_v119.py。
+検証：docs/VALIDATION_119.md。

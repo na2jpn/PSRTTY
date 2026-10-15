@@ -1,3 +1,14 @@
+# PSRTTY 1.19 正本引継ぎ — 2026-10-15
+
+正本：PSRTTY_1.19_CANONICAL_SOURCE.zip。1.18正本にフィルター保持修正を統合。
+バージョン：psrtty/__init__.py。仕様 VERSION_119.md、検証 docs/VALIDATION_119.md。
+ICOM set_fsk_mode は送信前にモードを読み、同じモードでは書き換えない。
+切替が必要な場合もCI-V 06コマンドのフィルター指定を省略し、読返しを確認する。
+FIL1の固定指定を戻さないこと。
+Hamlib set_fsk_mode も先に読み、同じモードなら再設定を省く。切替時は既存の帯域幅変更なし指定（-1）を維持し、モードを読返す。
+
+以下は継承元1.18の構成記録。
+
 # PSRTTY 1.18 正本引継ぎ — 2026-10-15
 
 正本フルソース：PSRTTY_1.18_CANONICAL_SOURCE.zip。1.18のFIX1～FIX7を統合済み。差分の追加適用は不要。

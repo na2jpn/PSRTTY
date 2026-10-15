@@ -220,7 +220,13 @@ class HamlibController(CIVController):
             if not self.handle or not self.status.connected or self.cancel.is_set():return False
             if self.read_transmitting() is not False:return False
             value=self.lib.rig_parse_mode(b'RTTY' if mode=='RTTY' else b'RTTYR')
-            if not value or self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
+            if not value:return False
+            # Reapplying RTTY can reset the selected filter on the radio even
+            # with Hamlib's no-change passband. Leave an existing mode alone.
+            current=ctypes.c_uint64();current_width=ctypes.c_long()
+            if self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(current),ctypes.byref(current_width))!=0:return False
+            if current.value==value:return True
+            if self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
             actual=ctypes.c_uint64();width=ctypes.c_long()
             return self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(actual),ctypes.byref(width))==0 and actual.value==value
 
