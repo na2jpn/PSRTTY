@@ -1,4 +1,5 @@
 from .i18n import tr
+from .manual_radio import MANUAL_MODEL, ManualController
 """Factory preserving ICOM CI-V and isolating experimental CAT support."""
 from .civ import CIVController, radio_address, connect_configured
 from .config import RIG_MODELS
@@ -8,13 +9,16 @@ from .hamlib_radio import HAMLIB_MODELS, HamlibController
 
 def validate_radio(values):
     model = values.get('model', '')
+    if model == MANUAL_MODEL:
+        if values.get('ptt') != '外部接続': raise ValueError(tr('v117.manual_note'))
+        return
     if model in HAMLIB_MODELS:
-        if values.get('ptt','CAT')!='CAT':
+        if values.get('ptt','CAT') not in ('CAT', '外部接続'):
             raise ValueError(tr('ui.4974a6628eaba1f2'))
         if str(values.get('com_port','AUTO')).upper()=='AUTO' or str(values.get('cat_baud','AUTO')).upper()=='AUTO':
             raise ValueError(tr('ui.c3e19a59664aae88'))
     elif model in YAESU_MODELS:
-        if values.get('ptt', 'CAT') != 'CAT':
+        if values.get('ptt', 'CAT') not in ('CAT', '外部接続'):
             raise ValueError(tr('ui.e24ce7516cfa999a'))
         if int(values.get('cat_stopbits', 1 if model == 'FTX-1' else 2)) not in (1, 2):
             raise ValueError(tr('ui.8c2f1f21557e9eeb'))
@@ -29,6 +33,7 @@ def validate_radio(values):
 
 def create_controller(values):
     validate_radio(values)
+    if values['model'] == MANUAL_MODEL: return ManualController()
     if values['model'] in HAMLIB_MODELS:
         return HamlibController(values['model'])
     return CIVController(radio_address(values), model=values['model'])

@@ -1,12 +1,11 @@
-# PSRTTY Ver1.16 正本フルソース — 2026-10-13
+# PSRTTY Ver1.17 正本 — 2026-10-15
 
-1.15最終正本を基に、1.16の機能とFIX1～FIX6をすべて反映しています。差分の追加適用は不要です。
+1.17のFIX1・FIX2を統合し、更新履歴を8言語とも機能ごとの箇条書きに整えたフルソースです。過去の差分の追加適用は不要です。
 
-Windowsでは build-windows.ps1 を実行してください。検証・EXEビルド後に release/PSRTTY_1.16.zip を生成します。
-利用者設定・交信ログは同梱しません。更新時は既存のconfig・logdata・varを保持してください。
+Windowsでは build-windows.ps1 を実行してください。テスト・EXEビルド後に release/PSRTTY_1.17.zip を生成します。
+既存のconfig・logdata・varは保持してください。このZIPには利用者設定・交信ログを含めていません。
 
-主な変更は周波数取得0.5秒、接続時の4モード選択、ADIF UDP連携、受信表示切替、FT-891対応、対応ICOM機種のUSB音声入力切替です。
-受信表示の初期値は「まとめて」、接続時モードの初期値はLSB-D、ADIF UDP連携の初期状態はOFFです。
-
-詳細は VERSION_116.md、docs/RELEASE_NOTES_116.md、docs/VALIDATION_116.md を参照してください。
-以前のFIX資料とテスト結果は各段階の記録です。今後の開発はこの正本を基準にしてください。
+Windows音量の確認では送信や音声再生を行いません。未取得の場合は理由を表示します。
+ウェブ用設定ガイドは別ZIPです。アプリZIPへの適用は不要です。
+詳細は VERSION_117.md と docs/VALIDATION_117_CANONICAL.md を参照してください。
+過去版の資料は各版の記録です。

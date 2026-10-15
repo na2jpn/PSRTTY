@@ -1,3 +1,19 @@
+# PSRTTY 1.17 引継ぎ — 2026-10-15
+
+フルソース: PSRTTY_1.17_CANONICAL_SOURCE.zip
+仕様: VERSION_117.md。検証: docs/VALIDATION_117_CANONICAL.md。FIX1・FIX2統合済み。
+バージョンの正本は psrtty/__init__.py。
+
+Windows音量はpsrtty/windows_volume.py、UIはpsrtty/ui/windows_volume.py。選択endpoint IDと自プロセスのsessionだけを対象にし、ProfileにWindows音量を保存・復元しません。
+外部PTTテストは設定画面のExternalPTTインスタンスで制御。各終了経路でOFF。通常送信は従来のtx_keying.pyを共有します。
+手動モデルIDはEXTERNAL-MANUAL。CAT/CI-Vは一切使用せず、周波数不明で以前の無線機の周波数をログへ流用しません。
+全QSO削除はlog_delete.py。ADIFのみ対象。原文ログ・既存バックアップは保持。バックアップ必須・検証後のみ移動、失敗時復元。
+FT-950=1028、FT-450=1027。外部音声、RS-232C CAT（2stop/handshake None）。
+Webガイドは別ZIP（63項目、8言語）。アプリのソースへ混在させません。
+開発ルールdocs/DEVELOPMENT_RULES.mdを維持。サンクスは履歴・リリースノートに記録しません。
+
+以下は1.16から引き継いだ既存仕様です。
+
 # PSRTTY 1.16 正本引継ぎ — 2026-10-13
 
 正本ファイル: PSRTTY_1.16_CANONICAL_SOURCE.zip

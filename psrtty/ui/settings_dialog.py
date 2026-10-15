@@ -16,6 +16,7 @@ from ..audio_engine import AudioEngine
 from ..tx_level import level_to_gain, gain_to_level
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller, validate_radio
+from ..manual_radio import MANUAL_MODEL
 from ..external_ptt import ExternalPTT, validate_external
 from ..yaesu import YAESU_MODELS
 from ..hamlib_radio import HAMLIB_MODELS
@@ -28,6 +29,7 @@ class SettingsDialog(QDialog):
     tx_test_finished = Signal(bool, str)
     def __init__(self, config_store, parent=None):
         super().__init__(parent)
+        self._external_test = None
         self.test_controller = None
         self.test_uses_main = False
         self.test_pending = False
@@ -168,6 +170,7 @@ class SettingsDialog(QDialog):
             scroll.setWidget(page); self.tabs.insertTab(index,scroll,label)
         self.tabs.setCurrentIndex(0)
         self.tabs.currentChanged.connect(self._update_inner_tab_colors)
+        self.tabs.currentChanged.connect(self._stop_external_test)
         self._update_inner_tab_colors()
         for combo in (self.rig, self.com, self.ptt, self.baud, self.stopbits, self.data_mode):
             combo.currentIndexChanged.connect(self._test_controls_changed)
@@ -210,6 +213,7 @@ class SettingsDialog(QDialog):
         return True
 
     def _profile_changed(self, index):
+        self._stop_external_test()
         if index < 0 or index == self.profile_index:
             return
         if self.tx_testing or self.test_pending or not self._capture_profile():
@@ -292,6 +296,7 @@ class SettingsDialog(QDialog):
         tab = QWidget(); form = QFormLayout(tab)
         form.setFieldGrowthPolicy(QFormLayout.AllNonFixedFieldsGrow)
         self.rig = QComboBox(); self.rig.addItem(tr('ui.0de0988dea1ae0b7'), '')
+        self.rig.addItem(tr('v117.manual'), MANUAL_MODEL)
         from ..radio_support import ICOM_EXTERNAL_AUDIO, ICOM_EXTERNAL_PTT
         groups=[(tr('ui.63998b8a254e5921'), [m for m in RIG_MODELS if m not in ICOM_EXTERNAL_AUDIO and m not in ICOM_EXTERNAL_PTT and m != 'その他ICOM']),
                 (tr('ui.052eb3a7ebf8c24c'), list(ICOM_EXTERNAL_AUDIO)),
@@ -389,7 +394,57 @@ class SettingsDialog(QDialog):
         form.addRow(self.external_reverse)
         reverse_note = QLabel(tr('ui.80ef022b95e55fe9'))
         reverse_note.setWordWrap(True); reverse_note.setObjectName('helpText'); form.addRow(reverse_note)
+        self.external_test_button = QPushButton(tr('v117.ext_test'))
+        self.external_test_button.setAutoRepeat(False)
+        self.external_test_button.pressed.connect(self._start_external_test)
+        self.external_test_button.released.connect(self._stop_external_test)
+        form.addRow(self.external_test_button)
+        self.external_test_status = QLabel(tr('v117.ext_help')); self.external_test_status.setWordWrap(True)
+        form.addRow(self.external_test_status)
+        self.external_test_timer = QTimer(self); self.external_test_timer.setSingleShot(True)
+        self.external_test_timer.timeout.connect(self._stop_external_test)
+        for widget in (self.external_enabled, self.external_role, self.external_port, self.external_line, self.external_reverse):
+            signal = widget.toggled if isinstance(widget, QCheckBox) else widget.currentIndexChanged
+            signal.connect(self._stop_external_test)
         self.tabs.addTab(tab, tr('ui.c66e3b1994a02069'))
+
+    def _start_external_test(self):
+        self._stop_external_test()
+        parent = self.parent()
+        if self.tx_testing or self.test_pending or (parent and (getattr(parent, 'antenna_tuning', False) or getattr(parent, 'auto_cq_active', False) or getattr(getattr(parent, 'audio', None), '_tx_active', False))):
+            self.external_test_status.setText(tr('v117.ext_busy')); return
+        values = self._external_values()
+        if not values['enabled'] or values['role'] != 'ptt':
+            self.external_test_status.setText(tr('v117.ext_role')); return
+        radio_port = '' if self.rig.currentData() == MANUAL_MODEL else self.com.currentData()
+        # Also protect the COM port held by the currently connected radio.
+        if parent and getattr(parent, 'radio', None) and parent.radio.status.connected:
+            if str(values['com_port']).upper() == str(parent.radio.status.port).upper():
+                self.external_test_status.setText(tr('ui.ccab6781bcc1fc2a')); return
+        try:
+            self._external_test = ExternalPTT(values, radio_port)
+            self._external_test.before_ptt()
+            self.external_test_status.setText(tr('v117.ext_on'))
+            self.external_test_timer.start(3000)
+        except Exception as exc:
+            self._stop_external_test()
+            self.external_test_status.setText(tr('v117.ext_error').format(error=exc))
+
+    def _stop_external_test(self, *_):
+        if hasattr(self, 'external_test_timer'): self.external_test_timer.stop()
+        test, self._external_test = self._external_test, None
+        if test:
+            try:
+                test.after_ptt()
+                self.external_test_status.setText(tr('v117.ext_help'))
+            except Exception as exc:
+                self.external_test_status.setText(tr('v117.ext_error').format(error=exc))
+
+    def event(self, event):
+        from PySide6.QtCore import QEvent
+        if event.type() in (QEvent.WindowDeactivate, QEvent.Hide) and getattr(self, '_external_test', None):
+            self._stop_external_test()
+        return super().event(event)
 
     def _external_values(self):
         return dict(role=self.external_role.currentData(), enabled=self.external_enabled.isChecked(),
@@ -404,7 +459,7 @@ class SettingsDialog(QDialog):
         self.connect_button.setEnabled(bool(model))
         for widget in (self.address_label, self.civ_addr, self.address_note): widget.setVisible(not yaesu)
         for widget in (self.stopbits_label, self.stopbits): widget.setVisible(False)
-        self.cat_note.setVisible(yaesu and model != 'FT-891')
+        self.cat_note.setVisible(yaesu and model not in ('FT-891','FT-950','FT-450'))
         from ..radio_support import USB_MOD_INPUT
         self.auto_usb_input.setVisible(model in USB_MOD_INPUT);self.usb_input_note.setVisible(model in USB_MOD_INPUT)
         from ..radio_support import LEGACY_MODE, connection_note, ICOM_EXTERNAL_PTT
@@ -412,7 +467,10 @@ class SettingsDialog(QDialog):
         if not initial and not yaesu:
             addr = RIG_MODELS.get(model, 0)
             self.civ_addr.setCurrentText(f'{addr:02X}' if addr else '')
-        self.ptt.clear(); self.ptt.addItems(['CAT'] if yaesu else (['外部接続'] if model in ICOM_EXTERNAL_PTT else ['CI-V', 'RTS', 'DTR', '外部接続']))
+        manual = model == MANUAL_MODEL
+        self.com.setEnabled(not manual); self.baud.setEnabled(not manual); self.auto_mode.setEnabled(not manual)
+        for widget in (self.address_label, self.civ_addr, self.address_note): widget.setVisible(not yaesu and not manual)
+        self.ptt.clear(); self.ptt.addItems(['外部接続'] if manual or model in ICOM_EXTERNAL_PTT else (['CAT', '外部接続'] if yaesu else ['CI-V', 'RTS', 'DTR', '外部接続']))
         saved = self.working['radio']
         if initial: self.ptt.setCurrentText(saved.get('ptt', 'CAT' if yaesu else 'CI-V'))
         for index in range(self.ptt.count()):
@@ -431,14 +489,17 @@ class SettingsDialog(QDialog):
             self.port_note.setText(connection_note(model))
         self.port_note.setStyleSheet("color:#075aa6;" if model in ICOM_EXTERNAL_PTT else "")
         self.cat_note.setText(tr('ui.572e3f063948c095'))
+        if manual: self.port_note.setText(tr('v117.manual_note'))
         self._mode_caption()
 
     def _mode_caption(self, *_):
         mode = self.data_mode.currentText() if hasattr(self, 'data_mode') else self.working['advanced'].get('data_mode', 'LSB-D')
         model=self.rig.currentData()
         if mode in ('LSB','USB'):pass
+        elif model=='FT-450':mode=('USER-L' if mode=='LSB-D' else 'USER-U')
+        elif model=='FT-950':mode=('PKT-LSB' if mode=='LSB-D' else 'PKT-USB')
         elif model=='TS-990S':mode=('LSB-D1' if mode=='LSB-D' else 'USB-D1')
-        elif model.startswith('TS-'):mode=('LSB-DATA' if mode=='LSB-D' else 'USB-DATA')
+        elif (model or '').startswith('TS-'):mode=('LSB-DATA' if mode=='LSB-D' else 'USB-DATA')
         elif model in HAMLIB_MODELS:
             mode = ('DATA-L' if mode == 'LSB-D' else 'DATA-U') if model == 'FTX-1' else ('DATA-LSB' if mode == 'LSB-D' else 'DATA-USB')
         self.auto_mode.setText(tr('ui.5a1692fc86baebf3').format(mode=mode))
@@ -474,6 +535,9 @@ class SettingsDialog(QDialog):
         n1 = QLabel(tr('ui.f64ba79915c04f8b'))
         n1.setWordWrap(True); n1.setObjectName("helpText"); form.addRow("", n1)
 
+        from .windows_volume import WindowsVolumeWidget
+        self.win_input_volume = WindowsVolumeWidget(self.audio_in, 'input', tab)
+        form.addRow(self.win_input_volume)
         self.rx_gain = QSlider(Qt.Horizontal)
         self.rx_gain.setRange(10, 300)
         self.rx_gain.setValue(int(float(self.working["audio"]["rx_gain"]) * 100))
@@ -519,6 +583,9 @@ class SettingsDialog(QDialog):
         n3 = QLabel(tr('ui.09acce0bec978e52'))
         n3.setWordWrap(True); n3.setObjectName("helpText"); form.addRow("", n3)
 
+        from .windows_volume import WindowsVolumeWidget
+        self.win_app_volume = WindowsVolumeWidget(self.audio_out, 'output', tab)
+        form.addRow(self.win_app_volume)
         self.tx_gain = QSlider(Qt.Horizontal)
         self.tx_gain.setRange(0, 100)
         self._original_tx_gain = float(self.working["audio"]["tx_gain"])
@@ -835,6 +902,7 @@ class SettingsDialog(QDialog):
                               tr('ui.8b75f49df672a1a5'))
 
     def _toggle_test_tx(self):
+        self._stop_external_test()
         if self.tx_testing:
             self._stop_test_tx(); return
         parent=self.parent()
@@ -926,6 +994,7 @@ class SettingsDialog(QDialog):
             if not parent or not hasattr(parent,'audio') or not parent.audio._tx_active: ctl.disconnect()
 
     def _test_radio(self):
+        self._stop_external_test()
         parent = self.parent()
         if parent is not None and hasattr(parent, '_connected') and (parent._connected() or parent.connecting):
             if not self._adopt_main_connection():
@@ -982,7 +1051,7 @@ class SettingsDialog(QDialog):
         if failed:
             QMessageBox.warning(self, tr('ui.3ee76ae7045f1ff8'), tr(str(error)) if error else tr(status.message) if status else tr('ui.382bfcb90044d03c'))
         else:
-            QMessageBox.information(self, tr('ui.3ee76ae7045f1ff8'), tr('ui.0a9d893efceea360').format(port=status.port, baud=status.baud, frequency=status.frequency_hz))
+            QMessageBox.information(self, tr('ui.3ee76ae7045f1ff8'), tr('v117.manual_note') if getattr(self.test_controller, 'manual', False) is True else tr('ui.0a9d893efceea360').format(port=status.port, baud=status.baud, frequency=status.frequency_hz))
             if self.test_controller and not self.test_uses_main:
                 self.test_connection_generation += 1
                 generation=self.test_connection_generation
@@ -998,6 +1067,7 @@ class SettingsDialog(QDialog):
         self.test_note.setText(tr('ui.6b3c79a9a83a317f'))
 
     def done(self, result):
+        self._stop_external_test()
         self.level_timer.stop()
         if self.tx_testing:
             self._stop_test_tx()
@@ -1020,6 +1090,7 @@ class SettingsDialog(QDialog):
         if self.result() != QDialog.Accepted: self.connect_requested = False
 
     def _save(self):
+        self._stop_external_test()
         if self.tx_testing or (self.test_controller and not self.verified_values):
             self.test_note.setText(tr('ui.396888a93624ff49'))
             return
@@ -1031,7 +1102,7 @@ class SettingsDialog(QDialog):
         except ValueError as exc:
             QMessageBox.warning(self, tr('ui.0d8619aae051ae34'), tr(str(exc))); return
         try:
-            validate_external(self._external_values(), values['com_port'])
+            validate_external(self._external_values(), '' if values['model'] == MANUAL_MODEL else values['com_port'])
             external=self._external_values()
             if values['ptt'] == '外部接続' and (not external['enabled'] or external['role'] != 'ptt'):
                 raise ValueError(tr('ui.3e8772d73f01525a'))

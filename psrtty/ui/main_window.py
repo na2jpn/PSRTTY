@@ -1203,7 +1203,7 @@ class MainWindow(QMainWindow):
         except ValueError:
             QMessageBox.warning(self, tr('ui.c344b5cbbd9c8698'), tr('ui.266ad7526f1edc1a'))
             return
-        q=QSORecord(call=call,rst_sent=self.rst_s.text().strip() or "599",rst_rcvd=self.rst_r.text().strip() or "599",sent=self.sent.text().strip(),rcvd=self.rcvd.text().strip(),station_callsign=normalize_call(self.my_call.text()),freq_hz=self.current_freq_hz or (self.last_known_freq_hz if not self._connected() else None),when_utc=when)
+        q=QSORecord(call=call,rst_sent=self.rst_s.text().strip() or "599",rst_rcvd=self.rst_r.text().strip() or "599",sent=self.sent.text().strip(),rcvd=self.rcvd.text().strip(),station_callsign=normalize_call(self.my_call.text()),freq_hz=None if self.store.data['radio'].get('model') == 'EXTERNAL-MANUAL' else self.current_freq_hz or (self.last_known_freq_hz if not self._connected() else None),when_utc=when)
         try:
             path=self.adif.append(q)
         except Exception as exc:
@@ -1309,10 +1309,11 @@ class MainWindow(QMainWindow):
                     message = tr(str(error)) if error else tr(status.message)
                     QTimer.singleShot(0, self, lambda: self._profile_connect_failed(message))
             else:
-                self.rig_status.setText(tr('ui.2a3b4be51df84443').format(values['model'], status.port))
+                self.rig_status.setText(tr('v117.manual') if getattr(ctl, 'manual', False) is True else tr('ui.2a3b4be51df84443').format(values['model'], status.port))
+                if getattr(ctl, 'manual', False) is True: self.last_known_freq_hz = None
                 self.current_freq_hz = status.frequency_hz
                 if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
-                self.poll_failures=0; self.rig_status.setToolTip(tr('ui.ab36bddc3b1b6600').format(values['model'], status.port)); self._update_freq_label(); self.poll_timer.start()
+                self.poll_failures=0; self.rig_status.setToolTip(tr('v117.manual_note') if getattr(ctl, 'manual', False) is True else tr('ui.ab36bddc3b1b6600').format(values['model'], status.port)); self._update_freq_label(); self.poll_timer.start()
                 self.statusBar().showMessage(tr('ui.76c639ce9adf41b3'), 5000)
                 if getattr(self, '_profile_switch', None):
                     self._profile_switch = None
@@ -1341,7 +1342,8 @@ class MainWindow(QMainWindow):
                 self.audio.wait_tx(2.0)
                 if was_tuning: ctl.stop_tuner()
                 if ctl.status.connected:
-                    {"CI-V": ctl.set_ptt, "CAT": ctl.set_ptt, "RTS": ctl.set_rts, "DTR": ctl.set_dtr}.get(mode, ctl.set_ptt)(False)
+                    release = {"CI-V": ctl.set_ptt, "CAT": ctl.set_ptt, "RTS": ctl.set_rts, "DTR": ctl.set_dtr}.get(mode)
+                    if release: release(False)
                 ctl.disconnect()
             self.cleanup_job = BackgroundJob(self, cleanup, lambda *_: None)
         if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
@@ -1359,7 +1361,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(100, retry)
 
     def _poll_radio(self):
-        if not self._connected() or self.polling or self.audio._tx_active or (self.control_window and self.control_window.busy):
+        if getattr(self.radio, 'manual', False) is True or not self._connected() or self.polling or self.audio._tx_active or (self.control_window and self.control_window.busy):
             return
         ctl = self.radio
         generation = self.connection_generation
@@ -1960,10 +1962,10 @@ class MainWindow(QMainWindow):
         profiles=list(self.store.data.get('profiles',[]))+[self.store.data]
         for profile in profiles:
             radio=profile.get('radio',{});external=profile.get('external',{})
-            if port==port_key(radio.get('com_port')) or port==port_key(external.get('com_port')):
+            if (radio.get('model') != 'EXTERNAL-MANUAL' and port==port_key(radio.get('com_port'))) or port==port_key(external.get('com_port')):
                 return tr('ui.c94aa95809e63d94')
         radio=self.store.data['radio']
-        if radio.get('model') and str(radio.get('com_port','AUTO')).upper()=='AUTO':
+        if radio.get('model') and radio.get('model') != 'EXTERNAL-MANUAL' and str(radio.get('com_port','AUTO')).upper()=='AUTO':
             return tr('ui.19328d36a95911a7')
         if self.radio and port==port_key(getattr(self.radio.status,'port','')):
             return tr('ui.c94aa95809e63d94')

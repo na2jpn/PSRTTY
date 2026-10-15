@@ -1,0 +1,30 @@
+FT-950
+
+Sin audio USB integrado. Use una interfaz externa como SCU-17.
+
+PC—SCU-17 por USB; DATA de SCU-17—puerto trasero de 6 pines con cable adecuado. CAT: RS-232C de SCU-17—CAT de radio con cable recto. Digirig: versión RS-232 y cables audio/CAT del modelo.
+
+PSRTTY usa AFSK de audio. FT-950: PKT-LSB; FT-450: DATA USER-L. No use FSK RTTY.
+
+Si FT8 funciona, mantenga dispositivos de audio y cables.
+
+Cambie de FT8 en banda lateral superior a AFSK inferior. Anote offsets/ganancias y restaure el modo al volver a FT8.
+
+Elija modelo, COM y velocidad CAT. Modo: LSB-D. PTT: CAT o conexión externa. Para PTT externo, COM separado, RTS/DTR y función PTT de radio; luego pruebe. Audio IN/OUT: USB Audio CODEC de SCU-17.
+
+CAT controla; USB Audio CODEC lleva sonido. Que funcione PTT no confirma audio.
+
+Sin audio: compruebe volumen/silencio de app y entrada Windows, mandos TX/RX SCU-17, cable y modo DATA.
+
+Empiece bajo y observe potencia/ALC. Deben pasar 2085/2295 Hz. Al principio desactive NAR, VOX y PROC.
+
+Contrastado con manuales del fabricante y Hamlib 4.7.2. Siga el manual del modelo/firmware si cambia la pantalla.
+
+026 GENE CAT BPS: Igual que CAT (4800–38400).
+028 GENE CAT RTS: OFF; sin control de flujo por hardware.
+050 DATA DT GAIN: Empiece en 50, ajuste TX.
+051 DATA OUT LVL: Empiece en 50, ajuste RX.
+054 DATA PKTDISP / 055 DATA PKT SFT: Anote y conserve offsets FT8.
+RTTY/PKT: Compruebe PKT-LSB, distinto de FSK RTTY.
+
+https://yaesu.com/Files/4CB893D7-1018-01AF-FA97E9E9AD48B50C/FT-950_USA_EXP_EU_OM_ENG_EH031H206.pdf

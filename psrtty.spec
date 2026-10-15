@@ -6,6 +6,9 @@ qt_lang_dir=Path(QLibraryInfo.path(QLibraryInfo.TranslationsPath))
 qt_languages=[(str(qt_lang_dir/('qtbase_'+x+'.qm')),'assets/qt-translations') for x in ('ja','ru','zh_CN','ko','id','th','es') if (qt_lang_dir/('qtbase_'+x+'.qm')).is_file()]
 
 hidden = collect_submodules('sounddevice') + collect_submodules('serial')
+import sys
+if sys.platform == 'win32':
+    hidden += collect_submodules('pycaw') + collect_submodules('comtypes')
 
 a = Analysis(
     ['psrtty.py'],

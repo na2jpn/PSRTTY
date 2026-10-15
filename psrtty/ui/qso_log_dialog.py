@@ -6,7 +6,7 @@ from decimal import Decimal, InvalidOperation
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (QAbstractItemView, QDialog, QHeaderView, QTableWidget,
     QTableWidgetItem, QVBoxLayout, QHBoxLayout, QPushButton, QFormLayout, QLineEdit,
-    QDialogButtonBox, QMessageBox, QLabel)
+    QDialogButtonBox, QMessageBox, QLabel, QCheckBox)
 from .formatting import band_text, frequency_text
 
 
@@ -63,7 +63,52 @@ class QSOLogDialog(QDialog):
         refresh=QPushButton(tr('ui.3055a035f0eb7a8b')); refresh.clicked.connect(self.reload); row.addWidget(refresh); row.addStretch(1)
         close=QPushButton(tr('ui.f6c244f98893cd95')); close.clicked.connect(self.accept); row.addWidget(close); root.addLayout(row)
         self.note=QLabel(tr('ui.d70088ea89681a81')); root.addWidget(self.note)
+        delete_row=QHBoxLayout()
+        self.delete_all_button=QPushButton(tr('v117.delete_all'))
+        self.delete_all_button.setEnabled(False)
+        self.delete_all_enable=QCheckBox(tr('v117.delete_enable'))
+        self.delete_all_enable.setChecked(False)
+        self.delete_all_enable.toggled.connect(self.delete_all_button.setEnabled)
+        self.delete_all_button.clicked.connect(self.delete_all)
+        delete_row.addWidget(self.delete_all_button); delete_row.addWidget(self.delete_all_enable); delete_row.addStretch()
+        root.addLayout(delete_row)
         self.table.itemSelectionChanged.connect(self.selection_changed); self.reload()
+
+    def showEvent(self, event):
+        self.delete_all_enable.setChecked(False)
+        super().showEvent(event)
+
+    def delete_all(self):
+        if not self.delete_all_enable.isChecked(): return
+        self.delete_all_enable.setChecked(False)
+        from ..log_delete import snapshot, delete_all_qso_logs
+        try:
+            expected=snapshot(self.adif.log_dir)
+            count=len(self.adif.load_recent(limit=None))
+        except Exception as exc:
+            QMessageBox.warning(self,tr('v117.delete_all'),str(exc)); return
+        if not expected:
+            QMessageBox.information(self,tr('v117.delete_all'),tr('v117.no_logs')); return
+        confirm=QDialog(self); confirm.setWindowTitle(tr('v117.delete_all'))
+        layout=QVBoxLayout(confirm)
+        explanation=QLabel(tr('v117.delete_detail').format(count=count, files=len(expected)))
+        explanation.setWordWrap(True); layout.addWidget(explanation)
+        consent=QCheckBox(tr('v117.delete_consent')); layout.addWidget(consent)
+        buttons=QDialogButtonBox(QDialogButtonBox.Ok|QDialogButtonBox.Cancel)
+        proceed=buttons.button(QDialogButtonBox.Ok); proceed.setText(tr('v117.proceed')); proceed.setEnabled(False)
+        buttons.button(QDialogButtonBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
+        consent.toggled.connect(proceed.setEnabled)
+        buttons.accepted.connect(confirm.accept); buttons.rejected.connect(confirm.reject); layout.addWidget(buttons)
+        if confirm.exec()!=QDialog.Accepted or not consent.isChecked(): return
+        if QMessageBox.question(self,tr('v117.delete_all'),tr('v117.delete_final'),
+                QMessageBox.Yes|QMessageBox.No,QMessageBox.No)!=QMessageBox.Yes: return
+        try:
+            backup=delete_all_qso_logs(self.adif.log_dir,expected)
+        except Exception as exc:
+            self.reload(); self.changed.emit()
+            QMessageBox.warning(self,tr('v117.delete_all'),tr('v117.delete_failed').format(error=exc)); return
+        self.reload(); self.changed.emit()
+        QMessageBox.information(self,tr('v117.delete_all'),tr('v117.deleted').format(path=backup))
 
     def reload(self):
         try: records=list(reversed(self.adif.load_recent(limit=None)))

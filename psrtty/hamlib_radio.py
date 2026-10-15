@@ -20,6 +20,8 @@ HAMLIB_MODELS = {
     'FT-817 / FT-817ND': (1020, 'Yaesu FT-817 / FT-817ND'),
     'FT-818ND': (1041, 'Yaesu FT-818ND'),
     'FT-857 / FT-857D': (1022, 'Yaesu FT-857 / FT-857D'),
+    'FT-950': (1028, 'Yaesu FT-950'),
+    'FT-450': (1027, 'Yaesu FT-450'),
     'FT-891': (1036, 'Yaesu FT-891'),
     'FT-991 / FT-991A': (1035, 'Yaesu FT-991 / FT-991A'),
     'FTX-1': (1051, 'Yaesu FTX-1 Field / Optima'),
@@ -158,7 +160,7 @@ class HamlibController(CIVController):
                 if not self.handle:raise RuntimeError(tr('ui.7e5e540d968b10d3'))
                 self._configure('rig_pathname',port)
                 self._configure('serial_speed',int(baud))
-                if self.model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D'):
+                if self.model in ('FT-817 / FT-817ND','FT-818ND','FT-857 / FT-857D','FT-950','FT-450'):
                     self._configure('stop_bits',2)
                     self._configure('serial_handshake','None')
                 if self.lib.rig_open(self.handle)!=0:raise RuntimeError(tr('ui.ed1d3a7ce55eadc9'))

@@ -1,0 +1,29 @@
+FT-450
+
+Tanpa audio USB internal. Gunakan antarmuka seperti SCU-17.
+
+PC—SCU-17 lewat USB; DATA SCU-17—port belakang 6-pin radio lewat kabel yang sesuai. CAT memakai kabel lurus RS-232C SCU-17—CAT radio. Digirig harus versi RS-232 dengan kabel audio/CAT khusus model.
+
+PSRTTY memakai AFSK audio. FT-950: PKT-LSB; FT-450: DATA USER-L, bukan FSK RTTY.
+
+Jika FT8 bekerja, pertahankan perangkat audio dan kabelnya.
+
+Ganti FT8 sisi atas ke AFSK sisi bawah. Catat offset/gain lama dan pulihkan mode saat kembali ke FT8.
+
+Pilih model, COM dan baud CAT. Mode koneksi: LSB-D. PTT: CAT atau koneksi eksternal. Untuk PTT eksternal, pilih COM terpisah, RTS/DTR, peran PTT radio lalu uji. Audio IN/OUT: pilih USB Audio CODEC SCU-17 secara jelas.
+
+CAT untuk kontrol; USB Audio CODEC untuk suara. PTT bekerja belum membuktikan audio bekerja.
+
+Tanpa audio: periksa volume/mute aplikasi dan input Windows, kenop TX/RX SCU-17, kabel audio dan mode DATA radio.
+
+Mulai dari volume kecil sambil melihat daya/ALC. Lewatkan 2085/2295 Hz. Awalnya matikan NAR, VOX, PROC.
+
+Diperiksa dengan manual produsen dan Hamlib 4.7.2. Ikuti manual model/firmware untuk perbedaan tampilan.
+
+CATRATE: Sama dengan CAT (4800–38400).
+CAT RTS: OFF; tanpa kontrol aliran perangkat keras.
+D TYPE: USER-L / DATA
+DIG VOX: OFF
+FT8 / PSRTTY: FT8: USER-U → PSRTTY: USER-L
+
+https://www.yaesu.com/jp/manuals/yaesu_m/FT-450_om_J.pdf

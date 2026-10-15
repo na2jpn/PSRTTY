@@ -14,6 +14,7 @@ USB_MOD_INPUT = {
 
 def connection_note(model):
     from .i18n import tr
+    if model in ('FT-950','FT-450'):return tr('v117.old_radio_note')
     if model == 'FT-891':return tr('v116.ft891_note')
     if model in ICOM_EXTERNAL_PTT:
         return tr('ui.c79c269d9e540a84')

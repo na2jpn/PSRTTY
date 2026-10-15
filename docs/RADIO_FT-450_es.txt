@@ -1,0 +1,29 @@
+FT-450
+
+Sin audio USB integrado. Use una interfaz externa como SCU-17.
+
+PC—SCU-17 por USB; DATA de SCU-17—puerto trasero de 6 pines con cable adecuado. CAT: RS-232C de SCU-17—CAT de radio con cable recto. Digirig: versión RS-232 y cables audio/CAT del modelo.
+
+PSRTTY usa AFSK de audio. FT-950: PKT-LSB; FT-450: DATA USER-L. No use FSK RTTY.
+
+Si FT8 funciona, mantenga dispositivos de audio y cables.
+
+Cambie de FT8 en banda lateral superior a AFSK inferior. Anote offsets/ganancias y restaure el modo al volver a FT8.
+
+Elija modelo, COM y velocidad CAT. Modo: LSB-D. PTT: CAT o conexión externa. Para PTT externo, COM separado, RTS/DTR y función PTT de radio; luego pruebe. Audio IN/OUT: USB Audio CODEC de SCU-17.
+
+CAT controla; USB Audio CODEC lleva sonido. Que funcione PTT no confirma audio.
+
+Sin audio: compruebe volumen/silencio de app y entrada Windows, mandos TX/RX SCU-17, cable y modo DATA.
+
+Empiece bajo y observe potencia/ALC. Deben pasar 2085/2295 Hz. Al principio desactive NAR, VOX y PROC.
+
+Contrastado con manuales del fabricante y Hamlib 4.7.2. Siga el manual del modelo/firmware si cambia la pantalla.
+
+CATRATE: Igual que CAT (4800–38400).
+CAT RTS: OFF; sin control de flujo por hardware.
+D TYPE: USER-L / DATA
+DIG VOX: OFF
+FT8 / PSRTTY: FT8: USER-U → PSRTTY: USER-L
+
+https://www.yaesu.com/jp/manuals/yaesu_m/FT-450_om_J.pdf

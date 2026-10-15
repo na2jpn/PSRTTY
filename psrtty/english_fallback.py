@@ -701,7 +701,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.10b3435e55698374': 'Duplicate on the same band',
  'ui.55c9b9c788e91a42': 'Specify the operating location',
  'ui.ffa1765404219654': 'No multiplier',
- 'ui.4974a6628eaba1f2': 'Select CAT PTT for Hamlib.',
+ 'ui.4974a6628eaba1f2': 'Connect audio through an external interface such as SCU-17 to the rear DATA/RTTY-PKT jack. '
+                        'CAT uses RS-232C. Select CAT or External connection for PTT. See the radio setup guide.',
  'ui.c3e19a59664aae88': 'Specify the COM port and CAT speed for Hamlib.',
  'ui.e24ce7516cfa999a': 'Select CAT PTT for experimental Yaesu support.',
  'ui.8c2f1f21557e9eeb': 'Stop bits must be 1 or 2.',
@@ -1074,7 +1075,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'for the actual mode is changed. First setup defaults ON; existing settings default OFF; profile '
                  'copies retain the source setting. Set input on the radio for unsupported models. The changed input '
                  'remains after disconnect.</p><p>Uses audio from the radio USB port, separate from USB sideband mode '
-                 '(SSB). Turn OFF when using ACC, LAN or another input.</p>',
+                 '(SSB). Turn OFF when using ACC, LAN or another input.</p><h3>Windows app volume / Windows input '
+                 'volume</h3><p>PSRTTY app volume on the selected output. The gauge shows the volume setting. Checked '
+                 'without transmission or audio playback. If unavailable, see the reason below. This affects other '
+                 'software using the same input device. Values change only when you operate these '
+                 'controls.</p><h3>Manual with external PTT</h3><p>No CAT/CI-V. Set frequency and mode on the radio. '
+                 'Enable External connection and select Radio PTT control. Frequency and meters are '
+                 'unavailable.</p><h3>External connection test</h3><p>Hold to check that the radio enters TX. No audio '
+                 'is sent. Release to turn OFF; automatic OFF after 3 seconds.</p>',
  'guide.1.title': 'Control',
  'guide.1.body': '<h2>Operating the radio</h2><p>Open <b>Control</b> beside the frequency. Only one window is opened; '
                  'pressing again brings it back near the main window.</p>\n'
@@ -1478,7 +1486,16 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-13  Ver1.16\n'
+ 'history.body': '2026-10-15  Ver1.17\n'
+                 'Added Windows app volume and mute controls to Audio OUT.\n'
+                 'Added Windows input device volume and mute controls to Audio IN.\n'
+                 'Volume can be checked without transmitting; unavailable values show a reason and differ from zero.\n'
+                 'Added external PTT selection and a hold-to-test button for all radios.\n'
+                 'Added a manual external-connection option to radio selection.\n'
+                 'Added deletion of all QSO logs, with staged confirmation and a backup before deletion.\n'
+                 'Added Hamlib support for FT-950 and FT-450.\n'
+                 '\n'
+                 '2026-10-13  Ver1.16\n'
                  '• Frequency polling alone changed to 0.5 s; meter timing retained, with no overlapping requests.\n'
                  '• Added LSB/USB connection modes alongside LSB-D/USB-D. Automatic switching follows the selection; '
                  'guidance updated in eight languages.\n'
@@ -2263,4 +2280,47 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                           'incoming text and removes short messages on finalization. Switching during reception '
                           'preserves the text. Selection and automatic extraction start only after finalization; '
                           'filtered messages are not extracted. Raw logging and printer output are independent of the '
-                          'display mode.'}
+                          'display mode.',
+ 'v117.manual': 'Manual with external PTT',
+ 'v117.manual_note': 'No CAT/CI-V. Set frequency and mode on the radio. Enable External connection and select Radio '
+                     'PTT control. Frequency and meters are unavailable.',
+ 'v117.win_input': 'Windows input volume',
+ 'v117.win_app': 'Windows app volume',
+ 'v117.mute': 'Mute',
+ 'v117.muted': 'Muted',
+ 'v117.unavailable': 'Unavailable',
+ 'v117.input_shared': 'This affects other software using the same input device. Values change only when you operate '
+                      'these controls.',
+ 'v117.session_note': 'PSRTTY app volume on the selected output. The gauge shows the volume setting. Checked without '
+                      'transmission or audio playback. If unavailable, see the reason below.',
+ 'v117.ext_test': 'External connection test',
+ 'v117.ext_help': 'Hold to check that the radio enters TX. No audio is sent. Release to turn OFF; automatic OFF after '
+                  '3 seconds.',
+ 'v117.ext_on': 'PTT ON commanded (max. 3 s)',
+ 'v117.ext_busy': 'Test unavailable during transmission or connection.',
+ 'v117.ext_role': 'Enable External connection and select Radio PTT control.',
+ 'v117.ext_error': 'External connection test: {error}',
+ 'v117.delete_all': 'Delete all logs',
+ 'v117.delete_enable': 'Enable Delete all logs',
+ 'v117.delete_detail': 'Delete all {count} QSOs ({files} ADIF files).\n'
+                       'A verified backup is required before deletion; failure cancels deletion.\n'
+                       'Transcripts and existing backups remain. QSOs already sent to other software are unaffected.',
+ 'v117.delete_consent': 'I understand that all QSO logs will be deleted',
+ 'v117.proceed': 'Continue',
+ 'v117.delete_final': 'Are you sure you want to proceed?',
+ 'v117.delete_changed': 'Logs changed after confirmation. Please review again.',
+ 'v117.backup_failed': 'Deletion cancelled: backup could not be created or verified.',
+ 'v117.no_logs': 'No QSO logs to delete.',
+ 'v117.delete_failed': 'Could not complete log deletion.\n{error}',
+ 'v117.deleted': 'All QSO logs deleted.\nBackup: {path}',
+ 'v117.old_radio_note': 'Connect audio through an external interface such as SCU-17 to the rear DATA/RTTY-PKT jack. '
+                        'CAT uses RS-232C. Select CAT or External connection for PTT. See the radio setup guide.',
+ 'v117fix2.platform': 'This feature is Windows only.',
+ 'v117fix2.dependency': 'Windows volume control is unavailable.',
+ 'v117fix2.selection': 'Select an audio device.',
+ 'v117fix2.device': 'Check that the selected audio device is connected and enabled.',
+ 'v117fix2.not_ready': 'Windows volume management is not ready. Check the audio device.',
+ 'v117fix2.service': 'Check the Windows audio service.',
+ 'v117fix2.mixed': 'PSRTTY audio sessions have different settings; controls are disabled.',
+ 'v117fix2.read': 'Cannot read Windows volume.',
+ 'v117fix2.write': 'Cannot change Windows volume.'}

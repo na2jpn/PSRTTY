@@ -139,7 +139,7 @@ class ControlWindow(QDialog):
         self.main.store.data['ui']['wheel_reverse']=checked; self.main.store.save()
     def ready(self):
         m=self.main
-        return not m.antenna_tuning and m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
+        return getattr(m.radio, 'manual', False) is not True and not m.antenna_tuning and m._connected() and not m.closing and m.active_tx_id is None and not m.audio._tx_active and not m.auto_cq_active and m.pending_manual is None
     def reveal(self):
         saved = self.main.store.data['ui'].get('control_window')
         self.showNormal()
@@ -171,7 +171,10 @@ class ControlWindow(QDialog):
         ready=self.ready()
         if self.controller is not self.main.radio:
             self.controller=self.main.radio; self.state_observed=False; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
-        if not self.main._connected():
+        if model == 'EXTERNAL-MANUAL':
+            self.state_observed=False
+            self.connection_notice.setText(tr('v117.manual_note'))
+        elif not self.main._connected():
             self.state_observed=False
             self.connection_notice.setText(tr('v115fix2.control_connect'))
         elif not self.state_observed:

@@ -1,0 +1,30 @@
+FT-950
+
+没有内置USB音频，需SCU-17等外部接口。
+
+PC通过USB接SCU-17，SCU-17 DATA通过适配线接电台后部6针端口。SCU-17 RS-232C通过直通线接电台CAT。Digirig请用RS-232版本及本机型音频/CAT线。
+
+PSRTTY使用音频AFSK。FT-950用PKT-LSB；FT-450用DATA USER-L，不用FSK RTTY。
+
+FT8正常时，保留原音频设备和接线。
+
+由FT8上边带切换为AFSK下边带。记录原偏移和增益，回到FT8时恢复模式。
+
+选择机型、CAT COM和速率。连接模式LSB-D。PTT选CAT或外部连接；外部PTT需独立COM、RTS/DTR和电台PTT控制角色，并测试。Audio IN/OUT明确选择SCU-17 USB Audio CODEC。
+
+CAT负责控制，USB Audio CODEC传音频。PTT正常不代表音频正常。
+
+无音频：检查Windows应用/输入音量及静音、SCU-17 TX/RX旋钮、音频线和电台DATA模式。
+
+从低音量开始，观察功率和ALC。带宽应通过2085/2295 Hz。初次关闭NAR、VOX、PROC。
+
+依据厂家手册及Hamlib 4.7.2核对。显示差异以实际机型和固件手册为准。
+
+026 GENE CAT BPS: 与CAT速率一致（4800～38400）。
+028 GENE CAT RTS: OFF；PSRTTY不使用硬件流控。
+050 DATA DT GAIN: 先50，再调整发射音量。
+051 DATA OUT LVL: 先50，再调整接收音量。
+054 DATA PKTDISP / 055 DATA PKT SFT: 记录并保留FT8正常时偏移。
+RTTY/PKT: 确认PKT-LSB，与RTTY FSK输入不同。
+
+https://yaesu.com/Files/4CB893D7-1018-01AF-FA97E9E9AD48B50C/FT-950_USA_EXP_EU_OM_ENG_EH031H206.pdf

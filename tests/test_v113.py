@@ -166,9 +166,9 @@ class UI113Tests(unittest.TestCase):
         i18n.configure('ja')
 
     def test_version_and_localized_history(self):
-        self.assertEqual(__version__,'1.16')
+        self.assertEqual(__version__,'1.17')
         for code in i18n.LANGUAGES:
             s=json.loads((ROOT/f'language/{code}.json').read_text(encoding='utf-8'))['strings']
-            self.assertTrue(s['history.body'].startswith('2026-10-13  Ver1.16'))
+            self.assertTrue(s['history.body'].startswith('2026-10-15  Ver1.17'))
             self.assertIn('2026-10-09  Ver1.12',s['history.body'])
             self.assertIn('0.5' if code not in ('ru','id','es') else '0,5',s['guide.9.body'])

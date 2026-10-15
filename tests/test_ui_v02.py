@@ -81,7 +81,13 @@ class UITests(unittest.TestCase):
         ticks=[]; timer=QTimer(); timer.setInterval(5); timer.timeout.connect(lambda:ticks.append(1)); timer.start()
         with patch('psrtty.ui.main_window.connect_configured',side_effect=slow):
             start=time.monotonic(); w.connect_radio(); self.assertLess(time.monotonic()-start,.1)
-            self.assertTrue(w.connecting); self.pump(.3)
+            self.assertTrue(w.connecting)
+            # Keep the async call's strict timing check above. Under a loaded
+            # offscreen runner, painting may consume a fixed 300 ms window.
+            # Wait for the observable result, with a bounded deadline instead.
+            deadline=time.monotonic()+2
+            while (w.connecting or len(ticks)<3) and time.monotonic()<deadline:
+                self.pump(.02)
         timer.stop(); self.assertGreaterEqual(len(ticks),3); self.assertFalse(w.connecting)
         self.assertTrue(w.connect_action.isEnabled()); self.assertFalse(w.send_button.isEnabled())
     def test_success_and_disconnect(self):

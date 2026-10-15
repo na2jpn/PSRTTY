@@ -488,7 +488,9 @@ def radio_address(settings: dict) -> int:
 def connect_configured(controller, settings, advanced):
     """Shared by main connection and test. Failure leaves no usable session."""
     try:
-        status = controller.connect(settings.get("com_port", "AUTO"), settings.get("cat_baud", "AUTO") if settings.get("ptt") == "CAT" else settings.get("civ_baud", "AUTO"))
+        from .hamlib_radio import HAMLIB_MODELS
+        cat = settings.get('model') in HAMLIB_MODELS or settings.get('ptt') == 'CAT'
+        status = controller.connect(settings.get("com_port", "AUTO"), settings.get("cat_baud", "AUTO") if cat else settings.get("civ_baud", "AUTO"))
         if status.connected and settings.get("auto_data_mode", True):
             mode = advanced.get("data_mode", "LSB-D")
             switched = controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)

@@ -1,0 +1,29 @@
+FT-450
+
+USB音声内蔵ではありません。SCU-17などの外部インターフェースを使います。
+
+PCとSCU-17をUSBで接続し、SCU-17のDATAと無線機背面の6ピン端子を対応ケーブルで接続します。CATはSCU-17のRS-232Cから無線機のCATへストレートケーブルで接続します。DigirigはRS-232対応版と、この機種用の音声・CATケーブルを使用してください。
+
+PSRTTYは音声によるAFSKです。FT-950はPKT-LSB、FT-450はDATAのUSER-Lを使います。FSK用RTTYは使いません。
+
+FT8で使えている場合は、音声機器と接続をそのまま使えます。
+
+上側波帯のFT8から下側波帯のAFSKに切り替えます。既存のオフセット・ゲイン設定を記録し、FT8へ戻す際は元のモードに戻してください。
+
+機種とCATのCOM・速度を指定。接続時モードはLSB-D。PTTはCAT、または外部接続を選びます。外部接続では別のCOM・RTS/DTRを指定し、役割を「無線機のPTT制御」にしてテストしてください。Audio IN/OUTはSCU-17のUSB Audio CODECを明示指定します。
+
+CATは制御、USB Audio CODECは音声です。PTTが動いても音声が届いているとは限りません。
+
+音声なし：Windowsのアプリ音量・入力音量・ミュート、SCU-17のTX/RXつまみ、音声ケーブルと無線機のDATAモードを確認します。
+
+低い音量からパワーとALCを見て調整します。2085/2295 Hzの両方が通る帯域にし、最初はNAR・VOX・PROCをOFFにします。
+
+メーカー取扱説明書とHamlib 4.7.2の設定を確認。機種・ファームウェアによる表示差は実機の説明書を優先します。
+
+CATRATE: CAT速度と同じ値（4800～38400）。
+CAT RTS: OFF。PSRTTY側もハードウェアフロー制御なし。
+D TYPE: USER-L / DATA
+DIG VOX: OFF
+FT8 / PSRTTY: FT8: USER-U → PSRTTY: USER-L
+
+https://www.yaesu.com/jp/manuals/yaesu_m/FT-450_om_J.pdf
