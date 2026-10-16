@@ -6,6 +6,7 @@ from psrtty.hamlib_radio import HamlibController, HAMLIB_MODELS, load_library
 
 class FakeLibrary:
     def __init__(self):self.events=[];self.frequency=14_085_000;self.ptt=0;self.mode=0
+    def rig_set_debug(self,level):self.events.append(('debug',level))
     def rig_init(self,model):self.events.append(('model',model));return 123
     def rig_cleanup(self,handle):self.events.append(('cleanup',handle));return 0
     def rig_open(self,handle):self.events.append(('open',handle));return 0
@@ -29,6 +30,7 @@ class HamlibBridgeTest(unittest.TestCase):
 
         class FakeLibrary:
             def __init__(self):
+                self.rig_set_debug = FakeFunction()
                 self.rig_init = FakeFunction()
                 self.rig_cleanup = FakeFunction()
                 self.rig_open = FakeFunction()
@@ -60,7 +62,7 @@ class HamlibBridgeTest(unittest.TestCase):
         lib=FakeLibrary();ctl=HamlibController('FT-710')
         with patch('psrtty.hamlib_radio.load_library',return_value=(lib,None)):
             self.assertTrue(ctl.connect('COM7',38400).connected)
-            self.assertEqual(lib.events[:4],[('model',1049),('conf',1,b'COM7'),('conf',2,b'38400'),('open',123)])
+            self.assertEqual(lib.events[:5],[('debug',0),('model',1049),('conf',1,b'COM7'),('conf',2,b'38400'),('open',123)])
             self.assertTrue(ctl.set_data_mode('LSB-D'))
             self.assertTrue(ctl.set_ptt(True))
             self.assertFalse(ctl.set_frequency(21_085_000))

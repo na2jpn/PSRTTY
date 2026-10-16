@@ -49,6 +49,39 @@ def input_fields(text):
     return tuple(value.strip() for value in lines[:14])
 
 
+def transfer_mismatches(row, actual):
+    """Report each unequal field; date/frequency formatting stays compatible."""
+    mismatches=[]
+    names={0:'CALL',1:'DATE',2:'TIME',3:'RST-S',4:'RST-R',5:'FREQ',6:'MODE',12:'Remarks1',13:'Remarks2'}
+    for index,name in names.items():
+        expected,observed=row[index],actual[index]
+        try:
+            if index==1:
+                date=datetime.strptime(expected,'%y/%m/%d')
+                equal=observed in (date.strftime('%y/%m/%d'),date.strftime('%Y/%m/%d'))
+            elif index==5:
+                a,b=Decimal(expected),Decimal(observed)
+                equal=a.is_finite() and b.is_finite() and a==b
+            elif index in (0,2,6):
+                equal=observed.upper()==expected.upper()
+            else:
+                equal=observed==expected
+        except (ValueError,InvalidOperation):
+            equal=False
+        if not equal:mismatches.append((name,expected,observed))
+    return mismatches
+
+
+def mismatch_error(mismatches):
+    details=[tr('ui.fcde825f19a91068')]
+    for name,expected,observed in mismatches:
+        details.append(tr('v123.mismatch_item').format(field=name,
+            sent=json.dumps(expected,ensure_ascii=False),received=json.dumps(observed,ensure_ascii=False)))
+    if any(name in ('RST-S','RST-R') for name,_,_ in mismatches):
+        details.append(tr('v123.rtty_setup'))
+    return LinkError('\n'.join(details))
+
+
 class Win32Transport:
     """A bounded, synchronous native request with a reentrant reply WNDPROC."""
     def __enter__(self):
@@ -204,19 +237,20 @@ class HamlogLink:
                     raise LinkError(tr('ui.71ef020415e1cb94'))
                 self._journal(key, 'attempted')  # durable before the first mutation
                 self.lookup_owner = None
+                # Complete HAMLOG's normal CALL/Enter processing first. It may
+                # populate lookup defaults or change the date, time and RST.
+                api.request(1 | THW_ENTER, row[0])
+                entered=input_fields(api.request(115, reply=True))
+                if entered[0].upper()!=row[0]:
+                    raise mismatch_error([('CALL',row[0],entered[0])])
                 # Preserve HAMLOG's own QSL/code/name/QTH defaults and lookup result.
-                for index in (1,2,3,4,5,6,7,13,14):
+                # Apply the actual QSO only after Enter, never Enter again here.
+                # RST field format depends on the selected HAMLOG mode.
+                for index in (7,2,3,4,5,6,13,14):
                     api.request(index, row[index - 1])
                 after = input_fields(api.request(115, reply=True))
-                try:
-                    date_ok = any(after[1] == datetime.strptime(row[1], '%y/%m/%d').strftime(fmt) for fmt in ('%y/%m/%d', '%Y/%m/%d'))
-                    time_ok = after[2].upper() == row[2]
-                    freq_ok = Decimal(after[5]) == Decimal(row[5])
-                except (ValueError, InvalidOperation):
-                    date_ok = time_ok = freq_ok = False
-                if (not (date_ok and time_ok and freq_ok) or after[0].upper() != row[0] or after[3:5] != tuple(row[3:5])
-                        or after[6].upper() != 'RTTY' or after[12:14] != tuple(row[12:14])):
-                    raise LinkError(tr('ui.fcde825f19a91068'))
+                mismatches=transfer_mismatches(row,after)
+                if mismatches:raise mismatch_error(mismatches)
                 if auto_save:
                     api.request(18 | THW_SAVEBOX_OFF)
                     if api.request(101, reply=True).strip():

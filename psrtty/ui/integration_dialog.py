@@ -121,7 +121,7 @@ class HamlogSettingsDialog(QDialog):
         super().__init__(parent)
         self.controller = controller
         self.setWindowTitle(tr('ui.2354935a4ee2b937'))
-        self.resize(640, 480)
+        self.resize(640, 560)
         root = QVBoxLayout(self)
         for text in (tr(VERSION_NOTICE).format(version=TARGET_VERSION, api=API_VERSION),
                      tr('ui.99ebd89f04ffb1bf')):
@@ -136,6 +136,8 @@ class HamlogSettingsDialog(QDialog):
         form = QFormLayout(); form.addRow(tr('ui.b7609e3949e19670'), self.save_mode); root.addLayout(form)
         note = QLabel(tr('ui.303123bf66937008'))
         note.setWordWrap(True); root.addWidget(note)
+        self.rtty_setup_note=QLabel(tr('v123.rtty_setup'))
+        self.rtty_setup_note.setWordWrap(True);root.addWidget(self.rtty_setup_note)
         self.check_button = QPushButton(tr('ui.242261d9bdf8729e'))
         self.check_button.clicked.connect(self.check); root.addWidget(self.check_button)
         row = QHBoxLayout()

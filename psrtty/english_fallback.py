@@ -1397,12 +1397,17 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '<h3>HAMLOG target: Ver5.48</h3><p>Uses the Turbo HAMLOG/Win public API introduced in Ver5.27c. On '
                  'Windows, start one HAMLOG instance and open its QSO input window. Run both programs with the same '
                  'privilege level.</p>\n'
-                 '<ol><li>Open <b>Integration → HAMLOG integration settings</b>. Check the connection; the responding '
-                 'window title is displayed.</li><li>Enable transfer when logging. This defaults to OFF. The default '
-                 'save mode fills HAMLOG input fields only; save the QSO in HAMLOG yourself. Alternatively, choose to '
-                 'request saving after transfer. Save these settings; they are shared by all profiles.</li><li>After '
-                 'PSRTTY saves a QSO to ADIF, it transfers it to HAMLOG. Manual logging and TU73 auto logging use the '
-                 'same path. PSRTTY increments the sent serial only once.</li></ol>\n'
+                 '<p>Register RTTY in HAMLOG mode settings and select the 599 format (three digits) for RST. Check '
+                 'existing RTTY settings too.</p><p>The sequence is CALL → Enter processing → apply this QSO → verify '
+                 '→ Save. Date, time and RST changed by Enter are replaced with this QSO afterwards. In input-only '
+                 'mode, Save remains manual. A mismatch shows the field, sent value and read-back value, and prevents '
+                 'automatic saving.</p><ol><li>Open <b>Integration → HAMLOG integration settings</b>. Check the '
+                 'connection; the responding window title is displayed.</li><li>Enable transfer when logging. This '
+                 'defaults to OFF. The default save mode fills HAMLOG input fields only; save the QSO in HAMLOG '
+                 'yourself. Alternatively, choose to request saving after transfer. Save these settings; they are '
+                 'shared by all profiles.</li><li>After PSRTTY saves a QSO to ADIF, it transfers it to HAMLOG. Manual '
+                 'logging and TU73 auto logging use the same path. PSRTTY increments the sent serial only '
+                 'once.</li></ol>\n'
                  '<p>CALL, JST date/time, sent/received RST, frequency and RTTY mode are transferred. SENT and RCVD '
                  'are retained in Remarks1; the station CALL is in Remarks2. Contest exchanges are not inferred as '
                  'JCC/JCG codes. HAMLOG QSL, Code, GL, Name and QTH settings/lookup results are retained.</p>\n'
@@ -1491,13 +1496,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-16  Ver1.22\n'
-                 '・Prepare the FSK COM port at connection and keep it open while connected, avoiding reopen on each '
-                 'transmission or resend.\n'
-                 '・Check RTTY mode before preparing the FSK port. Require confirmed RX after initialization before '
-                 'starting PTT.\n'
-                 '・Release the FSK port on disconnect or Profile change. Show the failed startup stage in all eight '
-                 'languages.\n'
+ 'history.body': '2026-10-16  Ver1.23\n'
+                 '・Prepare the FSK COM port at connection and keep it open between transmissions and resends.\n'
+                 '・Check RTTY mode before preparing the FSK port. Confirm RX after initialization before starting '
+                 'PTT.\n'
+                 '・Release the FSK port on disconnect or Profile change. Show the failed startup stage.\n'
+                 '・HAMLOG transfer now follows CALL → Enter → QSO data → verification → Save.\n'
+                 '・HAMLOG mismatch errors show the field, sent value and read-back value. Added guidance for '
+                 'three-digit RST 599 in RTTY.\n'
+                 '・Suppress Hamlib debug output. Updated guides, errors and history in all eight languages.\n'
                  '\n'
                  '2026-10-16  Ver1.21\n'
                  '• Added waits and read retries to Hamlib FSK mode checks to handle temporary read errors and '
@@ -2580,4 +2587,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v122.stage_port': 'FSK COM preparation',
  'v122.stage_receive': 'RX check after FSK COM initialization',
  'v122.stage_ptt': 'PTT start',
- 'v122.stage_keying': 'FSK keying'}
+ 'v122.stage_keying': 'FSK keying',
+ 'v123.mismatch_item': '{field}: sent {sent} / read back {received}',
+ 'v123.rtty_setup': 'Register RTTY in HAMLOG mode settings and select the 599 format (three digits) for RST. Check '
+                    'existing RTTY settings too.'}

@@ -111,6 +111,7 @@ def load_library(path=None):
     if lib is None:
         raise FileNotFoundError(tr('ui.088c2a06f0368f17').format(error=last_error))
     signatures={
+        'rig_set_debug':(None,[ctypes.c_int]),
         'rig_init':(ctypes.c_void_p,[ctypes.c_int]),
         'rig_cleanup':(ctypes.c_int,[ctypes.c_void_p]),
         'rig_open':(ctypes.c_int,[ctypes.c_void_p]),
@@ -162,6 +163,7 @@ class HamlibController(CIVController):
                 return self.status
             try:
                 self.lib,self.dll_directory=load_library()
+                self.lib.rig_set_debug(0)
                 self.handle=self.lib.rig_init(HAMLIB_MODELS[self.model][0])
                 if not self.handle:raise RuntimeError(tr('ui.7e5e540d968b10d3'))
                 self._configure('rig_pathname',port)
