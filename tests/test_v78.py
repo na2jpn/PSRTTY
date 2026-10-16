@@ -71,6 +71,7 @@ class UI78Tests(unittest.TestCase):
     pump=_Fixture.pump
 
     def test_manual_jst_and_latest_are_independent_of_host_zone(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window
         for host in ('UTC','America/New_York'):
             with host_zone(host):

@@ -1443,7 +1443,11 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'fails.</p><h3>ADIF UDP</h3><p>In Log4OM2, enable UDP Inbound service ADIF MESSAGE and use the same '
                  'port. Initial example: 127.0.0.1 (same PC), port 2236. Adjust to the receiver settings.</p><p>Send '
                  'each newly saved QSO once. Edits, deletions and old logs are not sent. UDP cannot confirm receipt or '
-                 'registration; no automatic retry. Send failures preserve the PSRTTY log.</p>',
+                 'registration; no automatic retry. Send failures preserve the PSRTTY log.</p><p>If the QSO frequency '
+                 'is missing at logging, a dialog shows the other station and asks for MHz (e.g. 7.045, 14.085, '
+                 '50.303). The value sets FREQ for this QSO and determines BAND from the supported band table. HAMLOG, '
+                 'ADIF UDP and other links use the same value after logging. Cancel does not log or transfer. This '
+                 'also applies to TU73 automatic logging.</p>',
  'guide.9.title': 'Direct TX',
  'guide.9.body': '<h2>1TX and direct TX</h2><p>Main 1TX sends one line and stops. Direct TX accepts two lines. TX '
                  'while typing defaults ON, with a 0.5-second correction delay. Pending text is blue-gray; sent text '
@@ -1496,7 +1500,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-16  Ver1.23\n'
+ 'history.body': '2026-10-16  Ver1.24\n'
+                 '・When a QSO has no frequency, show the other station callsign and a frequency input before logging.\n'
+                 '・Apply the entered MHz value to this QSO and derive its supported band. Use the same value for ADIF, '
+                 'HAMLOG, UDP and other links.\n'
+                 '・Cancel leaves the log, external transfers and serial number unchanged. This also applies to TU73 '
+                 'automatic logging.\n'
+                 '・Added the frequency dialog, guide and history in all eight languages.\n'
+                 '\n'
+                 '2026-10-16  Ver1.23\n'
                  '・Prepare the FSK COM port at connection and keep it open between transmissions and resends.\n'
                  '・Check RTTY mode before preparing the FSK port. Confirm RX after initialization before starting '
                  'PTT.\n'
@@ -2590,4 +2602,11 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v122.stage_keying': 'FSK keying',
  'v123.mismatch_item': '{field}: sent {sent} / read back {received}',
  'v123.rtty_setup': 'Register RTTY in HAMLOG mode settings and select the 599 format (three digits) for RST. Check '
-                    'existing RTTY settings too.'}
+                    'existing RTTY settings too.',
+ 'v124.title': 'QSO frequency',
+ 'v124.explanation': 'The QSO frequency is missing, for example after manual entry.\nPlease specify the frequency.',
+ 'v124.call': 'Other station: {call}',
+ 'v124.frequency': 'Frequency',
+ 'v124.examples': 'Examples: 7.045, 14.085, 50.303',
+ 'v124.register': 'Log QSO',
+ 'v124.invalid': 'Enter a valid frequency in MHz, e.g. 7.045.'}

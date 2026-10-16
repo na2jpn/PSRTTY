@@ -24,6 +24,8 @@ class DialogGuard:
         return blocked
 
     def start(self):
+        p=patch('psrtty.ui.main_window.request_qso_frequency',side_effect=self._handler('Missing QSO frequency',None))
+        p.start();self.patches.append(p)
         for cls,name,result in [
             (QMessageBox,'warning',QMessageBox.Ok),
             (QMessageBox,'critical',QMessageBox.Ok),

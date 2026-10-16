@@ -26,6 +26,7 @@ from ..audio_engine import AudioEngine
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller
 from .background import BackgroundJob
+from .qso_frequency_dialog import request_qso_frequency
 from .window_state import restore_window, save_window, place_tool_window
 from ..config import ConfigStore
 from ..logging_store import TranscriptLogger
@@ -1210,6 +1211,12 @@ class MainWindow(QMainWindow):
         self.qso_revision += 1
 
     def _add_qso(self):
+        if self.closing or getattr(self,'_adding_qso',False):return
+        self._adding_qso=True
+        try:self._register_qso()
+        finally:self._adding_qso=False
+
+    def _register_qso(self):
         call=normalize_call(self.q_call.text() or self.his_call.text())
         if not call:
             QMessageBox.warning(self,tr('ui.c344b5cbbd9c8698'),tr('ui.318622f7c8888ea7')); return
@@ -1220,6 +1227,9 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, tr('ui.c344b5cbbd9c8698'), tr('ui.266ad7526f1edc1a'))
             return
         q=QSORecord(call=call,rst_sent=self.rst_s.text().strip() or "599",rst_rcvd=self.rst_r.text().strip() or "599",sent=self.sent.text().strip(),rcvd=self.rcvd.text().strip(),station_callsign=normalize_call(self.my_call.text()),freq_hz=None if self.store.data['radio'].get('model') == 'EXTERNAL-MANUAL' else self.current_freq_hz or (self.last_known_freq_hz if not self._connected() else None),when_utc=when)
+        if not q.freq_hz:
+            q.freq_hz=request_qso_frequency(q.call,self)
+            if q.freq_hz is None or self.closing:return
         try:
             path=self.adif.append(q)
         except Exception as exc:

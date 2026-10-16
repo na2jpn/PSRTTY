@@ -151,6 +151,7 @@ class TimePrinterUI106Fix3Tests(unittest.TestCase):
     pump=Fixture.pump
 
     def test_zone_manual_rollover_preserves_qso_revision_and_saved_utc(self):
+        self.window.current_freq_hz=14085000
         w=self.window;w.adif=ADIFLog(Path(self.tmp.name)/'time-test');w.qsos=[];w.q_datetime.setText('2026-10-01 00:30')
         revision=w.qso_revision
         w._set_time_zone('UTC')

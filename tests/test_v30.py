@@ -137,6 +137,7 @@ class UI30Tests(unittest.TestCase):
         self.assertEqual(w.poll_failures,0)
 
     def test_separate_date_time_and_partial_rejected(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window;w.q_call.setText('JH1HST');w.q_datetime.setText('2026-09-24 ')
         with patch('psrtty.ui.main_window.QMessageBox.warning') as warning:
             w._add_qso(); warning.assert_called_once();w.adif.append.assert_not_called()

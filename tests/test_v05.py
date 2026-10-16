@@ -139,6 +139,7 @@ class UI05Tests(unittest.TestCase):
         with patch.object(w.audio,'send_text',return_value=(True,'OK')), patch.object(w,'_add_qso') as add:
             w._manual_request('TU TEST',macro=True); w._tx_finished(True,'OK'); add.assert_not_called()
     def test_empty_sent_survives_qso_and_does_not_increment(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window; w.qsos=[]; w.adif.append.return_value=Path('log.adi'); w.sent.setText(''); w.sent_fixed.setChecked(False)
         w.q_call.setText('JX1XXX'); w._add_qso(); self.assertEqual(w.sent.text(),''); self.assertEqual(w.qsos[0].sent,'')
     def test_guide_order_update_menu_and_dialog(self):

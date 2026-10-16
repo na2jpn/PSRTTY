@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock,patch
 from PySide6.QtWidgets import QFormLayout, QPushButton
 from tests.test_ui_v02 import UITests as _Fixture
 from psrtty.adif import QSORecord
@@ -17,9 +17,11 @@ class UI102Tests(unittest.TestCase):
         w = self.window
         w.qsos = []
         w.q_call.setText('JA1AAA')
-        w._add_qso()
+        with patch('psrtty.ui.main_window.request_qso_frequency',return_value=7045000) as prompt:
+            w._add_qso();prompt.assert_called_once_with('JA1AAA',w)
         first = w.adif.append.call_args.args[0]
-        self.assertIsNone(first.freq_hz)
+        self.assertEqual(first.freq_hz,7045000)
+        self.assertIsNone(w.current_freq_hz);self.assertIsNone(w.last_known_freq_hz)
         w.radio = Mock()
         w.radio.status.connected = True
         w._radio_observed(21085000)
@@ -41,8 +43,10 @@ class UI102Tests(unittest.TestCase):
         w.radio = Mock()
         w.radio.status.connected = True
         w.q_call.setText('JA1CCC')
-        w._add_qso()
-        self.assertIsNone(w.adif.append.call_args.args[0].freq_hz)
+        with patch('psrtty.ui.main_window.request_qso_frequency',return_value=50303000) as prompt:
+            w._add_qso();prompt.assert_called_once_with('JA1CCC',w)
+        self.assertEqual(w.adif.append.call_args.args[0].freq_hz,50303000)
+        self.assertEqual(w.last_known_freq_hz,14085000)
 
     def test_latest_two_columns_with_wide_windows_font(self):
         w = self.window

@@ -93,6 +93,7 @@ class UI10Tests(unittest.TestCase):
             w._send_macro(3); w.rcvd.setText('A'); w.rcvd.clear(); w._tx_finished(True,'OK'); self.assertFalse(w.q_datetime.manual.isChecked())
             add.assert_not_called()
     def test_log_validation_and_failed_save_keep_date(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window; w.q_call.setText('JX1XXX'); w.q_datetime.setText('2026-02-30 17:14')
         with patch('psrtty.ui.main_window.QMessageBox.warning'):
             w._add_qso(); w.adif.append.assert_not_called(); self.assertEqual(w.q_datetime.text(),'2026-02-30 17:14')

@@ -239,6 +239,7 @@ class UI04Tests(unittest.TestCase):
             w._start_auto_cq(); token=w.active_tx_id; w._send_macro(7)
             w._tx_finished(False,'PTT解除失敗',token); self.assertEqual(send.call_count,1)
     def test_fixed_and_serial_increment_only_after_successful_save(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window; w.qsos=[]; w.adif.append.return_value=Path('log.adi')
         self.assertTrue(w.sent_fixed.isChecked())
         w.sent.setText('25'); w.q_call.setText('JX1XXX'); w._add_qso(); self.assertEqual(w.sent.text(),'25')
@@ -250,6 +251,7 @@ class UI04Tests(unittest.TestCase):
         with patch.object(QMessageBox,'warning'): w._add_qso()
         self.assertEqual(w.sent.text(),'002'); self.assertEqual(w.q_call.text(),'JX1XXX')
     def test_settings_failure_after_adif_does_not_leave_duplicate_qso(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window; w.qsos=[]; w.adif.append.return_value=Path('log.adi')
         w.q_call.setText('JX1XXX'); w.sent_fixed.setChecked(False); w.sent.setText('009')
         with patch.object(self.store,'save',side_effect=OSError('full')), patch.object(QMessageBox,'warning') as warn:

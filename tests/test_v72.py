@@ -14,7 +14,7 @@ class UI72Tests(unittest.TestCase):
         w=self.window
         with patch('psrtty.adif.ensure_runtime_dirs',return_value=self.paths):w.adif=ADIFLog()
         w.qsos=[];w.radio=None;w.offline_tx.setChecked(True);w.auto_log.setChecked(True)
-        with patch('psrtty.audio_engine.sd') as sd,patch('psrtty.audio_engine.resolve_device',return_value=None):
+        with patch('psrtty.audio_engine.sd') as sd,patch('psrtty.audio_engine.resolve_device',return_value=None),patch('psrtty.ui.main_window.request_qso_frequency',return_value=7045000) as prompt:
             for mode in ('macro','manual','stop'):
                 w.q_call.setText('JQ7FIU');stream=FakeOutput();sd.OutputStream.return_value=stream
                 if mode=='macro':w._send_macro(3)
@@ -27,11 +27,14 @@ class UI72Tests(unittest.TestCase):
                 records=w.adif.load_recent(limit=None)
                 self.assertEqual(len(records),1 if mode=='macro' else 2)
                 self.assertEqual(w.latest_box.footer.text(),f'ログ合計 {len(records)}件')
-                self.assertIsNone(records[-1].freq_hz)
+                self.assertEqual(records[-1].freq_hz,7045000)
+                self.assertEqual(records[-1].band,'40m')
                 self.assertEqual(records[-1].call,'JQ7FIU')
                 self.assertFalse(w.q_datetime.manual.isChecked())
-        # No invented frequency or band for offline QSOs.
+            self.assertEqual(prompt.call_count,2)
+        # Offline records use the user's entry without inventing a radio reading.
+        self.assertIsNone(w.current_freq_hz);self.assertIsNone(w.last_known_freq_hz)
         raw=next(self.paths['logdata'].glob('*.adi')).read_text()
-        self.assertNotIn('<FREQ:',raw);self.assertNotIn('<BAND:',raw)
+        self.assertIn('<FREQ:5>7.045',raw);self.assertIn('<BAND:3>40m',raw)
 
 del _Fixture

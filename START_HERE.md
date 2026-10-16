@@ -1,10 +1,10 @@
-# PSRTTY Ver1.23 フルソース — 2026-10-16
+# PSRTTY Ver1.24 正本フルソース — 2026-10-16
 
-公開版Ver1.21以前の全機能、内部版Ver1.22のFSK対策と、今回のHAMLOG・Hamlib修正を統合しました。
+Ver1.23以前の全機能・修正と、ログ登録時の周波数未取得確認を統合した正本です。
 このZIPだけでビルドできます。差分の追加適用は不要です。
 
 Windowsでは build-windows.ps1 を実行してください。
-テスト・EXEビルド後に release/PSRTTY_1.23.zip を生成します。
+テスト・EXEビルド後に release/PSRTTY_1.24.zip を生成します。
 
-変更内容は VERSION_123.md、Git用リリースノートは docs/RELEASE_NOTES_123.md、検証は docs/VALIDATION_123.md を参照してください。
-ウェブ用ファイルは含みません。Ver1.22は非公開の内部配布で、公開用の更新履歴はVer1.23に統合しています。
+変更内容は VERSION_124.md、Git用リリースノートは docs/RELEASE_NOTES_124.md、検証は docs/VALIDATION_124.md を参照してください。
+ウェブ用ファイルは含みません。内部配布版Ver1.22の公開履歴は引き続きVer1.23に統合しています。

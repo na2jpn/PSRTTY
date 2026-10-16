@@ -60,6 +60,7 @@ class UI74Tests(unittest.TestCase):
             self.assertIn('read only',message.call_args.args[2])
 
     def test_count_success_failure_manual_and_exit_once(self):
+        self.window.current_freq_hz=14085000  # This test exercises logging with a known frequency.
         w=self.window;w.store.data['backup'].update(on_exit=True,every_enabled=True,every_count=2,pending_qsos=0)
         w.adif.append.return_value=Path('202609.adi')
         with patch('psrtty.backup.create_log_backup',return_value=Path('saved.zip')) as backup, patch.object(QMessageBox,'information'), patch.object(QMessageBox,'warning'):
