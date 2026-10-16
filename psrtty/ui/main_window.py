@@ -151,7 +151,8 @@ class MainWindow(QMainWindow):
         self.bridge.sub_char.connect(self._sub_char)
         self.bridge.direct_progress.connect(self._direct_progress)
         sr = int(self.store.data["audio"]["sample_rate"])
-        self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch)), self.bridge.level.emit, self.bridge.spectrum.emit)
+        self.audio = AudioEngine(sr, lambda ch: self.bridge.char.emit((self.audio.decode_generation, ch, time.monotonic(), True)), self.bridge.level.emit, self.bridge.spectrum.emit)
+        self.audio.decoder.on_break = lambda: self.bridge.char.emit((self.audio.decode_generation, None, time.monotonic()))
         self._apply_audio_config()
 
         self.setWindowTitle(f"PSRTTY {__version__}")
@@ -787,11 +788,40 @@ class MainWindow(QMainWindow):
 
     def _rx_char(self, ch):
         if not self.decode_enabled.isChecked() or self.active_tx_id is not None: return
+        received_at = time.monotonic()
+        framed = False
         if isinstance(ch, tuple):
-            generation, ch=ch
+            generation, ch, *timestamp = ch
             if generation != self.audio.decode_generation: return
+            if timestamp: received_at = timestamp[0]
+            if len(timestamp) > 1: framed = timestamp[1]
+        if ch is None:
+            # Frame boundaries share the character event queue, so delayed GUI
+            # processing cannot merge short runs. Live display ignores them.
+            if self.store.data['ui'].get('decode_display_mode', 'buffered') == 'buffered':
+                self._finalize_rx_card()
+            return
         if ch.strip(): self.rx_level_hint.decoded(time.monotonic())
         if self.sub_window and self.sub_window.isVisible():self.sub_window.main_char(ch)
+        if self.store.data['ui'].get('decode_display_mode', 'buffered') == 'buffered':
+            self._rx_buffered_char(ch, received_at, framed)
+        else:
+            self._rx_live_char(ch)
+
+    def _rx_buffered_char(self, ch, received_at, framed=False):
+        # Frame breaks are primary; the arrival-time check also covers legacy
+        # event sources and a GUI timer that has not run yet.
+        if not framed and self.rx_buffer and received_at - getattr(self, 'rx_last_char_time', received_at) > self.audio.decoder.continuity_timeout:
+            self._finalize_rx_card()
+        if ch in '\r\n':
+            if self.rx_buffer.strip(): self._finalize_rx_card()
+            return
+        self.rx_last_char_time = received_at
+        self.rx_buffer += ch
+        if len(self.rx_buffer) > 300: self._finalize_rx_card()
+        else: self.rx_idle_timer.start()
+
+    def _rx_live_char(self, ch):
         if ch in "\r\n":
             if self.rx_buffer.strip(): self._finalize_rx_card()
             return
@@ -803,8 +833,13 @@ class MainWindow(QMainWindow):
 
     def _check_rx_idle(self):
         if not self.rx_buffer:return
-        last=max(getattr(self,'rx_last_char_time',0.),self.audio.decoder.last_signal_time)
-        if time.monotonic()-last < 1.5:self.rx_idle_timer.start()
+        last = getattr(self, 'rx_last_char_time', 0.)
+        if self.store.data['ui'].get('decode_display_mode', 'buffered') == 'live':
+            last = max(last, self.audio.decoder.last_signal_time)
+        else:
+            last = max(last, self.audio.decoder.last_frame_wall_time)
+        timeout = 1.5 if self.store.data['ui'].get('decode_display_mode', 'buffered') == 'live' else self.audio.decoder.continuity_timeout
+        if time.monotonic()-last < timeout:self.rx_idle_timer.start()
         else:self._finalize_rx_card()
 
     def _discard_rx_preview(self):
@@ -832,6 +867,9 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(20, lambda: self.cards_scroll.verticalScrollBar().setValue(self.cards_scroll.verticalScrollBar().maximum()))
 
     def _finalize_rx_card(self, extract=True):
+        if self.store.data['ui'].get('decode_display_mode', 'buffered') == 'buffered':
+            self._finalize_buffered_rx(extract)
+            return
         text=" ".join(self.rx_buffer.split()); self.rx_buffer=""
         self.rx_idle_timer.stop()
         card,self.rx_live_card=self.rx_live_card,None
@@ -847,6 +885,20 @@ class MainWindow(QMainWindow):
         if len(text)<=self.store.data['ui'].get('decode_ignore_chars',0):return
         if card is None:self._add_card(text,"RX")
         if extract:self._consider_auto_extract(text)
+
+    def _finalize_buffered_rx(self, extract=True):
+        text = ' '.join(self.rx_buffer.split())
+        self.rx_buffer = ''
+        self.rx_idle_timer.stop()
+        self._remove_rx_preview()
+        if not text or not self.decode_enabled.isChecked(): return
+        # Preserve the independent raw log / printer policies. The main RX
+        # card and auto-extraction use the final normalized fragment length.
+        self.transcript.append('RX ' + text)
+        self.printer.submit('RX', text, zone=self.store.data['ui'].get('time_zone', 'JST'))
+        if len(text) <= self.store.data['ui'].get('decode_ignore_chars', 0): return
+        self._add_card(text, 'RX')
+        if extract: self._consider_auto_extract(text)
 
     def _add_card(self,text,direction):
         zone=self.store.data['ui'].get('time_zone','JST')

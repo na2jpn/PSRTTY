@@ -128,7 +128,7 @@ class Hamlog123Tests(unittest.TestCase):
             self.assertIn('Enter',i18n.tr('guide.8.body'));self.assertIn('Save',i18n.tr('guide.8.body'))
             item=i18n.tr('v123.mismatch_item').format(field='FREQ',sent='"14.085"',received='"50.303"')
             self.assertIn('14.085',item);self.assertNotIn('v123.',item)
-            history=i18n.tr('history.body');self.assertTrue(history.startswith('2026-10-16  Ver1.24\n'))
+            history=i18n.tr('history.body');self.assertTrue(history.startswith('2026-10-17  Ver1.25\n'))
             self.assertNotIn('Ver1.22',history);self.assertIn('Ver1.21',history)
         for name in ('CHANGELOG.md','UPDATE_HISTORY.txt'):
             self.assertNotIn('Ver1.22',(root/name).read_text(encoding='utf-8'))

@@ -1206,12 +1206,13 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '2.8. Last TX readings stay for about 2 seconds, then SWR -- / PWR 0.0. PWR uses one decimal and no '
                  'unit. Known frames stay while connected; unavailable ALC is gray. After about 1 second of connected '
                  'TX, a valid zero PWR reading shows “Check Audio settings!”. C tuning sits beside Space without a '
-                 'frame or bold type.</p><p>Select Live or Buffered between the decode checkbox and its label. '
-                 'Buffered is the default; the selection is saved. A newline or about 1.5 s without signal finalizes '
-                 'the message. Buffered hides messages at or below the selected character limit before display; Live '
-                 'shows incoming text and removes short messages on finalization. Switching during reception preserves '
-                 'the text. Selection and automatic extraction start only after finalization; filtered messages are '
-                 'not extracted. Raw logging and printer output are independent of the display mode.</p>',
+                 'frame or bold type.</p><p>Choose Buffered or Live; the choice is saved. Default: Buffered. Buffered '
+                 'groups characters by continuity of valid decoded frames. A rejected frame or a short wait without '
+                 'the next valid frame ends the run. Runs at or below the character limit are neither shown nor '
+                 'automatically extracted. The gap limit is about 0.22 s at 45.45 baud. Control codes maintain '
+                 'continuity but do not count as text. Live displays incoming text and removes short text at a newline '
+                 'or about 1.5 s without signal. Switching preserves pending text. Raw logging and printer filtering '
+                 'are independent.</p>',
  'guide.3.title': 'TX / Auto CQ',
  'guide.3.body': '<h2>Macros and manual transmission</h2><p>Transmit with F1–F9 or the on-screen macro buttons. For '
                  'manual TX, enter text and press TX. <b>STOP / Esc</b> stops transmission. Both upper-right and '
@@ -1385,13 +1386,13 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'communication errors and queue limits remain visible without popups. Test printing and stopping also '
                  'show status while jobs remain. The separator above Test print divides settings from '
                  'actions.</p><h2>Special Thanks</h2><p>The button at the bottom of About PSRTTY opens a separate '
-                 'window thanking contributors to testing and development.</p><p>Select Live or Buffered between the '
-                 'decode checkbox and its label. Buffered is the default; the selection is saved. A newline or about '
-                 '1.5 s without signal finalizes the message. Buffered hides messages at or below the selected '
-                 'character limit before display; Live shows incoming text and removes short messages on finalization. '
-                 'Switching during reception preserves the text. Selection and automatic extraction start only after '
-                 'finalization; filtered messages are not extracted. Raw logging and printer output are independent of '
-                 'the display mode.</p>',
+                 'window thanking contributors to testing and development.</p><p>Choose Buffered or Live; the choice '
+                 'is saved. Default: Buffered. Buffered groups characters by continuity of valid decoded frames. A '
+                 'rejected frame or a short wait without the next valid frame ends the run. Runs at or below the '
+                 'character limit are neither shown nor automatically extracted. The gap limit is about 0.22 s at '
+                 '45.45 baud. Control codes maintain continuity but do not count as text. Live displays incoming text '
+                 'and removes short text at a newline or about 1.5 s without signal. Switching preserves pending text. '
+                 'Raw logging and printer filtering are independent.</p>',
  'guide.8.title': 'HAMLOG / integrations',
  'guide.8.body': '<h2>HAMLOG and other integrations</h2>\n'
                  '<h3>HAMLOG target: Ver5.48</h3><p>Uses the Turbo HAMLOG/Win public API introduced in Ver5.27c. On '
@@ -1461,13 +1462,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'while typing OFF, the two lines are sent together and TX stops.</p><p>F11 is TX/STOP, F12 replay. In '
                  'the main window they focus an open direct window. Ctrl+F12/Shift+F12 open/close it. Clear and close '
                  'also stop TX. Color is not remote reception confirmation. Sent text enters the raw log and TX card; '
-                 'use normal QSO recording. RX holds lines during MARK/LTRS/NUL idle and finalizes at a newline or 1.5 '
-                 'seconds without signal.</p><p>Select Live or Buffered between the decode checkbox and its label. '
-                 'Buffered is the default; the selection is saved. A newline or about 1.5 s without signal finalizes '
-                 'the message. Buffered hides messages at or below the selected character limit before display; Live '
-                 'shows incoming text and removes short messages on finalization. Switching during reception preserves '
-                 'the text. Selection and automatic extraction start only after finalization; filtered messages are '
-                 'not extracted. Raw logging and printer output are independent of the display mode.</p>',
+                 'use normal QSO recording. In Live mode, RX holds lines during MARK/LTRS/NUL idle and finalizes at a '
+                 'newline or 1.5 seconds without signal.</p><p>Choose Buffered or Live; the choice is saved. Default: '
+                 'Buffered. Buffered groups characters by continuity of valid decoded frames. A rejected frame or a '
+                 'short wait without the next valid frame ends the run. Runs at or below the character limit are '
+                 'neither shown nor automatically extracted. The gap limit is about 0.22 s at 45.45 baud. Control '
+                 'codes maintain continuity but do not count as text. Live displays incoming text and removes short '
+                 'text at a newline or about 1.5 s without signal. Switching preserves pending text. Raw logging and '
+                 'printer filtering are independent.</p>',
  'about.body': '<h2>PSRTTY 1.14</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
@@ -1500,7 +1502,13 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-16  Ver1.24\n'
+ 'history.body': '2026-10-17  Ver1.25\n'
+                 '・Buffered reception now groups text by continuity of decoded frames.\n'
+                 '・Rejected frames or short gaps split runs early; the character limit applies to each run, reducing '
+                 'the joining of isolated short bursts.\n'
+                 '・Live display remains separate. Updated guides in all eight languages.\n'
+                 '\n'
+                 '2026-10-16  Ver1.24\n'
                  '・When a QSO has no frequency, show the other station callsign and a frequency input before logging.\n'
                  '・Apply the entered MHz value to this QSO and derive its supported band. Use the same value for ADIF, '
                  'HAMLOG, UDP and other links.\n'
@@ -2345,13 +2353,13 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v116.rx_buffered': 'Buffered',
  'v116.rx_display_tip': 'Select the RX display mode. Default: Buffered. In Live mode, short messages disappear after '
                         'finalization.',
- 'v116.rx_display_guide': 'Select Live or Buffered between the decode checkbox and its label. Buffered is the default; '
-                          'the selection is saved. A newline or about 1.5 s without signal finalizes the message. '
-                          'Buffered hides messages at or below the selected character limit before display; Live shows '
-                          'incoming text and removes short messages on finalization. Switching during reception '
-                          'preserves the text. Selection and automatic extraction start only after finalization; '
-                          'filtered messages are not extracted. Raw logging and printer output are independent of the '
-                          'display mode.',
+ 'v116.rx_display_guide': 'Choose Buffered or Live; the choice is saved. Default: Buffered. Buffered groups characters '
+                          'by continuity of valid decoded frames. A rejected frame or a short wait without the next '
+                          'valid frame ends the run. Runs at or below the character limit are neither shown nor '
+                          'automatically extracted. The gap limit is about 0.22 s at 45.45 baud. Control codes '
+                          'maintain continuity but do not count as text. Live displays incoming text and removes short '
+                          'text at a newline or about 1.5 s without signal. Switching preserves pending text. Raw '
+                          'logging and printer filtering are independent.',
  'v117.manual': 'Manual with external PTT',
  'v117.manual_note': 'No CAT/CI-V. Set frequency and mode on the radio. Enable External connection and select Radio '
                      'PTT control. Frequency and meters are unavailable.',

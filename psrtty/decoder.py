@@ -24,6 +24,7 @@ class RTTYDecoder:
         space_hz: float = 2295.0,
         invert: bool = False,
         on_char: Callable[[str], None] | None = None,
+        on_break: Callable[[], None] | None = None,
     ):
         self.sample_rate = sample_rate
         self.baud = baud
@@ -31,9 +32,12 @@ class RTTYDecoder:
         self.space_hz = space_hz
         self.invert = invert
         self.on_char = on_char or (lambda _c: None)
+        self.on_break = on_break or (lambda: None)
+        self._last_frame_time = None
         self.sq_level = 4
         self._quality = 0.0
         self.last_signal_time = 0.0
+        self.last_frame_wall_time = 0.0
         self._frame_quality = []
         self.window_ms = 10.0
         self.window_n = max(64, int(sample_rate * self.window_ms / 1000.0))
@@ -53,6 +57,17 @@ class RTTYDecoder:
     def bit_time(self) -> float:
         return 1.0 / max(self.baud, 1.0)
 
+    @property
+    def continuity_timeout(self) -> float:
+        # A complete character takes 7.5 bits. Allow 2.5 extra bits for
+        # framing jitter, rather than joining fragments across a 1.5 s gap.
+        return 10 * self.bit_time
+
+    def _break_continuity(self):
+        if self._last_frame_time is not None:
+            self._last_frame_time = None
+            self.on_break()
+
     def configure(self, baud: float, mark_hz: float, space_hz: float, invert: bool) -> None:
         self.baud = float(baud)
         changed = (self.mark_hz != mark_hz) or (self.space_hz != space_hz)
@@ -71,6 +86,8 @@ class RTTYDecoder:
         self._ignore_until = 0.0
         self._frame_quality = []
         self.last_signal_time = 0.0
+        self.last_frame_wall_time = 0.0
+        self._last_frame_time = None
 
     def _rebuild_basis(self) -> None:
         n = np.arange(self.window_n, dtype=np.float64)
@@ -106,6 +123,8 @@ class RTTYDecoder:
                 self.last_signal_time = time.monotonic()
             center_t = self._time + self.window_n / self.sample_rate / 2.0
             self._time += dt
+            if self._last_frame_time is not None and center_t - self._last_frame_time > self.continuity_timeout:
+                self._break_continuity()
             self._consume_logic(logic, confidence, center_t)
             self._last_logic = logic
 
@@ -127,6 +146,7 @@ class RTTYDecoder:
         if self._state == "start":
             if logic != 0:
                 self._state = "idle"
+                self._break_continuity()
                 return
             self._state = "data"
             self._next_sample_t = self._start_t + 1.5 * self.bit_time
@@ -138,10 +158,14 @@ class RTTYDecoder:
         elif self._state == "stop":
             # Validate stop MARK before changing ITA2 shift state or emitting text.
             if logic == 1 and sum(self._frame_quality)/len(self._frame_quality) >= threshold:
+                self._last_frame_time = t
                 code = sum((bit & 1) << i for i, bit in enumerate(self._bits))
                 self.last_signal_time = time.monotonic()
                 char = self._ita2.decode_code(code)
+                self.last_frame_wall_time = self.last_signal_time
                 if char:
                     self.on_char(char)
+            else:
+                self._break_continuity()
             self._state = "idle"
             self._ignore_until = self._start_t + 7.1 * self.bit_time

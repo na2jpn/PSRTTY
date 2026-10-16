@@ -170,6 +170,7 @@ class UI109Tests(unittest.TestCase):
         w.active_tx_id=None;w.manual_tx.setText('CQ')
         with patch.object(w,'_stop_tx') as stop:w._clear_manual();stop.assert_called_once();self.assertEqual(w.manual_tx.text(),'')
     def test_signal_idle_retains_then_loss_finalizes(self):
+        self.window.decode_display.setCurrentIndex(self.window.decode_display.findData('live'))
         w=self.window;w.rx_buffer='CQ';w.rx_last_char_time=time.monotonic()-3;w.audio.decoder.last_signal_time=time.monotonic()
         with patch.object(w,'_finalize_rx_card') as final:
             w._check_rx_idle();final.assert_not_called()
