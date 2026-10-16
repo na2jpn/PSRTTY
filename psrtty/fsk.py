@@ -119,8 +119,14 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
             if share_ptt:sequencer.borrowed_serial=key.ser
             # Mode must be confirmed before any PTT, even if auto-mode is OFF.
             if engine._tx_cancel.is_set():return
-            if not controller.set_fsk_mode(options.get('mode','RTTY')):
-                raise RuntimeError(tr('fsk.mode_failed'))
+            from .hamlib_radio import HamlibController
+            confirmed=(controller.set_fsk_mode(options.get('mode','RTTY'),cancel_event=engine._tx_cancel)
+                       if isinstance(controller,HamlibController) else controller.set_fsk_mode(options.get('mode','RTTY')))
+            if not confirmed:
+                if engine._tx_cancel.is_set():return
+                detail=getattr(controller,'fsk_mode_error','')
+                raise RuntimeError(detail if isinstance(detail,str) and detail else tr('fsk.mode_failed'))
+            if engine._tx_cancel.is_set():return
             engine._fsk_mode_confirmed=options.get('mode','RTTY')
             if not ptt_on or ptt_on() is not True:raise RuntimeError(tr('ui.5eef7dde3c3c7e95'))
             if engine._tx_cancel.wait(.12):return

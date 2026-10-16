@@ -76,7 +76,7 @@ class Filter119Tests(unittest.TestCase):
             ctl.lib = Mock()
             ctl.lib.rig_parse_mode.return_value = 32
             ctl.lib.rig_set_mode.return_value = 0
-            readings = iter((64, final_mode))
+            readings = iter((64,) + (final_mode,) * 5)
             def read(handle, vfo, actual, width):
                 actual._obj.value = next(readings)
                 width._obj.value = 500

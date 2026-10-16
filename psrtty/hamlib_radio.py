@@ -10,6 +10,7 @@ import ctypes
 import ctypes.util
 import os
 import sys
+import time
 from pathlib import Path
 
 from .civ import CIVController, CIVStatus
@@ -39,6 +40,9 @@ class LevelValue(ctypes.Union):
 
 
 VFO = 1 << 29  # RIG_VFO_CURR in Hamlib 4.7
+FSK_VERIFY_ATTEMPTS = 5
+FSK_VERIFY_INTERVAL = .25
+FSK_VERIFY_TIMEOUT = 2.
 
 
 def _library_filename() -> str:
@@ -142,6 +146,8 @@ class HamlibController(CIVController):
         if model not in HAMLIB_MODELS:raise ValueError(tr('ui.0e1b2eddb0064736'))
         super().__init__(0,model=model)
         self.handle=None;self.lib=None;self.dll_directory=None
+        self.fsk_mode_error=''
+        self.fsk_mode_diagnostic={}
 
     def _configure(self, name, value):
         token=self.lib.rig_token_lookup(self.handle,name.encode('ascii'))
@@ -214,21 +220,86 @@ class HamlibController(CIVController):
             if on and not ok:self.lib.rig_set_ptt(self.handle,VFO,0)
             return ok
 
-    def set_fsk_mode(self, mode='RTTY'):
-        if mode not in ('RTTY','RTTY-R'):return False
+    def set_fsk_mode(self, mode='RTTY', cancel_event=None):
+        """Verify FSK mode with bounded read retries and at most one mode write.
+
+        The deadline limits new CAT calls; an in-flight Hamlib call remains
+        subject to the driver's own serial timeout. No PTT is asserted here.
+        """
+        self.fsk_mode_error='';self.fsk_mode_diagnostic={}
+        def fail(reason, **details):
+            self.fsk_mode_diagnostic=dict(reason=reason,requested=mode,**details)
+            fields=dict(details)
+            if 'stage' in fields:fields['stage']=tr('v121.stage_'+fields['stage'])
+            self.fsk_mode_error=tr('v121.'+reason).format(mode=mode,**fields)
+            return False
+        if mode not in ('RTTY','RTTY-R'):return fail('invalid')
         with self._lock:
-            if not self.handle or not self.status.connected or self.cancel.is_set():return False
-            if self.read_transmitting() is not False:return False
-            value=self.lib.rig_parse_mode(b'RTTY' if mode=='RTTY' else b'RTTYR')
-            if not value:return False
-            # Reapplying RTTY can reset the selected filter on the radio even
-            # with Hamlib's no-change passband. Leave an existing mode alone.
-            current=ctypes.c_uint64();current_width=ctypes.c_long()
-            if self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(current),ctypes.byref(current_width))!=0:return False
-            if current.value==value:return True
-            if self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
-            actual=ctypes.c_uint64();width=ctypes.c_long()
-            return self.lib.rig_get_mode(self.handle,VFO,ctypes.byref(actual),ctypes.byref(width))==0 and actual.value==value
+            handle=self.handle
+            def aborted():
+                if self.cancel.is_set() or (cancel_event is not None and cancel_event.is_set()):
+                    fail('cancelled');return True
+                if not handle or self.handle!=handle or not self.status.connected or not self.lib:
+                    fail('not_ready');return True
+                return False
+            if aborted():return False
+            deadline=time.monotonic()+FSK_VERIFY_TIMEOUT
+            def retry(attempt):
+                if attempt>=FSK_VERIFY_ATTEMPTS or aborted():return False
+                remaining=deadline-time.monotonic()
+                if remaining<=0:return False
+                (cancel_event if cancel_event is not None else self.cancel).wait(min(FSK_VERIFY_INTERVAL,remaining))
+                return not aborted() and time.monotonic()<deadline
+            stage='ptt'
+            try:
+                for attempt in range(1,FSK_VERIFY_ATTEMPTS+1):
+                    if aborted():return False
+                    state=self.read_transmitting()
+                    if state is True:return fail('transmitting')
+                    if state is False:break
+                    if not retry(attempt):
+                        return False if self.fsk_mode_error else fail('ptt_read',attempts=attempt)
+                value=self.lib.rig_parse_mode(b'RTTY' if mode=='RTTY' else b'RTTYR')
+                if not value:return fail('invalid')
+                def read_mode():
+                    actual=ctypes.c_uint64();width=ctypes.c_long()
+                    code=self.lib.rig_get_mode(handle,VFO,ctypes.byref(actual),ctypes.byref(width))
+                    return code,actual.value
+                def label(value):
+                    for token,name in ((b'RTTY','RTTY'),(b'RTTYR','RTTY-R'),(b'LSB','LSB'),(b'USB','USB'),(b'CW','CW'),(b'CWR','CW-R'),(b'FM','FM'),(b'AM','AM'),(b'PKTLSB','DATA-LSB'),(b'PKTUSB','DATA-USB')):
+                        if self.lib.rig_parse_mode(token)==value:return f'{name} (0x{value:X})'
+                    return f'0x{value:X}'
+                stage='read'
+                for attempt in range(1,FSK_VERIFY_ATTEMPTS+1):
+                    if aborted():return False
+                    if time.monotonic()>=deadline:return fail('timeout',stage=stage)
+                    code,current=read_mode()
+                    if aborted():return False
+                    if code==0:break
+                    if not retry(attempt):
+                        return False if self.fsk_mode_error else fail('read',attempts=attempt,code=code)
+                # Do not reapply an existing mode: this preserves the filter.
+                if current==value:return True
+                if aborted():return False
+                if time.monotonic()>=deadline:return fail('mismatch',observed=label(current),attempts=attempt)
+                stage='set'
+                code=self.lib.rig_set_mode(handle,VFO,value,-1)
+                if aborted():return False
+                if code!=0:return fail('set',code=code)
+                stage='verify'
+                for attempt in range(1,FSK_VERIFY_ATTEMPTS+1):
+                    if aborted():return False
+                    if time.monotonic()>=deadline:return fail('timeout',stage=stage)
+                    code,current=read_mode()
+                    if aborted():return False
+                    if code==0 and current==value:return True
+                    if not retry(attempt):
+                        if self.fsk_mode_error:return False
+                        if code!=0:return fail('verify_read',attempts=attempt,code=code)
+                        return fail('mismatch',observed=label(current),attempts=attempt)
+            except Exception as exc:
+                if aborted():return False
+                return fail('exception',stage=stage,error=str(exc))
 
     def set_data_mode(self,mode='LSB-D'):
         if mode not in ('LSB-D','USB-D'):return False

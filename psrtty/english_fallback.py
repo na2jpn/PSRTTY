@@ -1491,7 +1491,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-16  Ver1.20\n'
+ 'history.body': '2026-10-16  Ver1.21\n'
+                 '• Added waits and read retries to Hamlib FSK mode checks to handle temporary read errors and '
+                 'mode-change delays.\n'
+                 '• Keeps the filter when already in the requested mode, sends at most one mode-change command, and '
+                 'starts TX only after verification. STOP also cancels verification waits.\n'
+                 '• Added stage-specific FSK errors with received mode, attempt count and Hamlib error codes in all '
+                 'eight languages.\n'
+                 '\n'
+                 '2026-10-16  Ver1.20\n'
                  '• Fixed SWR/PWR readings during FSK transmission on supported radios. Display switches and the '
                  '2-second hold after TX remain available.\n'
                  '• In FSK configuration, a verified RTTY/RTTY-R mode is shown as green “FSK” instead of an ALC '
@@ -2538,4 +2546,22 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'fsk6.audio': 'FT-891 controls CAT and FSK through a USB cable connection. Feed receive audio to Audio IN through an '
                'audio interface such as SCU-17 or a suitable audio connection.',
  'v120.fsk_hint': 'FSK keying: no audio-level adjustment using ALC is needed. Set power on the radio and check PWR and '
-                  'SWR.'}
+                  'SWR.',
+ 'v121.invalid': 'Hamlib: FSK mode "{mode}" is unavailable.',
+ 'v121.cancelled': 'Hamlib: FSK mode verification cancelled.',
+ 'v121.not_ready': 'Hamlib: cannot verify FSK mode; radio disconnected or connection changed.',
+ 'v121.transmitting': 'Hamlib: cannot change FSK mode while the radio is transmitting.',
+ 'v121.ptt_read': 'Hamlib: cannot read TX/RX state after {attempts} attempts. Transmission has not started.',
+ 'v121.read': 'Hamlib: cannot read current mode after {attempts} attempts (error {code}); requested {mode}. '
+              'Transmission has not started.',
+ 'v121.set': 'Hamlib: failed to set {mode} (error {code}). Transmission has not started.',
+ 'v121.verify_read': 'Hamlib: cannot read mode after setting {mode}, after {attempts} attempts (error {code}). '
+                     'Transmission has not started.',
+ 'v121.mismatch': 'Hamlib: mode mismatch; requested {mode}, received {observed} after {attempts} attempts. '
+                  'Transmission has not started.',
+ 'v121.exception': 'Hamlib: error during {stage}: {error}. Transmission has not started.',
+ 'v121.timeout': 'Hamlib: time limit reached during {stage}; requested {mode}. Transmission has not started.',
+ 'v121.stage_ptt': 'TX/RX state read',
+ 'v121.stage_read': 'current mode read',
+ 'v121.stage_set': 'mode change',
+ 'v121.stage_verify': 'mode readback'}

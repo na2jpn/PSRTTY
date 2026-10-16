@@ -524,8 +524,10 @@ def connect_configured(controller, settings, advanced):
             mode = settings.get("fsk_mode", "RTTY") if settings.get("tx_method")=="fsk" else advanced.get("data_mode", "LSB-D")
             switched = controller.set_fsk_mode(mode) if settings.get("tx_method")=="fsk" else controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)
             if not switched:
+                detail=getattr(controller,'fsk_mode_error','') if settings.get('tx_method')=='fsk' else ''
                 controller.disconnect()
                 controller.status.message = tr('ui.44de90efe2737145')
+                if isinstance(detail,str) and detail:controller.status.message+='\n'+detail
         from .radio_support import USB_MOD_INPUT
         if controller.status.connected and settings.get('tx_method')!='fsk' and settings.get('auto_usb_mod_input',False) is True and controller.model in USB_MOD_INPUT:
             if not controller.set_usb_mod_input():
