@@ -179,6 +179,8 @@ class HamlibController(CIVController):
 
     def disconnect(self):
         with self._lock:
+            from .fsk import release_connection
+            release_connection(self)
             if self.handle and self.lib:
                 try:self.lib.rig_close(self.handle)
                 except Exception:pass

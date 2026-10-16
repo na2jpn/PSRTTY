@@ -1491,7 +1491,15 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-16  Ver1.21\n'
+ 'history.body': '2026-10-16  Ver1.22\n'
+                 '・Prepare the FSK COM port at connection and keep it open while connected, avoiding reopen on each '
+                 'transmission or resend.\n'
+                 '・Check RTTY mode before preparing the FSK port. Require confirmed RX after initialization before '
+                 'starting PTT.\n'
+                 '・Release the FSK port on disconnect or Profile change. Show the failed startup stage in all eight '
+                 'languages.\n'
+                 '\n'
+                 '2026-10-16  Ver1.21\n'
                  '• Added waits and read retries to Hamlib FSK mode checks to handle temporary read errors and '
                  'mode-change delays.\n'
                  '• Keeps the filter when already in the requested mode, sends at most one mode-change command, and '
@@ -2564,4 +2572,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v121.stage_ptt': 'TX/RX state read',
  'v121.stage_read': 'current mode read',
  'v121.stage_set': 'mode change',
- 'v121.stage_verify': 'mode readback'}
+ 'v121.stage_verify': 'mode readback',
+ 'v122.cancelled': 'FSK output preparation cancelled. Check the connection.',
+ 'v122.receive_failed': 'RX could not be confirmed before or after FSK output initialization. Check PTT settings and '
+                        'RTS/DTR assignments.',
+ 'v122.stage_mode': 'RTTY mode check',
+ 'v122.stage_port': 'FSK COM preparation',
+ 'v122.stage_receive': 'RX check after FSK COM initialization',
+ 'v122.stage_ptt': 'PTT start',
+ 'v122.stage_keying': 'FSK keying'}

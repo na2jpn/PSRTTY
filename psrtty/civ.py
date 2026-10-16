@@ -47,6 +47,7 @@ class CIVController:
         self._lock = threading.RLock()
         self.cancel = threading.Event()
         self._connect_deadline = None
+        self._fsk_key_session = None
 
     @staticmethod
     def available_ports() -> list[str]:
@@ -150,6 +151,8 @@ class CIVController:
 
     def disconnect(self) -> None:
         with self._lock:
+            from .fsk import release_connection
+            release_connection(self)
             if self.ser:
                 try:
                     self.ser.close()
@@ -514,14 +517,14 @@ def radio_address(settings: dict) -> int:
     return addr
 
 
-def connect_configured(controller, settings, advanced):
+def connect_configured(controller, settings, advanced, fsk=None, external=None):
     """Shared by main connection and test. Failure leaves no usable session."""
     try:
         from .hamlib_radio import HAMLIB_MODELS
         cat = settings.get('model') in HAMLIB_MODELS or settings.get('ptt') == 'CAT'
         status = controller.connect(settings.get("com_port", "AUTO"), settings.get("cat_baud", "AUTO") if cat else settings.get("civ_baud", "AUTO"))
         if status.connected and settings.get("auto_data_mode", True):
-            mode = settings.get("fsk_mode", "RTTY") if settings.get("tx_method")=="fsk" else advanced.get("data_mode", "LSB-D")
+            mode = (fsk or {}).get('mode',settings.get("fsk_mode", "RTTY")) if settings.get("tx_method")=="fsk" else advanced.get("data_mode", "LSB-D")
             switched = controller.set_fsk_mode(mode) if settings.get("tx_method")=="fsk" else controller.set_operating_mode(mode) if mode in ('LSB', 'USB') else controller.set_data_mode(mode)
             if not switched:
                 detail=getattr(controller,'fsk_mode_error','') if settings.get('tx_method')=='fsk' else ''
@@ -533,6 +536,9 @@ def connect_configured(controller, settings, advanced):
             if not controller.set_usb_mod_input():
                 controller.disconnect()
                 controller.status.message=tr('v116.usb_mod_failed')
+        if controller.status.connected and settings.get('tx_method') == 'fsk' and fsk is not None:
+            from .fsk import prepare_connection
+            prepare_connection(controller, settings, fsk, external)
         if controller.cancel.is_set():
             controller.disconnect()
         return controller.status

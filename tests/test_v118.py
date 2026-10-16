@@ -65,7 +65,7 @@ class FSKTests(unittest.TestCase):
             clock.return_value.code.side_effect=code;clock.return_value.emit.return_value=True
             ok,_=start_fsk(engine,ctl,r,f,DEFAULT_CONFIG['advanced'],on,off,done,text='RY',session=session,progress=progress)
             self.assertTrue(ok);engine.wait_tx(2.)
-            self.assertFalse(engine._tx_active);self.assertEqual(done.call_count,1);off.assert_called_once();key.return_value.close.assert_called_once();sd.OutputStream.assert_not_called()
+            self.assertFalse(engine._tx_active);self.assertEqual(done.call_count,1);self.assertEqual(off.call_count,int(mode));key.return_value.close.assert_called_once();sd.OutputStream.assert_not_called()
         return on,done,progress
     def test_macro_fsk_success_has_no_audio(self):
         on,done,_=self.run_tx();on.assert_called_once();self.assertTrue(done.call_args.args[0])

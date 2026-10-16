@@ -70,14 +70,17 @@ class SharedPTTTests(unittest.TestCase):
     def test_shared_interface_single_open_and_cleanup_on_success_and_failure(self):
         for mode_ok in (True,False):
             r,f,e=self.config();ctl=Mock();ctl.status.connected=True;ctl.set_fsk_mode.return_value=mode_ok
+            ctl.external_transmitting=False
+            ctl.read_transmitting.return_value=False
             engine=AudioEngine();seq=ExternalPTT(e,'CAT1',engine._tx_cancel)
             on,off=keying_callbacks(ctl,'外部接続',seq,lambda:True);device=Mock();done=[]
             # No audio or FSK timing dependency: this test checks resource ownership and PTT.
             with patch('serial.Serial',return_value=device) as serial,patch('psrtty.fsk.BitClock'):
                 ok,_=start_fsk(engine,ctl,r,f,DEFAULT_CONFIG['advanced'],on,off,lambda *x:done.append(x),text='RY',external=e,sequencer=seq)
                 self.assertTrue(ok);engine._tx_thread.join(2);self.assertFalse(engine._tx_thread.is_alive())
-                self.assertEqual(serial.call_count,1);device.open.assert_called_once();device.close.assert_called_once()
-                self.assertFalse(device.rts);self.assertFalse(device.dtr);self.assertFalse(ctl.external_transmitting)
+                self.assertEqual(serial.call_count,int(mode_ok));self.assertEqual(device.open.call_count,int(mode_ok));self.assertEqual(device.close.call_count,int(mode_ok))
+                if mode_ok:self.assertFalse(device.rts);self.assertFalse(device.dtr)
+                self.assertFalse(ctl.external_transmitting)
                 self.assertEqual(done[0][0],mode_ok)
     def test_reject_same_line_cat_port_and_prekey_sharing(self):
         r,f,e=self.config();self.assertFalse(validate(r,f,e))

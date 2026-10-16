@@ -55,7 +55,7 @@ class KenwoodFSKTests(unittest.TestCase):
                     ok,_=start_fsk(engine,ctl,r,f,DEFAULT_CONFIG['advanced'],on,off,done,text='RY')
                     self.assertTrue(ok);engine.wait_tx(2)
                     self.assertFalse(engine._tx_active);self.assertEqual(done.call_args.args[0],mode_ok)
-                    self.assertEqual(on.call_count,int(mode_ok));off.assert_called_once();key.return_value.close.assert_called_once()
+                    self.assertEqual(on.call_count,int(mode_ok));self.assertEqual(off.call_count,int(mode_ok));key.return_value.close.assert_called_once()
                     sd.OutputStream.assert_not_called()
     def test_eight_language_model_guides_and_selected_usb_signal(self):
         for language in i18n.LANGUAGES:

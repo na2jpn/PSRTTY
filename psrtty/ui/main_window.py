@@ -1301,6 +1301,9 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr('ui.a242f5692c7f4423'), 3000); return
         values = deepcopy(self.store.data["radio"])
         advanced = deepcopy(self.store.data["advanced"])
+        fsk_options = deepcopy(self.store.data['fsk'])
+        external_options = deepcopy(self.store.data['external'])
+        if values.get('tx_method') == 'fsk':values['fsk_mode']=fsk_options['mode']
         try:
             ctl = create_controller(values)
         except ValueError as exc:
@@ -1335,7 +1338,7 @@ class MainWindow(QMainWindow):
                     self._profile_switch = None
                     self._refresh_profile_buttons()
             self._set_radio_controls()
-        self.connection_job = BackgroundJob(self, lambda: connect_configured(ctl, values, advanced), done)
+        self.connection_job = BackgroundJob(self, lambda: connect_configured(ctl, values, advanced, fsk_options, external_options), done)
         def deadline():
             if generation == self.connection_generation and self.connecting:
                 self.disconnect_radio()

@@ -437,6 +437,13 @@ class SettingsDialog(FSKSettingsMixin, QDialog):
                 self.external_test_status.setText(tr('ui.ccab6781bcc1fc2a')); return
         try:
             self._external_test = ExternalPTT(values, radio_port)
+            from ..fsk import borrow_for_ptt_test
+            for ctl in (getattr(parent,'radio',None),self.test_controller):
+                if ctl is not None:
+                    device=borrow_for_ptt_test(ctl,values)
+                    if device is not None:
+                        self._external_test.borrowed_serial=device
+                        break
             self._external_test.before_ptt()
             self.external_test_status.setText(tr('v117.ext_on'))
             self.external_test_timer.start(3000)
@@ -1045,9 +1052,11 @@ class SettingsDialog(FSKSettingsMixin, QDialog):
         self.connect_button.setEnabled(False)
         self.test_note.setText(tr('ui.c1083127083f08e6'))
         advanced = dict(data_mode=self.data_mode.currentText())
+        fsk_options = self._fsk_values() if fsk_enabled(self.working) else None
+        external_options = self._external_values()
         self.test_button.setEnabled(False); self.test_button.setText(tr('ui.c1083127083f08e6'))
         def work():
-            return connect_configured(ctl, values, advanced)
+            return connect_configured(ctl, values, advanced, fsk_options, external_options)
         self.test_job = BackgroundJob(self, work, lambda st, err: self._test_done(st, err, values) if self.test_controller is ctl else None)
         def deadline():
             if self.test_controller is ctl and self.test_pending:
