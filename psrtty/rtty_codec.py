@@ -47,25 +47,30 @@ class ITA2Decoder:
 def encode_ita2_codes(text: str) -> list[int]:
     text = text.upper().replace("\t", " ")
     figures = False
+    reassert_figures = False
     codes: list[int] = []
     for ch in text:
         if ch in ("\r", "\n", " "):
             code = LTRS_ENCODE.get(ch)
             if code is not None:
                 codes.append(code)
+            reassert_figures = True
             continue
         if ch in LTRS_ENCODE:
             if figures:
                 codes.append(LTRS_SHIFT)
                 figures = False
             codes.append(LTRS_ENCODE[ch])
+            reassert_figures = False
         elif ch in FIGS_ENCODE:
-            if not figures:
+            if not figures or reassert_figures:
                 codes.append(FIGS_SHIFT)
                 figures = True
             codes.append(FIGS_ENCODE[ch])
+            reassert_figures = False
         else:
             codes.append(LTRS_ENCODE[" "])
+            reassert_figures = True
     return codes
 
 

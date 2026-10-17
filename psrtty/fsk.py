@@ -152,17 +152,18 @@ class SerialKey:
             self.ser=None
 
 class CodeEncoder:
-    def __init__(self):self.figures=False
+    def __init__(self):self.figures=False;self.reassert_figures=False
     def char(self,ch):
         ch=ch.upper();codes=[]
-        if ch=='\n':return [8,2]
+        if ch=='\n':self.reassert_figures=True;return [8,2]
         if ch in LTRS_ENCODE:
             if self.figures and ch not in ' \r':codes.append(31);self.figures=False
             codes.append(LTRS_ENCODE[ch])
         elif ch in FIGS_ENCODE:
-            if not self.figures:codes.append(27);self.figures=True
+            if not self.figures or self.reassert_figures:codes.append(27);self.figures=True
             codes.append(FIGS_ENCODE[ch])
         else:codes=[4]
+        self.reassert_figures = ch in ' \r' or (ch not in LTRS_ENCODE and ch not in FIGS_ENCODE)
         return codes
 
 def frame(code):

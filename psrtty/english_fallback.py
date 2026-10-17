@@ -1239,7 +1239,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'ON, audio goes to Audio OUT without operating PTT. Even while disconnected, successful TU 73 / TU73 '
                  'TX can log a QSO if auto log is ON and a contact CALL is present. If frequency is unavailable, ADIF '
                  'FREQ and BAND are omitted. </p><p>Allows macro, manual, direct and Auto CQ audio without a radio '
-                 'connection. CAT PTT is not operated while disconnected.</p>',
+                 'connection. CAT PTT is not operated while disconnected.</p><p>When sending digits or symbols after a '
+                 'space or newline, PSRTTY re-sends FIGS as needed. This allows receivers with USOS enabled to read '
+                 'numbers such as 599 001. It applies automatically to AFSK, FSK keying and direct TX; no extra '
+                 'setting is required. Receivers without USOS remain supported.</p><p>Changed repeated numbers in the '
+                 'standard JARL WW RTTY and CQ WW RTTY macros to 001-001. To apply this to saved macros, select the '
+                 'template in the macro editor and apply it. Applying replaces edited text; for custom macros, change '
+                 'only the needed text manually.</p><p>Extract a single exchange from identical numbers repeated with '
+                 'a hyphen.</p>',
  'guide.4.title': 'QSO / logs',
  'guide.4.body': '<h2>Completing and saving a QSO</h2><p>If your transmitted text contains TU 73 or TU73, automatic '
                  'logging is considered after successful TX. This applies to macros and manual TX, not received text. '
@@ -1469,7 +1476,10 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'neither shown nor automatically extracted. The gap limit is about 0.22 s at 45.45 baud. Control '
                  'codes maintain continuity but do not count as text. Live displays incoming text and removes short '
                  'text at a newline or about 1.5 s without signal. Switching preserves pending text. Raw logging and '
-                 'printer filtering are independent.</p>',
+                 'printer filtering are independent.</p><p>When sending digits or symbols after a space or newline, '
+                 'PSRTTY re-sends FIGS as needed. This allows receivers with USOS enabled to read numbers such as 599 '
+                 '001. It applies automatically to AFSK, FSK keying and direct TX; no extra setting is required. '
+                 'Receivers without USOS remain supported.</p>',
  'about.body': '<h2>PSRTTY 1.14</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
@@ -1502,7 +1512,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-17  Ver1.25\n'
+ 'history.body': '2026-10-17  Ver1.26\n'
+                 '・Re-send FIGS before digits or symbols after a space.\n'
+                 '・Fixed contest numbers being decoded as letters by receivers with USOS (Unshift On Space) enabled.\n'
+                 '・Applied to AFSK, FSK keying and direct TX, preserving compatibility with receivers without USOS.\n'
+                 '・Changed repeated numbers in the standard JARL WW RTTY and CQ WW RTTY macros to 001-001.\n'
+                 '・Extract a single exchange from identical numbers repeated with a hyphen.\n'
+                 '\n'
+                 '2026-10-17  Ver1.25\n'
                  '・Buffered reception now groups text by continuity of decoded frames.\n'
                  '・Rejected frames or short gaps split runs early; the character limit applies to each run, reducing '
                  'the joining of isolated short bursts.\n'
@@ -2514,7 +2531,10 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                    'suitable load, use low power and check the frequency is clear before connecting and using FSK test '
                    '+ PTT. Check with a short RY sequence, then verify STOP returns to receive. Stop at the radio if '
                    'transmission persists. Follow the manual for wiring and electrical levels; do not connect generic '
-                   'serial signals directly to an FSK input.</p>',
+                   'serial signals directly to an FSK input.</p><p>When sending digits or symbols after a space or '
+                   'newline, PSRTTY re-sends FIGS as needed. This allows receivers with USOS enabled to read numbers '
+                   'such as 599 001. It applies automatically to AFSK, FSK keying and direct TX; no extra setting is '
+                   'required. Receivers without USOS remain supported.</p>',
  'fsk3.afsk_only': 'The manufacturer manual specifies AFSK operation for this model. Native direct FSK keying is not '
                    'supported; use normal AFSK mode.',
  'fsk3.external': 'The manufacturer manual uses the ACC RTTY keying input for FSK. A separate serial port and a '

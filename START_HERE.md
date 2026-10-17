@@ -1,15 +1,10 @@
-# PSRTTY Ver1.25 正本フルソース — 2026-10-17
+# PSRTTY Ver1.26 フルソース — 2026-10-17
 
-1.24正本の全機能と1.25 FIX1までの修正を統合した正本です。
-このZIPだけでビルドできます。差分の追加適用は不要です。
+1.25正本に、USOS対応のFIGS再送修正を加えたフルソースです。
+このZIPだけでビルドでき、差分の追加適用は不要です。
 
 Windowsではbuild-windows.ps1を実行してください。
-テスト・EXEビルド後にrelease/PSRTTY_1.25.zipを生成します。
+テスト・EXEビルド後にrelease/PSRTTY_1.26.zipを生成します。
 
-- 主な変更：まとめて受信の区切りを復調フレームの連続性に基づく方式へ変更し、短い断片ごとに文字数制限を適用。逐次表示は従来の挙動を維持。
-- 公開用ノート：docs/RELEASE_NOTES_125.md
-- 受信仕様：docs/BUFFERED_RX_125.md
-- 最終検証：docs/VALIDATION_125_CANONICAL.md
-
-初回1.25の1.5秒方式はFIX1で置換済みです。docs/VALIDATION_125.mdは初回版の過去記録、docs/FIX1_125.mdの差分適用手順は過去配布用です。この正本への差分適用は不要です。
+主な変更はVERSION_126.md、Git用ノートはdocs/RELEASE_NOTES_126.md、実装と検証はdocs/USOS_126.mdを参照してください。
 ウェブ用ファイル、利用者の設定・プロファイル・ログは含みません。

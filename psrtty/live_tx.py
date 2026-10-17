@@ -79,6 +79,7 @@ class ToneEncoder:
         self.phase = 0.
         self.error = 0.
         self.figures = False
+        self.reassert_figures = False
     def tone(self, mark, units):
         exact = self.rate/self.baud*units+self.error
         n = max(1, round(exact)); self.error = exact-n
@@ -101,9 +102,12 @@ class ToneEncoder:
             if self.figures and ch not in ' \r': codes.append(31); self.figures=False
             codes.append(LTRS_ENCODE[ch])
         elif ch in FIGS_ENCODE:
-            if not self.figures: codes.append(27); self.figures=True
+            if not self.figures or self.reassert_figures: codes.append(27); self.figures=True
             codes.append(FIGS_ENCODE[ch])
         else: codes = [LTRS_ENCODE[' ']]
+        # Keep actual shift state for receivers without USOS; re-send FIGS
+        # before the next figure after any transmitted whitespace.
+        self.reassert_figures = ch in ' \r\n' or (ch not in LTRS_ENCODE and ch not in FIGS_ENCODE)
         return np.concatenate([self.code(c) for c in codes])
 
 

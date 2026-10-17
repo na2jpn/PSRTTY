@@ -40,7 +40,7 @@ class ConfigMacroTests(unittest.TestCase):
         self.assertEqual([m['key'] for m in rows],[f'F{i}' for i in range(1,10)])
         self.assertEqual([m['text'] for m in rows],[
             'CQ TEST {MYCALL} {MYCALL} K','{MYCALL} {MYCALL} {MYCALL}',
-            '{HISCALL} 599 {SENT} {SENT} DE {MYCALL} K','R TU 73 DE {MYCALL}',
+            '{HISCALL} 599 {SENT}-{SENT} DE {MYCALL} K','R TU 73 DE {MYCALL}',
             'AGN DE {MYCALL} K','{HISCALL} NR NR?',
             'RRR DE {MYCALL} TEST','KKK',''])
         rows[0]['text']='EDIT'; self.assertNotEqual(jarl_ww_template()[0]['text'],'EDIT')

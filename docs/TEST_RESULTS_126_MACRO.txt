@@ -1,0 +1,41 @@
+test_jarl_and_cqww_use_hyphen_with_both_usos_policies (tests.test_v126.ContestMacro126Tests.test_jarl_and_cqww_use_hyphen_with_both_usos_policies) ... ok
+test_afsk_audio_decodes_with_usos_on_and_off (tests.test_v126.USOSTransmissionTests.test_afsk_audio_decodes_with_usos_on_and_off) ... ok
+test_all_three_encoders_work_with_both_receiver_policies (tests.test_v126.USOSTransmissionTests.test_all_three_encoders_work_with_both_receiver_policies) ... ok
+test_direct_audio_and_fsk_frames_decode_with_both_policies (tests.test_v126.USOSTransmissionTests.test_direct_audio_and_fsk_frames_decode_with_both_policies) ... ok
+test_direct_idle_and_fsk_replay_state_still_reassert_figures (tests.test_v126.USOSTransmissionTests.test_direct_idle_and_fsk_replay_state_still_reassert_figures) ... ok
+test_letters_after_figure_space_still_shift_for_non_usos_receiver (tests.test_v126.USOSTransmissionTests.test_letters_after_figure_space_still_shift_for_non_usos_receiver) ... ok
+test_reassert_only_at_needed_boundaries_not_every_digit (tests.test_v126.USOSTransmissionTests.test_reassert_only_at_needed_boundaries_not_every_digit) ... ok
+test_reproduces_original_space_failure_without_reassertion (tests.test_v126.USOSTransmissionTests.test_reproduces_original_space_failure_without_reassertion) ... ok
+test_ptt_failure_never_plays_audio (tests.test_v02.AudioSafetyTests.test_ptt_failure_never_plays_audio) ... ok
+test_stop_during_leadin (tests.test_v02.AudioSafetyTests.test_stop_during_leadin) ... ok
+test_success_and_double_send_guard (tests.test_v02.AudioSafetyTests.test_success_and_double_send_guard) ... ok
+test_cancelled_connect (tests.test_v02.CIVTests.test_cancelled_connect) ... ok
+test_connect_deadline (tests.test_v02.CIVTests.test_connect_deadline) ... ok
+test_connection_exception_closes_port (tests.test_v02.CIVTests.test_connection_exception_closes_port) ... ok
+test_data_mode_commands (tests.test_v02.CIVTests.test_data_mode_commands) ... ok
+test_data_mode_failure_disconnects (tests.test_v02.CIVTests.test_data_mode_failure_disconnects) ... ok
+test_no_mode_command_when_disabled (tests.test_v02.CIVTests.test_no_mode_command_when_disabled) ... ok
+test_ptt_requires_connected_and_ack (tests.test_v02.CIVTests.test_ptt_requires_connected_and_ack) ... ok
+test_exchange_strings_adif_roundtrip (tests.test_v02.ConfigMacroTests.test_exchange_strings_adif_roundtrip) ... ok
+test_existing_settings_and_eight_macros_preserved (tests.test_v02.ConfigMacroTests.test_existing_settings_and_eight_macros_preserved) ... ok
+test_template_exact_and_independent (tests.test_v02.ConfigMacroTests.test_template_exact_and_independent) ... ok
+test_unselected_default_and_address_validation (tests.test_v02.ConfigMacroTests.test_unselected_default_and_address_validation) ... ok
+test_backup_failure_does_not_touch_executable (tests.test_v02.UpdateTests.test_backup_failure_does_not_touch_executable) ... ok
+test_build_package_filename_and_validation (tests.test_v02.UpdateTests.test_build_package_filename_and_validation) ... ok
+test_changed_install_rejected (tests.test_v02.UpdateTests.test_changed_install_rejected) ... ok
+test_corrupt_hash (tests.test_v02.UpdateTests.test_corrupt_hash) ... ok
+test_failed_second_replace_rolls_back (tests.test_v02.UpdateTests.test_failed_second_replace_rolls_back) ... ok
+test_migration_failure_restores_settings_and_program (tests.test_v02.UpdateTests.test_migration_failure_restores_settings_and_program) ... ok
+test_new_only (tests.test_v02.UpdateTests.test_new_only) ... ok
+test_no_manifest (tests.test_v02.UpdateTests.test_no_manifest) ... ok
+test_snapshot_not_original_is_applied (tests.test_v02.UpdateTests.test_snapshot_not_original_is_applied) ... ok
+test_success_backup_and_user_data_preservation (tests.test_v02.UpdateTests.test_success_backup_and_user_data_preservation) ... ok
+test_traversal_rejected (tests.test_v02.UpdateTests.test_traversal_rejected) ... ok
+test_user_data_in_zip_rejected (tests.test_v02.UpdateTests.test_user_data_in_zip_rejected) ... ok
+test_version_comparison (tests.test_v02.UpdateTests.test_version_comparison) ... ok
+test_wrong_product (tests.test_v02.UpdateTests.test_wrong_product) ... ok
+
+----------------------------------------------------------------------
+Ran 36 tests in 0.493s
+
+OK

@@ -180,7 +180,7 @@ class UI04Tests(unittest.TestCase):
         self.store.macros = jarl_ww_template()
         w=self.window; self.assertIs(w.q_call,w.his_call)
         w.q_call.setText('JX1XXX'); w.sent.setText('002'); w.my_call.setText('JH1HST')
-        self.assertIn('002 002',w.macro_buttons[2].toolTip())
+        self.assertIn('002-002',w.macro_buttons[2].toolTip())
         self.assertIn('JX1XXX',w.macro_buttons[2].toolTip())
         self.assertIn('JH1HST',w.auto_cq_button.toolTip())
         self.assertNotIn('現在の相手コールサイン',[x.text() for x in w.findChildren(QLabel)])

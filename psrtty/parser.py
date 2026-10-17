@@ -61,6 +61,14 @@ def parse_exchange(text: str, mycall: str = "", *, cqww: bool = False) -> Parsed
     exchange = ""
     if rst_match:
         tail = upper[rst_match.end():]
+        # Our contest templates repeat the exchange with a hyphen. Normalize
+        # only identical repetitions; keep distinct/custom hyphenated values.
+        tail = re.sub(r'\b(\d+)-\1(?![A-Z0-9/\-])', r'\1 \1', tail)
+        if cqww:
+            def repeated_zone_qth(match):
+                zone, qth = match.group(1), match.group(2)
+                return f'{zone} {qth} {zone} {qth}' if 1 <= int(zone) <= 40 and qth in CQWW_QTH else match.group(0)
+            tail = re.sub(r'\b(\d{1,2})\s+([A-Z]{2,3})-\1\s+\2(?![A-Z0-9/\-])', repeated_zone_qth, tail)
         tokens = [t.strip("-/") for t in TOKEN_RE.findall(tail)]
         for index, token in enumerate(tokens):
             token = token.strip("-/")

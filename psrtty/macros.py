@@ -17,7 +17,7 @@ def jarl_ww_template() -> list[dict[str, str]]:
     rows = [
         ("CQ", "CQ TEST {MYCALL} {MYCALL} K"),
         ("CALL", "{MYCALL} {MYCALL} {MYCALL}"),
-        ("EXCHANGE", "{HISCALL} 599 {SENT} {SENT} DE {MYCALL} K"),
+        ("EXCHANGE", "{HISCALL} 599 {SENT}-{SENT} DE {MYCALL} K"),
         ("TU 73", "R TU 73 DE {MYCALL}"),
         ("AGN", "AGN DE {MYCALL} K"),
         ("NR?", "{HISCALL} NR NR?"),
