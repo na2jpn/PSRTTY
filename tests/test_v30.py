@@ -156,7 +156,7 @@ class UI30Tests(unittest.TestCase):
     def test_compact_cards_plain_text_and_menu(self):
         card=ReceiveCard('21:18:24','<b>literal</b>','RX');card.resize(700,35)
         labels=card.findChildren(QLabel)
-        self.assertEqual([x.text() for x in labels],['21:18:24','RX','|','<b>literal</b>'])
+        self.assertEqual([x.text() for x in labels],['21:18:24','RX','|','<b>literal</b>',''])
         self.assertEqual(labels[1].objectName(),'cardRX'); card.deleteLater()
         w=self.window
         actions=[a.text() for menu in w.menuBar().findChildren(QMenu) for a in menu.actions()]

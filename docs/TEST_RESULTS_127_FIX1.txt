@@ -1,0 +1,23 @@
+PSRTTY 1.27 FIX1 検証記録 — 2026-10-20
+
+全回帰: python3 -m unittest discover -s tests -v
+Ran 1015 tests in 339.621s
+OK (skipped=1)
+test_activation_ipc_and_lock_are_per_installation (test_v20.UI20Tests.test_activation_ipc_and_lock_are_per_installation) ... skipped 'この環境ではOSがローカルソケット作成を拒否します。Windows実機確認対象。'
+
+最終FIX1専用テスト: Ran 13 tests in 2.286s / OK
+最終FIX1専用13件は全回帰にも含まれます。
+初回の全回帰ではRITテスト4件が失敗しました。RITだけを模擬したテストに無関係な250msメーター取得が割り込み、CAT使用中の正しい延期を即時取得失敗と誤判定していました。RITテストの模擬接続ではメーター用タイマーを停止し、CAT使用中にRITを延期するケースは独立したテストで確認しています。製品の排他処理は緩めていません。再確認はRIT関連29件すべて通過、その後に全回帰を再実行しました。
+
+関連既存テスト: tests.test_v123, tests.test_v127, tests.test_v107 — 56件 OK。
+言語検査: 8言語 各1,355項目 OK、埋め込み英語とen.jsonが一致。
+Pythonコンパイル: psrttyとFIX1テスト通過。
+画面確認: RIT（−/＋、STEP）、HAMLOG設定（検索欄なし、周波数説明）のオフスクリーン描画を確認。
+
+HAMLOG模擬API: CALL Enter後にモード/RST等が変化する状態、各項目再設定、5帯域の周波数切り捨て、末尾0の読戻し、Save指示、入力欄クリアを確認。手動保存モード、周波数不一致による保存拒否、既存入力保護、旧転送記録の二重転送防止を確認。
+RIT: OFF時も定期取得開始・完了で無効化せず、変更のない読出しは更新通知なし。実機側相当の値変更のみ通知、3秒間隔、連続クリック加算、1STEPキーボード/ホイール、数値欄の矢印、STEPの保存・Profile切替を確認。
+RST: 299 599、399 599、599 299、区切り付き繰返しと通常番号123、CQ WW番号の扱いを確認。
+
+Windows実機のHAMLOG保存、無線機RIT、Windowsビルドは未実行です。API模擬テストの成功を実機での登録完了と同一視しません。
+音声復調・AFSK/FSKエンコーダ・ダイレクト送信エンコーダの既存ファイルは1.27基準と同一です。
+差分ZIPは基準ソースへの上書き再構築、全ファイル内容一致、SHA256マニフェスト、ZIP CRCを検査しています。

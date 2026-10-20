@@ -133,11 +133,13 @@ class CabrilloDialog(QDialog):
         field('ADDRESS-COUNTRY',tr('ui.1bcfedecfe8cf60d'))
         field('GRID-LOCATOR',tr('ui.44404a3a53ee0dc9'))
         self.club_choices=QComboBox();self.club_choices.addItem(tr('ui.814123f09aaa574f'),'')
-        try:
-            with resource_path('psrtty/data/club_db.csv').open(encoding='utf-8-sig',newline='') as stream:
-                for row in csv.DictReader(stream):
-                    self.club_choices.addItem(f'{row["number"]}　{row["name"]}',row['number'])
-        except OSError:pass
+        from ..club_database import load_clubs
+        clubs, checked, problem = load_clubs()
+        for number, name in clubs:
+            self.club_choices.addItem(f'{number}　{name}', number)
+        self.club_note = QLabel(tr('v127.club_help') + ('\n' + tr('v127.club_date').format(date=checked) if checked else '') + ('\n' + tr('v127.club_error') if problem else ''))
+        self.club_note.setWordWrap(True)
+        self.optional_form.addRow(self.club_note)
         self.club_choices.currentIndexChanged.connect(lambda *_:self.set_value('CLUB',self.club_choices.currentData() or ''))
         self.optional_form.addRow(tr('ui.85ac2ab658b386d6'),self.club_choices)
         field('CLUB',tr('ui.cf578442c3e0af44'))

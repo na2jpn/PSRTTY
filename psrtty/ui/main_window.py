@@ -31,7 +31,7 @@ from .window_state import restore_window, save_window, place_tool_window
 from ..config import ConfigStore
 from ..logging_store import TranscriptLogger
 from ..macros import expand_macro
-from ..parser import normalize_call, parse_exchange
+from ..parser import normalize_call, parse_exchange, card_callsign
 from ..macros import CQWW_TEMPLATE_NAME
 from ..paths import ensure_runtime_dirs, resource_path
 from .about_dialog import AboutDialog
@@ -75,6 +75,12 @@ class ReceiveCard(QFrame):
         f=body.font(); f.setPointSize(font_size); body.setFont(f)
         body.setMinimumWidth(0); body.setSizePolicy(QSizePolicy.Ignored,QSizePolicy.Preferred)
         lay.addWidget(body,1)
+        self.entity_label = QLabel(); self.entity_label.setTextFormat(Qt.PlainText)
+        self.entity_label.setWordWrap(False); self.entity_label.setFixedWidth(145)
+        self.entity_label.setAlignment(Qt.AlignRight | Qt.AlignTop)
+        self.entity_label.setStyleSheet('color:#735239; font-size:11px;')
+        lay.addWidget(self.entity_label,0,Qt.AlignTop)
+        self.entity_label.hide()
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton and self.finalized:
@@ -114,7 +120,12 @@ class MainWindow(QMainWindow):
         self.pending_auto_log = None
         self.qso_revision = 0
         self.control_window = None
+        self.rit_window = None
+        from .rit_window import RITService
+        self.rit_service = RITService(self)
         self.sub_window = None
+        self.ry_radar_window = None
+        self.ry_skimmer_window = None
         self.direct_window = None
         self.shortcut_window = None
         self.live_session = None
@@ -247,6 +258,8 @@ class MainWindow(QMainWindow):
         view.addSeparator()
         sub_action=self._act(view, tr('ui.51dace51bb74cc86'), self._show_sub)
         sub_action.setToolTip(tr('ui.4b93cd2f9749bf0f'))
+        self._act(view, tr('ry.skimmer'), self._show_ry_skimmer)
+        self._act(view, tr('ry.radar'), self._show_ry_radar)
 
         integration = mb.addMenu(tr('ui.e73b7be6f0d5c286'))
         self._act(integration, tr('ui.2354935a4ee2b937'), self.integration.settings)
@@ -298,16 +311,24 @@ class MainWindow(QMainWindow):
         self.control_button = QPushButton(tr('guide.1.title'))
         self.control_button.clicked.connect(self._show_control)
         self.control_button.setToolTip(tr('ui.ff54f9a1ceabb150'))
-        status.addWidget(self.control_button)
         self.scope_button = QPushButton(tr('ui.209d0d9729031ab6'))
         self.scope_button.setCheckable(True)
         self.scope_button.setToolTip(tr('ui.ee413465aeb67a13'))
         self.scope_button.toggled.connect(self._toggle_scope)
-        status.addWidget(self.scope_button)
         self.sub_button=QPushButton(tr('ui.51dace51bb74cc86'))
         self.sub_button.setToolTip(tr('ui.51a5471165c27f1a'))
         self.sub_button.clicked.connect(self._show_sub)
-        status.addWidget(self.sub_button)
+        self.ry_skimmer_button=QPushButton(tr('ry.skimmer'))
+        self.ry_skimmer_button.clicked.connect(self._show_ry_skimmer)
+        self.ry_radar_button=QPushButton(tr('ry.radar'))
+        self.ry_radar_button.clicked.connect(self._show_ry_radar)
+        self.tool_buttons=QGridLayout();self.tool_buttons.setContentsMargins(0,0,0,0);self.tool_buttons.setSpacing(4)
+        tool_width=self.scope_button.sizeHint().width()
+        for button,row,column in ((self.control_button,0,0),(self.scope_button,0,1),
+                (self.sub_button,0,2),(self.ry_skimmer_button,1,1),(self.ry_radar_button,1,2)):
+            button.setFixedSize(tool_width,22)
+            self.tool_buttons.addWidget(button,row,column)
+        status.addLayout(self.tool_buttons)
         status.addSpacing(8)
         self.center_tuning = QLabel(tr('ui.2bf4bf3a78a5303a')+'-- Hz')
         self.center_tuning.setStyleSheet('QLabel { background:transparent; border:none; padding:0; font-weight:normal; }')
@@ -598,6 +619,16 @@ class MainWindow(QMainWindow):
         QProgressBar { border: 1px solid #c8a87f; background: #f5eee5; border-radius: 3px; }
         QProgressBar::chunk { background: #e88919; }
         """)
+        # Compute the common width after the theme has supplied its font and
+        # padding. The compact 22px height uses the profile buttons' padding.
+        self.scope_button.ensurePolished()
+        width=self.scope_button.sizeHint().width()
+        buttons=(self.control_button,self.scope_button,self.sub_button,self.ry_skimmer_button,self.ry_radar_button)
+        for button in buttons:
+            button.setStyleSheet('QPushButton { padding:2px; font-weight:700; }')
+            button.ensurePolished()
+        width=max(width,max(QFontMetrics(b.font()).horizontalAdvance(b.text())+12 for b in buttons))
+        for button in buttons:button.setFixedSize(width,22)
 
     def _setup_shortcuts(self):
         self.shortcuts=[]
@@ -864,6 +895,7 @@ class MainWindow(QMainWindow):
             self.rx_live_card.setCursor(Qt.ArrowCursor)
         else:
             self.rx_live_card.text_value=text;self.rx_live_card.body.setText(text)
+            self._card_entity(self.rx_live_card, text)
             QTimer.singleShot(20, lambda: self.cards_scroll.verticalScrollBar().setValue(self.cards_scroll.verticalScrollBar().maximum()))
 
     def _finalize_rx_card(self, extract=True):
@@ -877,6 +909,7 @@ class MainWindow(QMainWindow):
         if card is not None:
             if show:
                 card.text_value=text;card.body.setText(text);card.finalized=True;card.direction_label.setText('RX');card.setCursor(Qt.PointingHandCursor)
+                self._card_entity(card, text)
             else:
                 self.cards_layout.removeWidget(card);card.hide();card.deleteLater()
         if not text or not self.decode_enabled.isChecked(): return
@@ -904,6 +937,7 @@ class MainWindow(QMainWindow):
         zone=self.store.data['ui'].get('time_zone','JST')
         when=datetime.now(timezone.utc)
         card=ReceiveCard(when.astimezone(display_zone(zone)).strftime("%H:%M:%S")+' '+zone,text,direction,int(self.store.data["ui"]["rx_card_font_size"]))
+        if direction == 'RX': self._card_entity(card, text)
         card.when_utc=when;card.clicked.connect(self._card_selected);self.cards_layout.addWidget(card)
         while self.cards_layout.count()>30:
             item=self.cards_layout.takeAt(0); w=item.widget();
@@ -911,10 +945,19 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(20, lambda: self.cards_scroll.verticalScrollBar().setValue(self.cards_scroll.verticalScrollBar().maximum()))
         return card
 
+    def _card_entity(self, card, text):
+        from ..card_entity import entity_name
+        call = card_callsign(text, self.my_call.text())
+        name = entity_name(call) if call else ''
+        card.entity_label.setText(card.entity_label.fontMetrics().elidedText(name, Qt.ElideRight, 140))
+        card.entity_label.setVisible(bool(name))
+        card.entity_label.setToolTip(call + (' / ' + name if name else ''))
+
     def _card_selected(self,text):
         parsed=parse_exchange(text,self.my_call.text(), cqww=self.store.data.get("macro_template") == CQWW_TEMPLATE_NAME)
-        if parsed.callsign:
-            self.his_call.setText(parsed.callsign); self.q_call.setText(parsed.callsign); self.call_locked=True
+        call = card_callsign(text, self.my_call.text())
+        if call:
+            self.his_call.setText(call); self.q_call.setText(call); self.call_locked=True
         if parsed.rst: self.rst_r.setText(parsed.rst)
         if parsed.exchange: self.rcvd.setText(parsed.exchange)
         self._refresh_macros()
@@ -1046,8 +1089,8 @@ class MainWindow(QMainWindow):
             self.pending_manual = (text, macro)
             self.audio.stop_tx()
             return
-        if self.control_window and self.control_window.busy:
-            self.control_window.pending = self.control_window.target = self.control_window.feature_pending = None
+        if self.rit_service.busy or (self.control_window and self.control_window.busy):
+            if self.control_window: self.control_window.pending = self.control_window.target = self.control_window.feature_pending = None
             self.pending_manual = (text, macro)
             QTimer.singleShot(50, self, self._resume_manual)
             return
@@ -1057,7 +1100,7 @@ class MainWindow(QMainWindow):
 
     def _resume_manual(self):
         if not self.pending_manual or self.closing: return
-        if self.control_window and self.control_window.busy:
+        if self.rit_service.busy or (self.control_window and self.control_window.busy):
             QTimer.singleShot(50, self, self._resume_manual)
             return
         queued, self.pending_manual = self.pending_manual, None
@@ -1075,6 +1118,7 @@ class MainWindow(QMainWindow):
             if self.control_window.busy:
                 self.statusBar().showMessage(tr('ui.d92e7c1727e582f5'), 2500)
                 return False
+        if self.rit_service.busy: return False
         a=self.store.data["advanced"]; au=self.store.data["audio"]
         ctl = self.radio
         from ..external_ptt import ExternalPTT
@@ -1208,7 +1252,7 @@ class MainWindow(QMainWindow):
 
     def _auto_cq_send(self):
         if not self.auto_cq_active: return
-        if self.control_window and self.control_window.busy:
+        if self.rit_service.busy or (self.control_window and self.control_window.busy):
             QTimer.singleShot(50, self, self._auto_cq_send)
             return
         self.auto_cq_timer.stop(); self.auto_cq_deadline = None
@@ -1392,6 +1436,7 @@ class MainWindow(QMainWindow):
             else:
                 self.rig_status.setText(tr('v117.manual') if getattr(ctl, 'manual', False) is True else tr('ui.2a3b4be51df84443').format(values['model'], status.port))
                 if getattr(ctl, 'manual', False) is True: self.last_known_freq_hz = None
+                self.rit_service.invalidate()
                 self.current_freq_hz = status.frequency_hz
                 if self.current_freq_hz: self.last_known_freq_hz = self.current_freq_hz
                 self.poll_failures=0; self.rig_status.setToolTip(tr('v117.manual_note') if getattr(ctl, 'manual', False) is True else tr('ui.ab36bddc3b1b6600').format(values['model'], status.port)); self._update_freq_label(); self.poll_timer.start()
@@ -1412,6 +1457,7 @@ class MainWindow(QMainWindow):
         was_tuning = self.antenna_tuning
         self.antenna_tuning = False
         self.connection_generation += 1
+        self.rit_service.invalidate()
         self.poll_timer.stop(); self.poll_failures=0; self._stop_tx()
         ctl, self.radio = self.radio, None
         self.connecting = False
@@ -1442,7 +1488,7 @@ class MainWindow(QMainWindow):
         QTimer.singleShot(100, retry)
 
     def _poll_radio(self):
-        if getattr(self.radio, 'manual', False) is True or not self._connected() or self.polling or self.audio._tx_active or (self.control_window and self.control_window.busy):
+        if getattr(self.radio, 'manual', False) is True or not self._connected() or self.polling or self.rit_service.busy or self.audio._tx_active or (self.control_window and self.control_window.busy):
             return
         ctl = self.radio
         generation = self.connection_generation
@@ -1496,6 +1542,34 @@ class MainWindow(QMainWindow):
         elif self.scope_window is not None:
             self.store.data['ui']['scope_window']=save_window(self.scope_window)
             self.scope_window.hide()
+
+    def _show_rit(self):
+        from .rit_window import RITWindow
+        if self.rit_window is None: self.rit_window = RITWindow(self)
+        self.rit_window.reveal()
+
+    def _show_ry_radar(self):
+        from .ry_windows import RadarWindow
+        if self.ry_radar_window is None:self.ry_radar_window=RadarWindow(self)
+        self.ry_radar_window.reveal()
+
+    def _show_ry_skimmer(self):
+        from .ry_windows import SkimmerWindow
+        if self.ry_skimmer_window is None:self.ry_skimmer_window=SkimmerWindow(self)
+        self.ry_skimmer_window.reveal()
+        if self.ry_skimmer_window.options is None:self.ry_skimmer_window.configure()
+
+    def _ry_tune(self,hz):
+        # Reuse the established CAT queue, limits, lock and TX arbitration.
+        if not self.rit_service.ready():
+            self.statusBar().showMessage(tr('ry.tune_unavailable'),5000);return
+        if self.control_window is None:
+            from .control_window import ControlWindow
+            self.control_window=ControlWindow(self)
+        window=self.control_window;window.refresh_enabled();window.request_frequency(int(hz))
+        if window.pending is not None:
+            window.external_frequency=True;window.tick()
+        self.statusBar().showMessage(window.note.text(),5000)
 
     def _show_control(self):
         from .control_window import ControlWindow
@@ -1580,7 +1654,7 @@ class MainWindow(QMainWindow):
         if self.alc_busy or now-self.alc_last_poll < .5:return
         if not self._connected() or (not fsk and not hasattr(self.radio,'read_alc')):
             self.main_alc=None;self.main_meters={};return
-        if self.polling or (self.control_window and self.control_window.busy):return
+        if self.rit_service.busy or self.polling or (self.control_window and self.control_window.busy):return
         ctl=self.radio;generation=self.connection_generation;token=self.active_tx_id
         self.alc_busy=True;self.alc_last_poll=now
         def read():
@@ -2177,6 +2251,10 @@ class MainWindow(QMainWindow):
                 self.store.data['ui']['sub_window']=save_window(self.sub_window)
                 self.sub_window.close()
             for window in self.help_windows.values(): window.close()
+            self.rit_service.timer.stop()
+            if self.rit_window: self.rit_window.close()
+            if self.ry_radar_window:self.ry_radar_window.close()
+            if self.ry_skimmer_window:self.ry_skimmer_window.close()
             if self.control_window:
                 self.store.data['ui']['control_window']=save_window(self.control_window)
                 self.control_window.close()

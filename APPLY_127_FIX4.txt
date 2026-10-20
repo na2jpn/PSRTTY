@@ -1,0 +1,28 @@
+PSRTTY 1.27 FIX4 差分 — 2026-10-20
+
+適用元：PSRTTY 1.27 FULL + FIX1 + FIX2 + FIX3 適用済みソース。
+本ZIP単体ではビルドできません。
+
+1. PSRTTYを終了します。
+2. ZIP内のPSRTTY_1.27_FIX4_DIFFフォルダーの中身を、既存ソースの同名位置へ上書きします。
+3. Windowsでは従来通りbuild-windows.ps1でビルドしてください。
+   テストのみ：python -m unittest discover -s tests
+
+config / logdata / var はZIPに含めません。交信ログやプロファイルを保持します。
+RYレーダー初回スタート時、接続先JSON内の上海ノードが旧配布内容と完全一致する場合だけ、
+RBN公式へ更新します。変更前ファイルを同じフォルダーの
+ry_radar_sources.json.pre-fix4.bak に一度だけ保存します。
+接続先・ポート・コマンド・有効状態などを利用者が編集していた場合は変更しません。
+すでに上海枠を編集していた場合は、必要に応じて外部JSONから手動で変更してください。
+
+主な変更
+・RYレーダー／スキマーにJA-BAND ONLYを追加（初期ON・選択状態保存）。
+・周波数軸をPSLog風の細い縦軸と短い目盛り線に変更。
+・RBN巡回番号、巡回待ち、接続中、受信中、接続エラーを区別。
+・上海枠をRBN公式 telnet.reversebeacon.net:7000 へ変更。
+・IQ入力案内、ICOM機種選択、公式導入ページ、フォルダー内DLL検索を追加。
+・画面の説明・更新履歴を8言語で更新。
+
+通常の送受信、デコード、FSK、HAMLOG、RITの処理は変更していません。
+詳細：docs/RY_GUIDE_127_FIX4.md
+検証：docs/TEST_RESULTS_127_FIX4.txt

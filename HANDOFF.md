@@ -1,3 +1,15 @@
+# Ver1.27 FIX2 — 2026-10-20
+
+FIX1適用済みを基準とした差分。HAMLOG連携設定に599形式指定の設定例画像とRTTY=5*9を確認する赤字の案内を追加しました。説明は8言語対応です。適用はAPPLY_127_FIX2.txtを参照。
+
+# Ver1.27 FIX1 — 2026-10-20
+
+RIT表示・STEP、RST候補の599優先、HAMLOG周波数の3桁切り捨てと設定画面を修正。適用はAPPLY_127_FIX1.txt、実装詳細はdocs/IMPLEMENTATION_127_FIX1.md、検証はdocs/TEST_RESULTS_127_FIX1.txtを参照してください。
+
+# Ver1.27 引継ぎ — 2026-10-19
+
+1.26 FIX1までを統合。今回の仕様・確認範囲は docs/IMPLEMENTATION_127.md、テスト記録は docs/TEST_RESULTS_127.txt を参照。RIT接続時の読み取りのみ初期化、接続世代の破棄、TXとの排他を維持してください。Thanks追加は更新履歴へ記載しません。
+
 # Ver1.26 引継ぎ — 2026-10-17
 
 最新の送信仕様・検証はdocs/USOS_126.md。スペース／改行後のFIGS再送をAFSK一括・AFSKダイレクト・FSKの3経路で維持し、USOS ON/OFF双方で確認すること。送信側の実際のFIGS/LTRS状態は保持し、USOS OFFの受信側で数字の後の英字が化けないようにすること。受信USOSの設定追加は今回の対象外です。

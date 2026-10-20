@@ -14,7 +14,7 @@ import sys
 import threading
 import uuid
 from datetime import datetime
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_DOWN
 from pathlib import Path
 
 from .hamlog_csv import hamlog_row
@@ -221,7 +221,9 @@ class HamlogLink:
             row = hamlog_row(qso)
         except ValueError as exc:
             raise LinkError(tr('ui.c5ba582ace4bbb6c')) from exc
-        key = hashlib.sha256(json.dumps([row, qso.when_utc.isoformat()], ensure_ascii=False).encode('utf-8')).hexdigest()
+        # HAMLOG link only: truncate MHz to 1 kHz; keep ADIF/CSV unchanged.
+        row[5] = format(Decimal(row[5]).quantize(Decimal('0.001'), rounding=ROUND_DOWN), '.3f')
+        key = hashlib.sha256(json.dumps([hamlog_row(qso), qso.when_utc.isoformat()], ensure_ascii=False).encode('utf-8')).hexdigest()
         with self.lock:
             if self.journal.exists():
                 for line in self.journal.read_text(encoding='utf-8').splitlines():

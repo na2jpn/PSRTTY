@@ -2,11 +2,13 @@
 from copy import deepcopy
 
 from PySide6.QtCore import QObject, Qt, QTimer
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
     QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QSpinBox)
 
 from ..hamlog_link import HamlogLink, TARGET_VERSION, API_VERSION
 from ..i18n import tr
+from ..paths import resource_path
 from ..zserver_link import ZServerLink, LinkError, DEFAULT_OPTIONS
 from .background import BackgroundJob
 
@@ -137,15 +139,17 @@ class HamlogSettingsDialog(QDialog):
         note = QLabel(tr('ui.303123bf66937008'))
         note.setWordWrap(True); root.addWidget(note)
         self.rtty_setup_note=QLabel(tr('v123.rtty_setup'))
+        self.rtty_setup_note.setStyleSheet('color: #c62828; font-weight: bold;')
         self.rtty_setup_note.setWordWrap(True);root.addWidget(self.rtty_setup_note)
+        self.rtty_setup_image=QLabel()
+        self.rtty_setup_image.setAlignment(Qt.AlignLeft)
+        self.rtty_setup_image.setPixmap(QPixmap(str(resource_path('assets/hamlog_rst599.png'))))
+        self.rtty_setup_image.setToolTip(tr('v123.rtty_setup'))
+        self.rtty_setup_image.setAccessibleName(tr('v123.rtty_setup'))
+        root.addWidget(self.rtty_setup_image)
         self.check_button = QPushButton(tr('ui.242261d9bdf8729e'))
         self.check_button.clicked.connect(self.check); root.addWidget(self.check_button)
-        row = QHBoxLayout()
-        self.call = QLineEdit(); self.call.setPlaceholderText(tr('ui.e54f8ce684788b1b'))
-        self.search_button = QPushButton(tr('ui.a3f9a6c76bb95689'))
-        self.search_button.clicked.connect(self.lookup)
-        row.addWidget(self.call); row.addWidget(self.search_button); root.addLayout(row)
-        note = QLabel(tr('ui.028b54989d5885bb'))
+        note = QLabel(tr('v127fix1.hamlog_frequency'))
         note.setWordWrap(True); root.addWidget(note)
         self.result = QLabel(); self.result.setWordWrap(True); self.result.setTextFormat(Qt.PlainText)
         self.result.setTextInteractionFlags(Qt.TextSelectableByMouse); root.addWidget(self.result)
@@ -157,22 +161,17 @@ class HamlogSettingsDialog(QDialog):
 
     def _work(self, work, render):
         def done(result, error):
-            self.check_button.setEnabled(True); self.search_button.setEnabled(True)
+            self.check_button.setEnabled(True)
             if error:
                 QMessageBox.warning(self, tr('ui.0ac34687acceae77'), tr(str(error)))
             else:
                 self.result.setText(render(result))
         if self.controller.run(work, done):
-            self.check_button.setEnabled(False); self.search_button.setEnabled(False)
+            self.check_button.setEnabled(False)
             self.result.setText(tr('ui.150fad0f11e1eadc'))
 
     def check(self):
         self._work(self.controller.link.check, lambda title: tr('ui.23c45791e4c46b0f').format(title=title))
-
-    def lookup(self):
-        call = self.call.text()
-        self._work(lambda: self.controller.link.lookup(call),
-                   lambda result: tr('ui.44d815d5ed26e974').format(**result))
 
     def save(self):
         data = self.controller.main.store.data

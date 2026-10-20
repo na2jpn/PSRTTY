@@ -110,6 +110,11 @@ class UI05Tests(unittest.TestCase):
         self.assertEqual(self.store.data['audio']['input_device'],selected)
     def test_audio_open_is_async_and_latest_selection_wins(self):
         w=self.window; self.pump(.1); calls=[]
+        # The startup UNSET job may still be finishing on a busy test host.
+        # Begin the two-selection scenario only after that job has completed.
+        deadline=time.monotonic()+2
+        while w.audio_input_busy and time.monotonic()<deadline:self.pump(.01)
+        self.assertFalse(w.audio_input_busy)
         def slow(selection): calls.append(selection); time.sleep(.08); return True,'OK'
         ticks=[]; timer=QTimer(); timer.setInterval(5); timer.timeout.connect(lambda:ticks.append(1)); timer.start()
         with patch.object(w.audio,'start_input',side_effect=slow), patch.object(w.audio,'stop_input'):

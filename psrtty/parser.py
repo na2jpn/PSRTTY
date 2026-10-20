@@ -7,7 +7,7 @@ from dataclasses import dataclass
 # avoid most exchange numbers. Explicit card selection still lets the user
 # correct anything it misses.
 CALL_RE = re.compile(
-    r"(?<![A-Z0-9])([A-Z0-9]{1,3}\d[A-Z]{1,4}(?:/[A-Z0-9]{1,5})?)(?![A-Z0-9])",
+    r"(?<![A-Z0-9/!#])([A-Z0-9]{1,3}\d[A-Z]{1,4}(?:/[A-Z0-9]{1,5})?)(?![A-Z0-9/])",
     re.IGNORECASE,
 )
 RST_RE = re.compile(r"(?<![A-Z0-9])([1-5][1-9][1-9])(?![A-Z0-9])")
@@ -56,11 +56,24 @@ def parse_exchange(text: str, mycall: str = "", *, cqww: bool = False) -> Parsed
                 after = [m.group(1) for m in CALL_RE.finditer(upper[cq.end():]) if normalize_call(m.group(1)) in calls]
                 if len(set(after)) == 1: call = normalize_call(after[0])
 
-    rst_match = RST_RE.search(upper)
+    rst_matches = list(RST_RE.finditer(upper))
+    rst_match = rst_matches[0] if rst_matches else None
+    # Only an adjacent run of RST-shaped tokens is a repeated report.
+    # Once an exchange or other text starts, later 599 is not promoted.
+    report_end = rst_match.end() if rst_match else 0
+    if rst_match and rst_match.group(1).endswith('99'):
+        for candidate in rst_matches[1:]:
+            if not candidate.group(1).endswith('99'):
+                break
+            if not re.fullmatch(r'[\s,;:/-]*', upper[report_end:candidate.start()]):
+                break
+            if candidate.group(1) == '599':
+                rst_match = candidate
+            report_end = candidate.end()
     rst = rst_match.group(1) if rst_match else ""
     exchange = ""
     if rst_match:
-        tail = upper[rst_match.end():]
+        tail = upper[report_end:]
         # Our contest templates repeat the exchange with a hyphen. Normalize
         # only identical repetitions; keep distinct/custom hyphenated values.
         tail = re.sub(r'\b(\d+)-\1(?![A-Z0-9/\-])', r'\1 \1', tail)
@@ -88,3 +101,19 @@ def parse_exchange(text: str, mycall: str = "", *, cqww: bool = False) -> Parsed
                     break
             break
     return ParsedExchange(call, rst, exchange)
+
+
+def card_callsign(text, mycall=''):
+    """Existing sender rules first, unique standalone candidate as fallback.
+
+    No repair, embedded substring extraction, or network lookup.
+    """
+    parsed = parse_exchange(text, mycall)
+    if parsed.callsign:
+        return parsed.callsign
+    if RST_RE.search(text.upper()) or re.search(r'\b(?:DE|TU)\b', text, re.I):
+        return ''
+    candidates = {normalize_call(m.group(1)) for m in CALL_RE.finditer(text)}
+    # Explicit card selection can intentionally select even the local call.
+    # Automatic extraction continues to use parse_exchange's own-call guard.
+    return next(iter(candidates)) if len(candidates) == 1 else ''

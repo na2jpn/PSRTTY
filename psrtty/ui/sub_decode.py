@@ -298,7 +298,7 @@ class SubDecodeWindow(QDialog):
 
     def _flush(self,index):
         text=' '.join(self.buffers[index].split());self.buffers[index]=''
-        if text:
+        if len(re.sub(r'\s','',text)) >= 3:
             output=self.outputs[index]
             output.appendPlainText(text)
             cursor=output.textCursor()

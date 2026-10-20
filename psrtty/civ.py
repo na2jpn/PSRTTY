@@ -37,6 +37,7 @@ def decode_bcd_frequency(data: bytes) -> int:
 
 
 class CIVController:
+    from .rit import icom_read_rit as read_rit, icom_set_rit as set_rit
     PC_ADDRESS = 0xE0
 
     def __init__(self, civ_address: int, model: str = ""):

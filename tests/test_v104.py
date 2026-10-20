@@ -88,8 +88,8 @@ class UI104Tests(unittest.TestCase):
         self.assertFalse(w.auto_track.isChecked())
         self.assertIsNone(w.sub_window)
         view=next(m for m in w.menuBar().findChildren(QMenu) if m.title()=='表示')
-        self.assertEqual([a.text() for a in view.actions()][-4:],
-                         ['コントロール','クロススコープ','','サブデコ'])
+        self.assertEqual([a.text() for a in view.actions()][-6:],
+                         ['コントロール','クロススコープ','','サブデコ','RYスキマー','RYレーダー'])
         with patch.object(QMessageBox,'exec',return_value=QMessageBox.Cancel):
             w._show_sub()
         self.assertIsNone(w.sub_window)

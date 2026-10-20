@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "dwell": 60,
+  "rbn": [
+    {
+      "name": "JG1VGX-8 / JP",
+      "host": "arc.jg1vgx.net",
+      "port": 7000,
+      "commands": [
+        "set dx filt"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "JG1VGX-7 / JP",
+      "host": "ccc.jg1vgx.net",
+      "port": 7373,
+      "commands": [
+        "set/skimmer",
+        "set/rtty"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "RBN / Official",
+      "host": "telnet.reversebeacon.net",
+      "port": 7000,
+      "commands": [],
+      "enabled": true
+    },
+    {
+      "name": "UA0APV-1 / RU",
+      "host": "ua0apv.i234.me",
+      "port": 7300,
+      "commands": [
+        "set/skimmer"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "W3LPL-1 / US",
+      "host": "dxc.w3lpl.net",
+      "port": 7373,
+      "commands": [
+        "set dx filt"
+      ],
+      "enabled": true
+    }
+  ],
+  "clusters": [
+    {
+      "name": "J-Cluster",
+      "transport": "http",
+      "url": "https://qrv.jp/xml/All100.xml",
+      "interval": 90,
+      "enabled": true
+    },
+    {
+      "name": "G1FEF-2 / DXSpider",
+      "host": "dxc.hamserve.uk",
+      "port": 7300,
+      "commands": [
+        "accept/spot 0 info RTTY"
+      ],
+      "enabled": true
+    },
+    {
+      "name": "NG7M",
+      "host": "dxc.ng7m.com",
+      "port": 7373,
+      "commands": [],
+      "enabled": true
+    }
+  ]
+}

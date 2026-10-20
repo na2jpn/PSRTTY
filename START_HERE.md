@@ -1,10 +1,16 @@
-# PSRTTY Ver1.26 フルソース — 2026-10-17
+# Ver1.27 FIX2 — 2026-10-20
 
-1.25正本に、USOS対応のFIGS再送修正を加えたフルソースです。
-このZIPだけでビルドでき、差分の追加適用は不要です。
+FIX1適用済みを基準とした差分。HAMLOG連携設定に599形式指定の設定例画像とRTTY=5*9を確認する赤字の案内を追加しました。説明は8言語対応です。適用はAPPLY_127_FIX2.txtを参照。
 
-Windowsではbuild-windows.ps1を実行してください。
-テスト・EXEビルド後にrelease/PSRTTY_1.26.zipを生成します。
+# Ver1.27 FIX1 — 2026-10-20
 
-主な変更はVERSION_126.md、Git用ノートはdocs/RELEASE_NOTES_126.md、実装と検証はdocs/USOS_126.mdを参照してください。
+RIT表示・STEP、RST候補の599優先、HAMLOG周波数の3桁切り捨てと設定画面を修正。適用はAPPLY_127_FIX1.txt、実装詳細はdocs/IMPLEMENTATION_127_FIX1.md、検証はdocs/TEST_RESULTS_127_FIX1.txtを参照してください。
+
+# PSRTTY Ver1.27 フルソース — 2026-10-19
+
+1.26 FIX1を含むフルソースです。差分の追加適用は不要です。
+Windowsでは build-windows.ps1 を実行してください。
+テスト・EXEビルド後に release/PSRTTY_1.27.zip を生成します。
+
+追加内容は VERSION_127.md、詳細は docs/IMPLEMENTATION_127.md を参照。
 ウェブ用ファイル、利用者の設定・プロファイル・ログは含みません。

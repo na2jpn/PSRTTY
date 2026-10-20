@@ -41,6 +41,8 @@ class DirectTxWindow(QWidget):
         note.setWordWrap(True);lay.addWidget(note)
         self.status=QLabel(tr('ui.2f3ee0fc058199a7'));self.status.setWordWrap(True);lay.addWidget(self.status)
         self.timer=QTimer(self);self.timer.setSingleShot(True);self.timer.setInterval(500);self.timer.timeout.connect(self.auto_start)
+        self.rit_retry=QTimer(self);self.rit_retry.setSingleShot(True);self.rit_retry.setInterval(50)
+        self.rit_retry.timeout.connect(self._retry_after_rit)
         self.editor.textChanged.connect(self.changed);self.auto.toggled.connect(self.mode_changed)
         self.idle_timeout.currentIndexChanged.connect(self.timeout_changed)
         place_tool_window(self,main,(720,220),(340,180),main.store.data['ui'].get('direct_window'))
@@ -79,6 +81,7 @@ class DirectTxWindow(QWidget):
         self.suppressed=False
         if self.auto.isChecked() and not self.session and len(text)>self.sent and not self.timer.isActive():self.timer.start()
     def mode_changed(self, enabled):
+        self.rit_retry.stop()
         self.main.store.data['ui']['direct_auto_tx']=enabled
         self.timer.stop()
         if self.session:self.session.hold=enabled
@@ -91,6 +94,11 @@ class DirectTxWindow(QWidget):
     def auto_start(self):
         if self.isVisible() and self.auto.isChecked() and not self.session and not self.suppressed and len(self.last_text)>self.sent:
             self.start(replay=False)
+    def _retry_after_rit(self):
+        if (self.isVisible() and not self.suppressed and not self.main.closing
+                and self.rit_retry_generation == self.main.connection_generation):
+            self.start(replay=self.rit_retry_replay)
+
     def start(self,replay=False):
         self.timer.stop();self.suppressed=False
         if self.session:
@@ -98,6 +106,10 @@ class DirectTxWindow(QWidget):
                 self.session.replay();self.sent=0;self.paint()
             return
         if self.main.active_tx_id is not None:return
+        service=getattr(self.main,'rit_service',None)
+        if service is not None and service.busy:
+            self.rit_retry_replay=replay;self.rit_retry_generation=self.main.connection_generation
+            self.rit_retry.start();return
         text=self.last_text
         if not text and not self.auto.isChecked():return
         # The sent prefix survives STOP. F11 resumes only the unsent tail.
@@ -109,7 +121,7 @@ class DirectTxWindow(QWidget):
         if not self.main._send_text(text, live_session=self.session):self.session=None;return
         self.tx_button.setText(tr('ui.0d16c18e1b0c0af1'));self.status.setText(tr('ui.19ae7f1dfcb6e2d3'))
     def stop(self):
-        self.timer.stop();self.suppressed=True;self.main._stop_tx()
+        self.rit_retry.stop();self.timer.stop();self.suppressed=True;self.main._stop_tx()
     def toggle(self):
         if self.session:self.stop()
         else:self.start()

@@ -143,7 +143,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ui.67a619a287140bfb': 'Station',
  'ui.22edd69c9f0e6e6c': 'Contact CALL',
  'ui.4c9989e8a8420e55': 'Current QSO',
- 'ui.df6b49184a0fd279': 'Recent QSOs',
+ 'ui.df6b49184a0fd279': 'Latest QSOs (double-click for details)',
  'ui.18619d6669e0866e': 'Station callsign {MYCALL}',
  'ui.2097a2f37bbe4363': 'Station location {MYQTH}',
  'ui.1a0f216487deae85': 'Additional text {MYTXT}',
@@ -1116,7 +1116,11 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'It cannot work if the radio does not support it. Sending a command alone does not count as '
                  'completion; radio state changes are checked. Operation has been verified on IC-7300 / '
                  'IC-7300MK2.</p>\n'
-                 '<p>G on band buttons means GHz. The frequency display remains in MHz even on higher bands.</p>',
+                 '<p>G on band buttons means GHz. The frequency display remains in MHz even on higher '
+                 'bands.</p><h3>RIT</h3><p>Added an independent RIT window from the STEP row, with connection-time and '
+                 'periodic RX synchronization. Fine-tune reception only. Radio changes are refreshed periodically. RIT '
+                 'data shown. Only supported read/write controls are available. XIT/Delta-TX is ON; the shared offset '
+                 'cannot be changed.</p>',
  'guide.2.title': 'RX / tuning',
  'guide.2.body': '<h2>Pause and resume decoding</h2><p>The checkbox at the upper right of the Decode frame starts ON. '
                  'OFF pauses character decoding, RX card creation and automatic capture of CALL and other fields. '
@@ -1405,25 +1409,23 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  '<h3>HAMLOG target: Ver5.48</h3><p>Uses the Turbo HAMLOG/Win public API introduced in Ver5.27c. On '
                  'Windows, start one HAMLOG instance and open its QSO input window. Run both programs with the same '
                  'privilege level.</p>\n'
-                 '<p>Register RTTY in HAMLOG mode settings and select the 599 format (three digits) for RST. Check '
-                 'existing RTTY settings too.</p><p>The sequence is CALL → Enter processing → apply this QSO → verify '
-                 '→ Save. Date, time and RST changed by Enter are replaced with this QSO afterwards. In input-only '
-                 'mode, Save remains manual. A mismatch shows the field, sent value and read-back value, and prevents '
-                 'automatic saving.</p><ol><li>Open <b>Integration → HAMLOG integration settings</b>. Check the '
-                 'connection; the responding window title is displayed.</li><li>Enable transfer when logging. This '
-                 'defaults to OFF. The default save mode fills HAMLOG input fields only; save the QSO in HAMLOG '
-                 'yourself. Alternatively, choose to request saving after transfer. Save these settings; they are '
-                 'shared by all profiles.</li><li>After PSRTTY saves a QSO to ADIF, it transfers it to HAMLOG. Manual '
-                 'logging and TU73 auto logging use the same path. PSRTTY increments the sent serial only '
+                 '<p>In HAMLOG settings, enable the 599-format option and check that the setting contains RTTY=5*9. '
+                 'Check this even if RTTY is already listed.</p><p>The sequence is CALL → Enter processing → apply '
+                 'this QSO → verify → Save. Date, time and RST changed by Enter are replaced with this QSO afterwards. '
+                 'In input-only mode, Save remains manual. A mismatch shows the field, sent value and read-back value, '
+                 'and prevents automatic saving.</p><ol><li>Open <b>Integration → HAMLOG integration settings</b>. '
+                 'Check the connection; the responding window title is displayed.</li><li>Enable transfer when '
+                 'logging. This defaults to OFF. The default save mode fills HAMLOG input fields only; save the QSO in '
+                 'HAMLOG yourself. Alternatively, choose to request saving after transfer. Save these settings; they '
+                 'are shared by all profiles.</li><li>After PSRTTY saves a QSO to ADIF, it transfers it to HAMLOG. '
+                 'Manual logging and TU73 auto logging use the same path. PSRTTY increments the sent serial only '
                  'once.</li></ol>\n'
                  '<p>CALL, JST date/time, sent/received RST, frequency and RTTY mode are transferred. SENT and RCVD '
                  'are retained in Remarks1; the station CALL is in Remarks2. Contest exchanges are not inferred as '
                  'JCC/JCG codes. HAMLOG QSL, Code, GL, Name and QTH settings/lookup results are retained.</p>\n'
-                 '<h3>CALL / Name / QTH lookup</h3><p>Lookup in the settings window enters a CALL in HAMLOG’s empty '
-                 'input window, invokes HAMLOG’s Enter processing and displays Name/QTH. Results depend on HAMLOG '
-                 'lookup settings and stored records and may be empty. Logging that same CALL fills the draft created '
-                 'by lookup. If the draft was edited in HAMLOG, automatic transfer is stopped to protect it. Save or '
-                 'clear the draft before proceeding.</p>\n'
+                 '<p>In input-only mode, save in HAMLOG before the next QSO. Other drafts are protected. Auto-save '
+                 'verifies the transferred fields before Save. If transfer fails, PSRTTY ADIF is already saved: check '
+                 'HAMLOG rather than adding the QSO again.</p>\n'
                  '<h3>Saving and transfer failures</h3><p>In input-only mode, save the QSO in HAMLOG before recording '
                  'the next QSO. Other QSO drafts are never overwritten. Automatic saving reads back and checks the '
                  'transfer before invoking HAMLOG’s Save API. You can check the result in HAMLOG’s input window and '
@@ -1431,6 +1433,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'already saved: do not add that QSO again. Interrupted transfers are journaled and not retried '
                  'automatically. Check HAMLOG and manually enter only missing QSOs, or use File → HAMLOG CSV export. '
                  'Records, edits and deletions in HAMLOG do not synchronize back to PSRTTY.</p>\n'
+                 '<p>HAMLOG receives MHz truncated to 3 decimal places (21.07982 → 21.079). PSRTTY ADIF retains the '
+                 'original precision.</p>\n'
                  '<h3>zLog: real-time Z-Server link</h3><ol><li>Start normal TCP Z-Server and connect zLog. Check its '
                  'contest, station CALL, exchanges and time basis.</li><li>Open Integration → zLog settings. Set '
                  'server, port, unique client name, operator and TX number. On one PC use 127.0.0.1. Match UTC/JST and '
@@ -1512,7 +1516,28 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-17  Ver1.26\n'
+ 'history.body': '2026-10-19  Ver1.27\n'
+                 '• Added RY Skimmer and RY Radar below Subdecode in the View menu.\n'
+                 '• Added JA-BAND ONLY to RY Radar / Skimmer, clearer scales and feed rotation status.\n'
+                 '• Added model-specific IQ setup and DLL search; replaced the Shanghai node with the official RBN '
+                 'feed.\n'
+                 '• Added RY Skimmer: multiple RTTY signals from IQ, with a vertical scope, callsigns and countries.\n'
+                 '• Added RY Radar: per-band RTTY reports from RBN and clusters; double-click to tune.\n'
+                 '• Arranged tool buttons in two rows. Subdecode hides fragments of two characters or fewer.\n'
+                 '・Added a HAMLOG 599-format example image and a reminder to check RTTY=5*9.\n'
+                 '・Reduced RIT refresh flicker; visible polling now runs about every 3 seconds.\n'
+                 '・Added RIT −/+ buttons and nine STEP choices from 1 to 20 Hz.\n'
+                 '・Prefer 599 within consecutive RST candidates.\n'
+                 '・Truncate HAMLOG frequency to 3 decimal MHz for transfer and verification; remove the separate CALL '
+                 'lookup from settings.\n'
+                 '・Added an independent RIT window from the STEP row, with connection-time and periodic RX '
+                 'synchronization.\n'
+                 '・Club list can be replaced as an external CSV, with a checked date and manual entry guidance.\n'
+                 '・Improved single/repeated callsign selection in receive cards and added DXCC entity names on the '
+                 'right.\n'
+                 '・Latest QSOs heading now explains double-clicking for details.\n'
+                 '\n'
+                 '2026-10-17  Ver1.26\n'
                  '・Re-send FIGS before digits or symbols after a space.\n'
                  '・Fixed contest numbers being decoded as letters by receivers with USOS (Unshift On Space) enabled.\n'
                  '・Applied to AFSK, FSK keying and direct TX, preserving compatibility with receivers without USOS.\n'
@@ -2629,12 +2654,97 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v122.stage_ptt': 'PTT start',
  'v122.stage_keying': 'FSK keying',
  'v123.mismatch_item': '{field}: sent {sent} / read back {received}',
- 'v123.rtty_setup': 'Register RTTY in HAMLOG mode settings and select the 599 format (three digits) for RST. Check '
-                    'existing RTTY settings too.',
+ 'v123.rtty_setup': 'In HAMLOG settings, enable the 599-format option and check that the setting contains RTTY=5*9. '
+                    'Check this even if RTTY is already listed.',
  'v124.title': 'QSO frequency',
  'v124.explanation': 'The QSO frequency is missing, for example after manual entry.\nPlease specify the frequency.',
  'v124.call': 'Other station: {call}',
  'v124.frequency': 'Frequency',
  'v124.examples': 'Examples: 7.045, 14.085, 50.303',
  'v124.register': 'Log QSO',
- 'v124.invalid': 'Enter a valid frequency in MHz, e.g. 7.045.'}
+ 'v124.invalid': 'Enter a valid frequency in MHz, e.g. 7.045.',
+ 'v127.rit_help': 'Fine-tune reception only. Radio changes are refreshed periodically.',
+ 'v127.rit_unavailable': 'Disconnected, waiting, or RIT data unavailable.',
+ 'v127.rit_failed': 'RIT setting could not be confirmed. Check the readback.',
+ 'v127.rit_xit': 'XIT/Delta-TX is ON; the shared offset cannot be changed.',
+ 'v127.club_help': 'Replace club_db.csv (UTF-8) to update the list. For an unlisted club, enter it in CLUB below.',
+ 'v127.club_date': 'List checked: {date}',
+ 'v127.club_error': 'Some or all club data could not be read. You can enter CLUB manually.',
+ 'v127.qso_title': 'Latest QSOs (double-click for details)',
+ 'v127.rit_readonly': 'RIT data shown. Only supported read/write controls are available.',
+ 'v127fix1.hamlog_frequency': 'HAMLOG receives MHz truncated to 3 decimal places (21.07982 → 21.079). PSRTTY ADIF '
+                              'retains the original precision.',
+ 'ry.skimmer': 'RY Skimmer',
+ 'ry.radar': 'RY Radar',
+ 'ry.start': 'Start',
+ 'ry.stop': 'Stop',
+ 'ry.back': 'Back',
+ 'ry.tune_help': 'Double-click a station to tune to its frequency. Unavailable during TX or when disconnected.',
+ 'ry.tune_unavailable': 'Connect a radio and return to RX before tuning.',
+ 'ry.age_legend': 'Age: red 0–3 / vermilion 3–6 / pink 6–12 / orange 12–24 / gray 24–30 min. New reports refresh; '
+                  'removed at 30 min.',
+ 'ry.sources_note': 'RTTY only. RBN: 5 nodes, 60 s each. J-Cluster: 90 s. Two overseas feeds stay connected. Sources: '
+                    'config/ry_radar_sources.json',
+ 'ry.call_required': 'Set your station callsign first.',
+ 'ry.error': 'Error: {error}',
+ 'ry.connecting': 'Connecting',
+ 'ry.connected': 'Connected',
+ 'ry.closed': 'Disconnected',
+ 'ry.stopped': 'Stopped',
+ 'ry.connect_rig': 'Connect a radio',
+ 'ry.no_frequency': 'Frequency unavailable',
+ 'ry.icom_choice': 'ICOM IQ (IC-7610 / IC-7760)',
+ 'ry.rtl_choice': 'External USB SDR (RTL-SDR)',
+ 'ry.input_note': 'ICOM uses its dedicated IQ port and vendor ExtIO DLL, separately from AudioIN. An external SDR '
+                  'needs a receive antenna and HF support. USB here means the cable connection.',
+ 'ry.dll': 'Input DLL',
+ 'ry.find_devices': 'Find devices',
+ 'ry.device': 'Device / serial',
+ 'ry.hf_input': 'SDR input',
+ 'ry.tuner': 'Tuner (V4, etc.)',
+ 'ry.direct_i': 'Direct sampling I',
+ 'ry.direct_q': 'Direct sampling Q (V3 HF, etc.)',
+ 'ry.center': 'IQ center frequency',
+ 'ry.span': 'Display span',
+ 'ry.reverse': 'Reverse Mark / Space',
+ 'ry.driver_note': 'Install the vendor IQ driver / DLL, or the RTL-SDR driver / rtlsdr.dll first. These DLLs are not '
+                   'bundled. Check the device settings on first use.',
+ 'ry.no_device': 'No device found. Check the DLL, driver and connection.',
+ 'ry.no_dll': 'Choose an input DLL.',
+ 'ry.input_settings': 'Input settings',
+ 'ry.receiving': 'Receiving IQ',
+ 'ry.dropped': 'Dropped {count}',
+ 'ry.no_iq': 'No IQ data received. Check input settings and device connection.',
+ 'ry.skimmer_help': '45.45 baud / 170 Hz, up to 12 signals. Click a signal position to add a decoder manually.',
+ 'ry.mark_reference': 'Labels show RF Mark frequency. AFSK tuning compensates for the receive audio tone.',
+ 'ry.ja_help': 'Show ordinary terrestrial JA RTTY sections. Excludes CW-only, satellite, EME-only, repeater and beacon '
+               'sections. Foreign stations remain in range. This is a display filter, not a licence or TX check.',
+ 'ry.waiting': 'Waiting for rotation',
+ 'ry.rotation': 'RBN rotation {index}/{total}: {name}',
+ 'ry.retry_error': 'Connection error (retry next turn): {error}',
+ 'ry.iq_model': 'IQ radio model',
+ 'ry.download': 'Official drivers / setup',
+ 'ry.dll_folder': 'Find DLLs in a folder',
+ 'ry.dll_candidates': 'Found DLLs',
+ 'ry.icom_7610_help': '1. Download “USB I/Q Package for HDSDR” from the official page and install following its guide '
+                      '(radio firmware 1.20+).\n'
+                      '2. Connect the rear [USB 2] port to the PC by USB cable; this is separate from [USB 1] for CAT '
+                      '/ USB Audio.\n'
+                      '3. Select the ExtIO DLL from the installation folder, such as HDSDR. Use the folder search '
+                      'below. Check the vendor settings opened at Start. USB here means the cable, not the SSB '
+                      'sideband.',
+ 'ry.icom_7760_help': '1. Install “USB I/Q Package for HDSDR” from the official page, following its guide.\n'
+                      '2. Connect the IQ [USB] port on the rear of the RF deck to the PC by USB cable. Distinguish it '
+                      'from controller / normal USB Audio connections.\n'
+                      '3. Select the ExtIO DLL in the installation folder, such as HDSDR; use folder search below. '
+                      'Check the receive selection in the vendor settings at Start. USB means the cable, not the SSB '
+                      'sideband.',
+ 'ry.rtl_help': 'This input supports RTL-SDR (RTL2832U).\n'
+                '1. Follow the official guide: use Zadig to install WinUSB for the RTL-SDR Bulk-In Interface 0. Do not '
+                'select CAT or USB Audio devices. Blog V4 needs a V4-compatible driver / DLL.\n'
+                '2. Extract all DLL files together. Select rtlsdr.dll or librtlsdr.dll matching PSRTTY 32/64-bit, then '
+                'Find devices → select USB serial (not a COM port). Close other SDR software.\n'
+                '3. For HF: V3 usually uses Direct sampling Q; V4 uses Tuner. Ordinary TV dongles may not receive HF '
+                'directly. Use an HF receive antenna.',
+ 'ry.range_help': 'IQ center is the middle of the receive range; span is the total width. Example: 14.090 MHz / 20 kHz '
+                  '→ 14.080–14.100 MHz. Actual coverage also depends on the IQ input center and sample rate.'}

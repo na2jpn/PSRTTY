@@ -129,6 +129,10 @@ def load_library(path=None):
     for name,(restype,argtypes) in signatures.items():
         function=getattr(lib,name);function.restype=restype;function.argtypes=argtypes
     for name, (restype, argtypes) in {
+        'rig_get_rit': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.POINTER(ctypes.c_long)]),
+        'rig_set_rit': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_long]),
+        'rig_has_set_func': (ctypes.c_uint64, [ctypes.c_void_p, ctypes.c_uint64]),
+        'rig_has_get_func': (ctypes.c_uint64, [ctypes.c_void_p, ctypes.c_uint64]),
         'rig_parse_level': (ctypes.c_uint64, [ctypes.c_char_p]),
         'rig_get_level': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, ctypes.POINTER(LevelValue)]),
         'rig_set_level': (ctypes.c_int, [ctypes.c_void_p, ctypes.c_uint, ctypes.c_uint64, LevelValue]),
@@ -143,6 +147,8 @@ def load_library(path=None):
 
 
 class HamlibController(CIVController):
+    from .rit import hamlib_read_rit as read_rit, hamlib_set_rit as set_rit
+
     def __init__(self, model):
         if model not in HAMLIB_MODELS:raise ValueError(tr('ui.0e1b2eddb0064736'))
         super().__init__(0,model=model)

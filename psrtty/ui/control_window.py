@@ -105,7 +105,9 @@ class ControlWindow(QDialog):
         row.addWidget(self.step); row.addStretch(1)
         self.reverse=QCheckBox(tr('ui.f1b260cdb584c9ff')); self.reverse.setChecked(bool(main.store.data['ui'].get('wheel_reverse',False)))
         self.dial.wheel_reverse=self.reverse.isChecked(); self.reverse.toggled.connect(self.set_wheel_reverse)
-        row.addWidget(self.reverse); root.addLayout(row)
+        row.addWidget(self.reverse)
+        self.rit_button = QPushButton('RIT…'); self.rit_button.clicked.connect(main._show_rit)
+        row.addWidget(self.rit_button); root.addLayout(row)
         row=QHBoxLayout(); self.buttons={}
         for name in ('NB','NR','NOTCH'):
             b=QPushButton(name+' —'); b.setCheckable(True); self.buttons[name]=b
@@ -169,6 +171,7 @@ class ControlWindow(QDialog):
         self.notch.setItemText(0,'DNF' if yaesu else tr('ui.36147b7e34df7ac8'))
         self.notch.setItemText(1,'NOTCH' if yaesu else tr('ui.e794646f29f66a94'))
         ready=self.ready()
+        self.rit_button.setEnabled(ready and bool(self.main.rit_service.state))
         if self.controller is not self.main.radio:
             self.controller=self.main.radio; self.state_observed=False; self.states={}; self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; self.mode_observed=None; self.last_poll=0
         if model == 'EXTERNAL-MANUAL':
@@ -241,6 +244,8 @@ class ControlWindow(QDialog):
         self.filter_box.setToolTip(tr('ui.3d309c7f5a79d659'))
 
     def request_tuner(self):
+        if self.main.rit_service.busy:
+            QTimer.singleShot(50, self.request_tuner); return
         if not self.antenna_tune.isEnabled() or not self.ready(): return
         if self.busy:
             self.tuner_pending=True;self.note.setText(tr('ui.eec3cb581b101afa'));return
@@ -320,7 +325,8 @@ class ControlWindow(QDialog):
         self.refresh_enabled()
     def tick(self):
         self.refresh_enabled()
-        if not self.isVisible() or not self.ready() or self.busy or self.main.polling: return
+        if (not self.isVisible() and not (getattr(self,'external_frequency',False) and self.pending is not None)) or not self.ready() or self.busy or self.main.rit_service.busy or self.main.polling: return
+        self.external_frequency=False
         ctl=self.main.radio; generation=self.main.connection_generation
         hz,self.pending=self.pending,None; feature,self.feature_pending=self.feature_pending,None
         mode,self.mode_pending=self.mode_pending,None

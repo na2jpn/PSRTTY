@@ -31,6 +31,9 @@ def package_release(root: Path):
         if not (root / "language").exists():
             shutil.copytree(source, root / "language")
         validate_all(root / "language")
+    if version_key(__version__) >= version_key('1.27'):
+        for name in ('club_db.csv', 'club_db_meta.json'):
+            if not (root / name).exists(): shutil.copy2(SOURCE_ROOT / name, root / name)
     create_manifest(root, __version__)
     archive = Path(str(root) + '.zip')
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -49,6 +52,13 @@ def build_distribution(executable: Path, output: Path):
         root = Path(td) / f"PSRTTY_{__version__}"
         root.mkdir()
         shutil.copy2(executable, root / 'psrtty.exe')
+        iq = SOURCE_ROOT / 'lib' / 'iq'
+        if not all((iq / f'psrtty-extio{bits}.exe').is_file() for bits in (32,64)):
+            raise FileNotFoundError('Run build-iq-bridge.ps1 before packaging')
+        (root / 'lib' / 'iq').mkdir(parents=True)
+        for bits in (32,64):
+            name=f'psrtty-extio{bits}.exe'
+            shutil.copy2(iq/name,root/'lib'/'iq'/name)
         source = Path('lib/hamlib')
         if source.is_dir():
             if Path('docs/DISTRIBUTION_TERMS.txt').is_file():
