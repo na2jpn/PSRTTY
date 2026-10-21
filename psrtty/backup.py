@@ -1,4 +1,6 @@
 """Log-only snapshots and an actual startup write probe."""
+from .diagnostics import trace, event
+from .log_retention import log_storage_locked, prune_after_success
 from datetime import datetime
 from pathlib import Path
 import os
@@ -21,6 +23,8 @@ def check_log_writable(log_dir: Path) -> None:
             probe.unlink()
 
 
+@trace('update')
+@log_storage_locked
 def create_log_backup(log_dir: Path) -> Path | None:
     # No recursive traversal: never include backups, locks, config or temp files.
     sources = sorted(p for p in log_dir.iterdir()
@@ -43,6 +47,7 @@ def create_log_backup(log_dir: Path) -> Path | None:
         with temporary.open('rb+') as f:
             os.fsync(f.fileno())
         os.replace(temporary, target)
+        prune_after_success(log_dir)
         return target
     finally:
         if temporary is not None and temporary.exists():

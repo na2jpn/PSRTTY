@@ -7,6 +7,7 @@ import sys
 from .i18n import tr
 from .rtty_codec import LTRS_ENCODE, FIGS_ENCODE
 
+from .diagnostics import event
 from .fsk_models import ICOM_FSK, KENWOOD_FSK, YAESU_FSK, USB_KEYING, modes_for, warning_key
 SUPPORTED = tuple(sorted(ICOM_FSK | KENWOOD_FSK | YAESU_FSK))
 DEFAULT_FSK = {'port': 'RADIO', 'line': 'DTR', 'invert': False, 'mode': 'RTTY'}
@@ -205,6 +206,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
         controller.fsk_start_diagnostic={'events':trace}
         try:
             # Mode must be confirmed before any PTT, even if auto-mode is OFF.
+            event('tx','FSK mode verification before port open')
             trace.append('mode_before_port')
             if engine._tx_cancel.is_set():return
             from .hamlib_radio import HamlibController
@@ -216,18 +218,18 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
                 raise RuntimeError(detail if isinstance(detail,str) and detail else tr('fsk.mode_failed'))
             if engine._tx_cancel.is_set():return
             stage='port'
-            trace.append('port_prepare')
+            trace.append('port_prepare');event('tx','FSK port_prepare')
             key.open()
             if share_ptt:sequencer.borrowed_serial=key.ser
             if key.opened_new is True:
                 stage='receive'
-                trace.append('receive_after_port')
+                trace.append('receive_after_port');event('tx','FSK receive_after_port')
                 if engine._tx_cancel.wait(PORT_SETTLE_SECONDS):return
                 wait_receive(controller,engine._tx_cancel)
             if engine._tx_cancel.is_set():return
             engine._fsk_mode_confirmed=options.get('mode','RTTY')
             stage='ptt'
-            trace.append('ptt_on')
+            trace.append('ptt_on');event('tx','FSK ptt_on')
             ptt_attempted=True
             if not ptt_on or ptt_on() is not True:raise RuntimeError(tr('ui.5eef7dde3c3c7e95'))
             stage='keying'
@@ -265,6 +267,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
                 if engine._tx_cancel.is_set():return
             success=True;message=tr('ui.fe0cbba02e8d4de7')
         except Exception as exc:
+            event('tx','FSK failed stage='+stage,error=exc)
             controller.fsk_start_diagnostic.update(stage=stage,error=str(exc))
             message=tr('ui.f8732c961aef978d')+tr('v122.stage_'+stage)+': '+str(exc)
         finally:
@@ -278,6 +281,7 @@ def start_fsk(engine,controller,radio,options,advanced,ptt_on,ptt_off,finished,
                 ctypes.windll.winmm.timeEndPeriod(1)
             engine._fsk_mode_confirmed=None
             engine._tx_active=False
+            event('tx','FSK completed success='+str(success)+' '+message)
             finished(success,message)
     engine._tx_thread=threading.Thread(target=worker,daemon=True);engine._tx_thread.start()
     return True,tr('ui.18e846a7e87b6ef5')

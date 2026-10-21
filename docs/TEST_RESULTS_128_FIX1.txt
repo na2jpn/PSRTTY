@@ -1,0 +1,16 @@
+PSRTTY 1.28 FIX1 検証 — 2026-10-21
+
+原因：test_language_errors_use_settings_categoryがUTF-8で保存された診断ログを
+encoding省略で読込み、日本語WindowsのCP932でUnicodeDecodeErrorとなっていた。
+
+同じ新規テストモジュール内の全read_text/write_textを確認し、未指定7箇所にencoding="utf-8"を追加。
+ログ・CSV・退避ファイル・ビルド設定の入出力に適用。本体ソースは変更していない。
+
+Path.read_text/write_textの既定エンコーディングをCP932へ差し替えた環境で、
+1.28専用テスト24件を実行：失敗0・エラー0、正常終了。
+実Windows上での再実行は利用者環境で行う。
+
+----------------------------------------------------------------------
+Ran 24 tests in 5.443s
+
+OK

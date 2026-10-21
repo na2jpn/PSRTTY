@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .diagnostics import trace, event
 
 import json
 from copy import deepcopy
@@ -120,6 +121,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
         "show_pwr": True,
     },
     "ui": {
+        "ry_mode_link": True,
         "direct_idle_seconds": 2,
         "language": "ja",
         "time_zone": "JST",
@@ -206,6 +208,7 @@ class ConfigStore:
         item = self.data["profiles"][self.data["active_profile"]]
         item.update(self._profile_values())
 
+    @trace('settings')
     def activate_profile(self, index: int) -> None:
         if not 0 <= index < len(self.data["profiles"]):
             raise IndexError(index)
@@ -218,6 +221,7 @@ class ConfigStore:
         else: self.data["ui"]["rx_tones"] = deepcopy(tones)
         self.save()
 
+    @trace('settings')
     def load(self) -> None:
         previous_font = None
         profile_records = None
@@ -284,6 +288,7 @@ class ConfigStore:
                 self.macros[7] = deepcopy(DEFAULT_MACROS[7])
             self.data["macro_defaults_v03"] = True
 
+    @trace('settings')
     def save(self) -> None:
         self.snapshot_profile()
         self.config_path.parent.mkdir(parents=True, exist_ok=True)

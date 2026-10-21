@@ -1303,7 +1303,9 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'under logdata/backups before changes; recent QSOs update too.</p>\n'
                  '<p>Normal-QSO QTH / INFO uses {MYQTH}, {MYJCCJCG} and {MYTXT}. Additional text can include your name '
                  'and other details.</p><p>Added ADIF UDP after QSO save. Integration settings provide ON/OFF, '
-                 'destination IP and port for Log4OM2 and other ADIF receivers.</p>',
+                 'destination IP and port for Log4OM2 and other ADIF receivers.</p>\n'
+                 '<p>Keep the latest 3 ZIP snapshots and 3 pre-edit backups per monthly ADIF. Older copies are removed '
+                 'automatically.</p>',
  'guide.5.title': 'Cabrillo export',
  'guide.5.body': '<h2>ADIF export</h2><p><b>File → Export ADIF</b>: select start / end times (selected JST / UTC zone) '
                  'and the operating callsign. Select at least one matching band and one QSO. Check the count and '
@@ -1516,7 +1518,22 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-19  Ver1.27\n'
+ 'history.body': '2026-10-22  Ver1.28\n'
+                 '• Keep 3 log ZIP snapshots and 3 pre-edit backups per monthly ADIF, including existing copies. Live '
+                 'QSO logs and transcripts remain.\n'
+                 '• Revised RY Skimmer startup: close saved input settings and bring the skimmer forward. Distinguish '
+                 'startup failure from waiting for IQ; show errors in red.\n'
+                 '• Added diagnostics across features: 500 kB per file, up to 3 generations, about 12 MB overall. '
+                 'Retain the last file of each category.\n'
+                 '• Added shared double-click mode linkage to RY Skimmer / RY Radar, ON by default, following the '
+                 'active Profile.\n'
+                 '• Moved club data into config, preserving existing edits. Distribution root contains only the EXE '
+                 'and folders.\n'
+                 '• Excluded unused Qt modules and other unnecessary build components.\n'
+                 '• Keep one update generation and two pre-update backups as ZIP files. After successful startup, '
+                 'clean older stored generations and avoid nesting earlier backups.\n'
+                 '\n'
+                 '2026-10-20  Ver1.27\n'
                  '• Added RY Skimmer and RY Radar below Subdecode in the View menu.\n'
                  '• Added JA-BAND ONLY to RY Radar / Skimmer, clearer scales and feed rotation status.\n'
                  '• Added model-specific IQ setup and DLL search; replaced the Shanghai node with the official RBN '
@@ -2667,7 +2684,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'v127.rit_unavailable': 'Disconnected, waiting, or RIT data unavailable.',
  'v127.rit_failed': 'RIT setting could not be confirmed. Check the readback.',
  'v127.rit_xit': 'XIT/Delta-TX is ON; the shared offset cannot be changed.',
- 'v127.club_help': 'Replace club_db.csv (UTF-8) to update the list. For an unlisted club, enter it in CLUB below.',
+ 'v127.club_help': 'Replace config/club_db.csv (UTF-8) to update the list. For an unlisted club, enter it in CLUB '
+                   'below.',
  'v127.club_date': 'List checked: {date}',
  'v127.club_error': 'Some or all club data could not be read. You can enter CLUB manually.',
  'v127.qso_title': 'Latest QSOs (double-click for details)',
@@ -2747,4 +2765,16 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                 '3. For HF: V3 usually uses Direct sampling Q; V4 uses Tuner. Ordinary TV dongles may not receive HF '
                 'directly. Use an HF receive antenna.',
  'ry.range_help': 'IQ center is the middle of the receive range; span is the total width. Example: 14.090 MHz / 20 kHz '
-                  '→ 14.080–14.100 MHz. Actual coverage also depends on the IQ input center and sample rate.'}
+                  '→ 14.080–14.100 MHz. Actual coverage also depends on the IQ input center and sample rate.',
+ 'ry.mode_link': 'Link mode on double-click',
+ 'ry.mode_help': 'ON: double-click sets frequency and the active Profile mode. OFF: frequency only. No filter number '
+                 'is specified; filter behavior on mode changes depends on the radio. Does not start TX.',
+ 'ry.wait_iq': 'Starting; waiting for IQ data…',
+ 'ry.bridge_missing': 'ExtIO bridge not found: {path}. Extract the full ZIP again or rebuild with build-windows.ps1.',
+ 'ry.log_hint': 'Diagnostic log: var/diagnostics/ry_skimmer.log',
+ 'ry.cable_note': 'IC-7610: IQ reception alone uses one USB cable from rear [USB 2]. Also connect [USB 1] when using '
+                  'normal PSRTTY CAT / Audio alongside it. USB means the connector / cable here.',
+ 'storage.done': 'Storage cleaned (updates: 1 / pre-update: 2 / log ZIPs: 3 / edit backups per month: 3).',
+ 'storage.error': 'Could not clean update storage. Original saved data is retained: {error}',
+ 'backup.retention': 'Keep the latest 3 ZIP snapshots and 3 pre-edit backups per monthly ADIF. Older copies are '
+                     'removed automatically.'}

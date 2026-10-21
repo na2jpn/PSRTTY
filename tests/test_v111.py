@@ -40,7 +40,7 @@ class Language111Tests(unittest.TestCase):
         self.assertEqual(i18n.LANGUAGE, 'en')
         self.assertEqual(i18n.tr('保存'), 'Save')
         self.assertTrue(i18n.startup_notice())
-        self.assertTrue((self.root/'var/language.log').exists())
+        self.assertTrue(i18n.diagnostics())  # bounded diagnostics are covered by test_v128
         shutil.copytree(ROOT/'language', self.catalog)
         i18n.configure('ru', self.catalog)
         self.assertEqual(i18n.LANGUAGE, 'ru')

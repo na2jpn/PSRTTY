@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (QDialog,QWidget,QVBoxLayout,QHBoxLayout,QGridLayo
     QLabel,QPushButton,QCheckBox,QScrollArea,QSplitter,QComboBox,QLineEdit,
     QDoubleSpinBox,QFormLayout,QFileDialog,QStackedWidget,QPlainTextEdit)
 from ..i18n import tr
+from ..diagnostics import event
 from ..paths import resource_path, app_root
 from ..card_entity import entity_name
 from ..ry_ja import ja_rtty,ja_band,ja_pair
@@ -125,6 +126,24 @@ class RYWindow(QDialog):
         box.toggled.connect(changed)
         return box
 
+    def mode_checkbox(self):
+        box=QCheckBox(tr('ry.mode_link'));box.setChecked(self.main.store.data['ui'].get('ry_mode_link',True))
+        box.setToolTip(tr('ry.mode_help'));self.mode_link=box
+        def changed(checked):
+            old=self.main.store.data['ui'].get('ry_mode_link',True)
+            self.main.store.data['ui']['ry_mode_link']=checked
+            try:self.main.store.save()
+            except Exception as exc:
+                self.main.store.data['ui']['ry_mode_link']=old
+                box.blockSignals(True);box.setChecked(old);box.blockSignals(False)
+                event('settings','RY mode linkage save failed',error=exc)
+                self.main.statusBar().showMessage(tr('ry.error').format(error=exc),10000);return
+            for key in ('ry_skimmer_window','ry_radar_window'):
+                window=getattr(self.main,key,None)
+                if window is not None and hasattr(window,'mode_link'):
+                    other=window.mode_link;other.blockSignals(True);other.setChecked(checked);other.blockSignals(False)
+        box.toggled.connect(changed);return box
+
     def reveal(self):
         place_tool_window(self,self.main,(1050,650),(600,400),self.main.store.data['ui'].get(self.key))
         self.show();self.raise_();self.activateWindow()
@@ -156,7 +175,7 @@ class RadarWindow(RYWindow):
         super().__init__(main,tr('ry.radar'));self.cache=SpotCache();self.feeds=None;self.statuses={};self.last_received={};self.active_band=None;self.rotation=None
         row=QHBoxLayout();self.start=QPushButton(tr('ry.start'));self.start.clicked.connect(self.start_feeds)
         self.stop=QPushButton(tr('ry.stop'));self.stop.clicked.connect(self.stop_feeds);self.stop.setEnabled(False)
-        row.addWidget(self.start);row.addWidget(self.stop);self.ja_only=self.ja_checkbox('ry_radar_ja_only');row.addWidget(self.ja_only);row.addStretch()
+        row.addWidget(self.start);row.addWidget(self.stop);self.ja_only=self.ja_checkbox('ry_radar_ja_only');row.addWidget(self.ja_only);row.addWidget(self.mode_checkbox());row.addStretch()
         self.root.addLayout(row)
         bands=QGridLayout();self.bands=bands;self.band_buttons={}
         selected=main.store.data['ui'].get('ry_radar_bands',[3.5,7,14,21,28])
@@ -262,6 +281,7 @@ class SkimmerSetup(QDialog):
             diagram.setAlignment(Qt.AlignCenter);diagram.setMinimumHeight(140);diagram.setStyleSheet('font-size:17px; background:#fff3df; padding:12px');v.addWidget(diagram)
         for method,label in [('extio','ry.icom_choice'),('rtl','ry.rtl_choice')]:
             b=QPushButton(tr(label));b.clicked.connect(lambda checked=False,m=method:self.choose(m));v.addWidget(b)
+        cable=QLabel(tr('ry.cable_note'));cable.setWordWrap(True);v.addWidget(cable)
         note=QLabel(tr('ry.input_note'));note.setWordWrap(True);v.addWidget(note);v.addStretch()
         self.pages.addWidget(first)
         self.settings=QWidget();form=QFormLayout(self.settings);self.form=form
@@ -333,7 +353,7 @@ class SkimmerSetup(QDialog):
                 name=f.name.lower()
                 if (name.startswith('extio') if self.method=='extio' else name in ('rtlsdr.dll','librtlsdr.dll')):found.append(f)
         for f in sorted(set(found))[:100]:self.candidates.addItem(str(f),str(f))
-        if not found:self.note.setText(tr('ry.no_dll'))
+        if not found:self.show_error(tr('ry.no_dll'))
 
     def pick_dll(self):
         if self.candidates.currentData():self.dll.setText(self.candidates.currentData())
@@ -348,34 +368,51 @@ class SkimmerSetup(QDialog):
         self.scan.setEnabled(False);self.go.setEnabled(False)
         def done(result,error):
             self.scan.setEnabled(True);self.go.setEnabled(True)
-            if error:self.note.setText(tr('ry.error').format(error=error));return
+            if error:self.show_error(error);return
             self.rtl,rows=result;self.device.clear()
             for index,serial,product in rows:self.device.addItem(f'{product} / {serial}',serial)
-            if not rows:self.note.setText(tr('ry.no_device'))
+            if not rows:self.show_error(tr('ry.no_device'))
         # Capture GUI values before dispatching work.
         dll=self.dll.text()
         def work():
             obj=RTLInput(dll,'',0,None,None);return obj,obj.devices()
         self.job=BackgroundJob(self,work,done)
 
+    def show_error(self,error):
+        self.note.setStyleSheet('color:#c62828;');self.note.setText(tr('ry.error').format(error=error))
+        event('ry_skimmer','Input settings failed',error=error)
+
     def accept_options(self):
-        if not Path(self.dll.text()).is_file():self.note.setText(tr('ry.no_dll'));return
-        if self.method=='rtl' and not self.device.currentData():self.note.setText(tr('ry.no_device'));return
-        self.options=dict(model=self.model.currentText(),method=self.method,dll=self.dll.text(),serial=self.device.currentData(),center=self.center.value(),span=self.span.currentData(),reverse=self.reverse.isChecked(),direct=self.direct.currentData())
-        inputs=self.main.store.data['ui'].setdefault('ry_skimmer_inputs',{});inputs[self.method]=dict(self.options)
-        self.main.store.save();self.accept()
+        from copy import deepcopy
+        before=deepcopy(self.main.store.data['ui'].get('ry_skimmer_inputs',{}))
+        try:
+            event('ry_skimmer','Input settings validation')
+            if not Path(self.dll.text()).is_file():raise ValueError(tr('ry.no_dll'))
+            if self.method=='rtl' and not self.device.currentData():raise ValueError(tr('ry.no_device'))
+            from ..ry_iq import pe_bits
+            bits=pe_bits(self.dll.text())
+            event('ry_skimmer','DLL '+self.dll.text()+' '+str(bits)+' bit')
+            if self.method=='extio':
+                bridge=app_root()/f'lib/iq/psrtty-extio{bits}.exe'
+                if not bridge.is_file():raise FileNotFoundError(tr('ry.bridge_missing').format(path=bridge))
+            options=dict(model=self.model.currentText(),method=self.method,dll=self.dll.text(),serial=self.device.currentData(),center=self.center.value(),span=self.span.currentData(),reverse=self.reverse.isChecked(),direct=self.direct.currentData())
+            self.main.store.data['ui'].setdefault('ry_skimmer_inputs',{})[self.method]=dict(options)
+            self.main.store.save()
+            self.options=options;event('ry_skimmer','Input settings saved');self.accept()
+        except Exception as exc:
+            self.main.store.data['ui']['ry_skimmer_inputs']=before;self.options=None;self.show_error(exc)
 
 
 class SkimmerWindow(RYWindow):
     key='ry_skimmer_window'
     def __init__(self,main):
         super().__init__(main,tr('ry.skimmer'));self.worker=None;self.input=None;self.options=None;self.mailbox=queue.Queue(maxsize=100);self.generation=0
-        self.spectrum_queue=queue.Queue(maxsize=1);self.rows={};self.last_samples=0;self.last_data=time.monotonic()
+        self.spectrum_queue=queue.Queue(maxsize=1);self.rows={};self.last_samples=0;self.last_data=time.monotonic();self.failure='';self.first_iq=False
         row=QHBoxLayout();self.setup=QPushButton(tr('ry.input_settings'));self.setup.clicked.connect(self.configure)
         self.start=QPushButton(tr('ry.start'));self.start.clicked.connect(self.start_input)
         self.stop=QPushButton(tr('ry.stop'));self.stop.clicked.connect(self.stop_input);self.stop.setEnabled(False)
         for button in (self.setup,self.start,self.stop):row.addWidget(button)
-        self.ja_only=self.ja_checkbox('ry_skimmer_ja_only');row.addWidget(self.ja_only)
+        self.ja_only=self.ja_checkbox('ry_skimmer_ja_only');row.addWidget(self.ja_only);row.addWidget(self.mode_checkbox())
         row.addStretch();self.root.addLayout(row);self.root.addWidget(self.explanation)
         reference=QLabel(tr('ry.mark_reference'));reference.setWordWrap(True);self.root.addWidget(reference)
         self.canvas=BandCanvas();self.canvas.skimmer=True;self.hook(self.canvas);self.canvas.manual.connect(self.manual)
@@ -390,11 +427,18 @@ class SkimmerWindow(RYWindow):
         dialog=SkimmerSetup(self.main)
         if dialog.exec()==QDialog.Accepted:
             self.options=dialog.options
-            self.start_input()
+            self.reveal()
+            QTimer.singleShot(0,self,self.start_input)
 
     def post(self,*args):
         try:self.mailbox.put_nowait(args)
-        except queue.Full:pass
+        except queue.Full:
+            if args and args[0]=='error':
+                event('ry_skimmer','Input error',error=args[1])
+                try:self.mailbox.get_nowait()
+                except queue.Empty:pass
+                try:self.mailbox.put_nowait(args)
+                except queue.Full:pass
 
     def spectrum(self,*args):
         try:self.spectrum_queue.get_nowait()
@@ -402,14 +446,27 @@ class SkimmerWindow(RYWindow):
         try:self.spectrum_queue.put_nowait(args)
         except queue.Full:pass
 
+    def fail(self,error):
+        event('ry_skimmer','Receive failed',error=error)
+        self.failure=str(error);self.stop_input()
+        self.status.setStyleSheet('color:#c62828;')
+        self.status.setText(tr('ry.error').format(error=error)+'\n'+tr('ry.log_hint'))
+
     def start_input(self):
+        try:self._start_input()
+        except Exception as exc:self.fail(exc)
+
+    def _start_input(self):
         if not self.options:self.configure();return
         if self.options['method']=='extio' and (self.main.active_tx_id is not None or self.main.audio._tx_active):
-            self.status.setText(tr('ui.30cf2a7b6ef59827'));return
+            self.fail(tr('ui.30cf2a7b6ef59827'));return
         from ..ry_iq import ExtIOInput,RTLInput
         from ..ry_skimmer import SkimmerWorker
         from .background import BackgroundJob
-        if self.input is not None:return
+        if self.input is not None:
+            self.status.setText(tr('ry.receiving') if self.first_iq else tr('ry.wait_iq'));return
+        self.failure='';self.first_iq=False;self.status.setStyleSheet('')
+        event('ry_skimmer','Start requested')
         o=dict(self.options);center=round(o['center']*1e6);self.rows={};self.canvas.set_rows([])
         self.generation+=1;generation=self.generation
         while not self.mailbox.empty():self.mailbox.get_nowait()
@@ -427,16 +484,21 @@ class SkimmerWindow(RYWindow):
             if self.input is not source:
                 source.stop();return
             self.stop.setEnabled(True)
-            if err:self.stop_input();self.status.setText(tr('ry.error').format(error=err))
-            else:self.status.setText(tr('ry.receiving'))
+            if err:self.fail(err)
+            elif not self.first_iq:self.status.setText(tr('ry.wait_iq'))
         self.job=BackgroundJob(self,source.start,done)
 
     def stop_input(self):
         self.generation+=1
-        if self.input:self.input.stop();self.input=None
-        if self.worker:self.worker.stop();self.worker=None
+        source,self.input=self.input,None
+        worker,self.worker=self.worker,None
+        for obj in (source,worker):
+            if obj is not None:
+                try:obj.stop()
+                except Exception as exc:event('ry_skimmer','Stop failed',error=exc)
         self.setup.setEnabled(True);self.start.setEnabled(True);self.stop.setEnabled(False)
-        self.status.setText(tr('ry.stopped'))
+        event('ry_skimmer','Input stopped')
+        if not self.failure:self.status.setText(tr('ry.stopped'))
 
     def manual(self,hz):
         if self.worker:self.worker.manual(hz)
@@ -453,7 +515,7 @@ class SkimmerWindow(RYWindow):
         for _ in range(100):
             try:event=self.mailbox.get_nowait()
             except queue.Empty:break
-            if event[0]=='error':self.stop_input();self.status.setText(tr('ry.error').format(error=event[1]));continue
+            if event[0]=='error':self.fail(event[1]);continue
             _,hz,call,text,recent=event
             if self.ja_only.isChecked() and not ja_pair(hz,not (self.options or {}).get('reverse',False)):continue
             self.rows[round(hz/50)]=Spot(call,round(hz),now,'IQ',text=recent)
@@ -468,9 +530,13 @@ class SkimmerWindow(RYWindow):
         if self.worker:
             if self.worker.error:self.post('error',self.worker.error);return
             if self.worker.samples!=self.last_samples:
+                if not self.first_iq:
+                    from ..diagnostics import event as record_event
+                    record_event('ry_skimmer','First IQ received; samples='+str(self.worker.samples))
+                    self.first_iq=True
                 self.last_samples=self.worker.samples;self.last_data=time.monotonic()
                 self.status.setText(tr('ry.receiving')+f' / {len(self.worker.engine.channels)} RTTY / '+tr('ry.dropped').format(count=self.worker.dropped))
-            elif time.monotonic()-self.last_data>8:self.status.setText(tr('ry.no_iq'))
+            elif time.monotonic()-self.last_data>15:self.fail(tr('ry.no_iq'))
 
     def closeEvent(self,event):
         self.stop_input();super().closeEvent(event)

@@ -32,7 +32,11 @@ a = Analysis(
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
-    excludes=[],
+    # PSRTTY imports Widgets/Gui/Core/Network/PrintSupport; no web engine or QML.
+    # Keep unittest: NumPy testing is imported by SciPy array_api_compat at runtime.
+    excludes=['PySide6.QtWebEngineCore','PySide6.QtWebEngineWidgets',
+              'PySide6.QtWebEngineQuick','PySide6.QtQml','PySide6.QtQuick',
+              'PySide6.QtQuickWidgets','tkinter'],
     noarchive=False,
     optimize=0,
 )

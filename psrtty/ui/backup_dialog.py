@@ -23,6 +23,8 @@ class BackupDialog(QDialog):
         self.every.toggled.connect(self.count.setEnabled); root.addLayout(row)
         note = QLabel(tr('ui.7e9a0fc83c7c277b'))
         note.setWordWrap(True); root.addWidget(note)
+        retention = QLabel(tr('backup.retention'))
+        retention.setWordWrap(True); root.addWidget(retention)
         now = QPushButton(tr('ui.b4600d946d7bf45d')); now.clicked.connect(lambda: backup_now()); root.addWidget(now)
         buttons = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Save).setText(tr('ui.a3030bf8f16dc63c'))

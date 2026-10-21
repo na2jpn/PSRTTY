@@ -26,6 +26,7 @@ from ..audio_engine import AudioEngine
 from ..civ import CIVController, connect_configured
 from ..radio import create_controller
 from .background import BackgroundJob
+from ..diagnostics import event
 from .qso_frequency_dialog import request_qso_frequency
 from .window_state import restore_window, save_window, place_tool_window
 from ..config import ConfigStore
@@ -1114,11 +1115,13 @@ class MainWindow(QMainWindow):
             self.statusBar().showMessage(tr('ui.30cf2a7b6ef59827'), 2500)
             return False
         if self.control_window:
-            self.control_window.pending = self.control_window.target = self.control_window.feature_pending = None
+            self.control_window.pending = self.control_window.target = self.control_window.feature_pending = self.control_window.mode_pending = None
+            self.control_window.linked_mode=False
             if self.control_window.busy:
                 self.statusBar().showMessage(tr('ui.d92e7c1727e582f5'), 2500)
                 return False
         if self.rit_service.busy: return False
+        event('tx','Send requested method='+self.store.data['radio'].get('tx_method','afsk')+' chars='+str(len(text)))
         a=self.store.data["advanced"]; au=self.store.data["audio"]
         ctl = self.radio
         from ..external_ptt import ExternalPTT
@@ -1172,6 +1175,7 @@ class MainWindow(QMainWindow):
             self.transcript.append("TX " + text); self._add_card(text,"TX")
         if not ok: self.active_tx_id = None; self.live_session = None
         self._set_radio_controls()
+        event('tx','Send startup result='+str(ok)+' '+str(msg))
         self.statusBar().showMessage(msg,4000)
         return ok
 
@@ -1502,6 +1506,7 @@ class MainWindow(QMainWindow):
     def _radio_observed(self, freq, error=None):
         if error or not freq:
             self.poll_failures += 1
+            event('radio','Frequency read failed count='+str(self.poll_failures),error=error or 'No frequency reply')
             if self.poll_failures < 3:
                 self.statusBar().showMessage(tr('ui.f8f5d84186bd2947').format(count=self.poll_failures))
                 return
@@ -1511,6 +1516,7 @@ class MainWindow(QMainWindow):
             self.rig_status.setToolTip(reason)
             self.statusBar().showMessage(reason); self.transcript.append(reason)
         else:
+            if self.poll_failures:event('radio','Frequency read recovered')
             if self.poll_failures: self.statusBar().showMessage(tr('ui.8c165df3bc47365b'),4000)
             self.poll_failures=0
             self.current_freq_hz=freq; self.last_known_freq_hz=freq; self._update_freq_label()
@@ -1568,6 +1574,11 @@ class MainWindow(QMainWindow):
             self.control_window=ControlWindow(self)
         window=self.control_window;window.refresh_enabled();window.request_frequency(int(hz))
         if window.pending is not None:
+            if not self.store.data['ui'].get('ry_mode_link',True) and getattr(window,'linked_mode',False):
+                window.mode_pending=None;window.linked_mode=False
+            if self.store.data['ui'].get('ry_mode_link',True):
+                mode=(self.store.data.get('fsk',{}).get('mode','RTTY') if self.store.data['radio'].get('tx_method','afsk')=='fsk' else self.store.data['advanced'].get('data_mode','LSB-D'))
+                window.request_mode(mode);window.linked_mode=True
             window.external_frequency=True;window.tick()
         self.statusBar().showMessage(window.note.text(),5000)
 

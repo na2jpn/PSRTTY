@@ -1,5 +1,6 @@
 """Optional, lower-priority receive-only decoders for the nearby spectrum."""
 from __future__ import annotations
+from .diagnostics import trace, event
 
 import queue
 import threading
@@ -25,6 +26,7 @@ class SubDecodeWorker:
         self.decoders = [RTTYDecoder(sample_rate, on_char=lambda c, i=i: self.on_char(i, c))
                          for i in range(2)]
 
+    @trace('decode')
     def start(self):
         if self._thread and self._thread.is_alive():
             return
@@ -32,6 +34,7 @@ class SubDecodeWorker:
         self._thread = threading.Thread(target=self._run, name='PSRTTY-SubRX', daemon=True)
         self._thread.start()
 
+    @trace('decode')
     def stop(self):
         self._stop.set()
         try:
@@ -71,6 +74,7 @@ class SubDecodeWorker:
     def backlog(self):
         return self._queue.qsize()
 
+    @trace('decode')
     def configure(self, index, baud, mark, space, invert, sq=4):
         with self._lock:
             decoder = self.decoders[index]
@@ -78,6 +82,7 @@ class SubDecodeWorker:
             decoder.sq_level = sq
             decoder.reset()
 
+    @trace('decode')
     def set_enabled(self, index, enabled):
         with self._lock:
             self.enabled[index] = bool(enabled)

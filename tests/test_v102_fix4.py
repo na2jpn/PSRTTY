@@ -12,7 +12,7 @@ from psrtty.updater import (HAMLIB_REQUIRED, MANIFEST, apply_update,
 
 
 class Legacy101UpgradeTests(unittest.TestCase):
-    def test_release_passes_actual_101_requirement_and_cleans_root_copy(self):
+    def test_127_bridge_release_passes_101_requirement_and_cleans_root_copy(self):
         # The shipped 1.01 EXE requests the root-level filename; its source
         # canonical was subsequently changed to request the docs/ filename.
         legacy_required = (HAMLIB_REQUIRED - {'docs/DISTRIBUTION_TERMS.txt'}) | {'DISTRIBUTION_TERMS.txt'}
@@ -20,16 +20,17 @@ class Legacy101UpgradeTests(unittest.TestCase):
             base = Path(td)
             exe = base / 'psrtty.exe'
             exe.write_bytes(b'MZ future 1.02 executable')
-            release = build_distribution(exe, base / 'release')
+            version='1.27'  # 1.28 intentionally drops this root-file compatibility.
+            with patch('package_release.__version__',version):
+                release = build_distribution(exe, base / 'release')
             with patch('psrtty.updater.HAMLIB_REQUIRED', legacy_required):
-                from psrtty import __version__
-                self.assertEqual(inspect_zip(release, '1.01')['version'], __version__)
+                self.assertEqual(inspect_zip(release, '1.01')['version'], version)
             with zipfile.ZipFile(release) as z:
                 names = set(z.namelist())
                 for filename in ('DISTRIBUTION_TERMS.txt', 'docs/DISTRIBUTION_TERMS.txt'):
-                    self.assertIn(f'PSRTTY_{__version__}/' + filename, names)
-                self.assertEqual(z.read(f'PSRTTY_{__version__}/DISTRIBUTION_TERMS.txt'),
-                                 z.read(f'PSRTTY_{__version__}/docs/DISTRIBUTION_TERMS.txt'))
+                    self.assertIn(f'PSRTTY_{version}/' + filename, names)
+                self.assertEqual(z.read(f'PSRTTY_{version}/DISTRIBUTION_TERMS.txt'),
+                                 z.read(f'PSRTTY_{version}/docs/DISTRIBUTION_TERMS.txt'))
             old = base / 'installed'
             old.mkdir()
             (old / 'psrtty.exe').write_bytes(b'MZ old 1.01')
@@ -46,7 +47,7 @@ class Legacy101UpgradeTests(unittest.TestCase):
             self.assertTrue((old / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file())
             self.assertEqual((old / 'config' / 'saved.json').read_text(), 'settings')
             self.assertEqual((old / 'logdata' / 'saved.adi').read_text(), 'qsos')
-            self.assertEqual(json.loads((old / MANIFEST).read_text())['version'], __version__)
+            self.assertEqual(json.loads((old / MANIFEST).read_text())['version'], version)
 
     def test_unrelated_root_file_is_preserved(self):
         with tempfile.TemporaryDirectory() as td:

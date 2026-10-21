@@ -4,6 +4,7 @@ Target: HAMLOG 5.48. No database DLL, keystroke automation or reverse log sync.
 All native calls run on the same worker thread as the temporary reply window.
 """
 from __future__ import annotations
+from .diagnostics import trace, event
 
 import ctypes
 import hashlib
@@ -195,11 +196,13 @@ class HamlogLink:
             stream.write(json.dumps({'key': key, 'state': state}) + '\n')
             stream.flush(); os.fsync(stream.fileno())
 
+    @trace('integration')
     def check(self):
         with self.lock, self.transport_factory() as api:
             input_fields(api.request(115, reply=True))
             return api.title
 
+    @trace('integration')
     def lookup(self, call):
         call = call.strip().upper()
         if not re.fullmatch(r'[A-Z0-9/]{3,24}', call):
@@ -216,6 +219,7 @@ class HamlogLink:
             self.lookup_owner = (api.target, after)
             return {'call': call, 'name': after[10], 'qth': after[11], 'title': api.title}
 
+    @trace('integration')
     def transfer(self, qso, auto_save=False):
         try:
             row = hamlog_row(qso)

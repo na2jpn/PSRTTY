@@ -320,6 +320,7 @@ class ControlWindow(QDialog):
         self.refresh_enabled()
     def request_mode(self,mode):
         if mode and self.ready():
+            self.linked_mode=False
             self.mode_pending=mode
             self.note.setText(f"{tr('ui.06af9f6052b03d15')}{mode}")
         self.refresh_enabled()
@@ -330,12 +331,15 @@ class ControlWindow(QDialog):
         ctl=self.main.radio; generation=self.main.connection_generation
         hz,self.pending=self.pending,None; feature,self.feature_pending=self.feature_pending,None
         mode,self.mode_pending=self.mode_pending,None
+        linked_mode=getattr(self,'linked_mode',False);self.linked_mode=False
         if hz is None and feature is None and mode is None and time.monotonic()-self.last_poll<1.2: return
         self.busy=True; self.last_poll=time.monotonic()
         def work():
             ok=True
             if hz is not None: ok=ctl.set_frequency(hz)
-            if mode is not None: ok=ctl.set_operating_mode(mode) and ok
+            if mode is not None:
+                setter=ctl.set_linked_mode if linked_mode else ctl.set_operating_mode
+                ok=setter(mode) and ok
             if feature is not None:
                 if feature[0]=='FILTER': ok=ctl.set_filter(*feature[1]) and ok
                 elif feature[0]=='NARROW': ok=ctl.set_narrow(*feature[1]) and ok
@@ -361,6 +365,8 @@ class ControlWindow(QDialog):
                 if self.pending is None: self.target=None
                 self.main._radio_observed(freq)
                 self.note.setText(tr('ui.828aa53324192553') if ok else tr('ui.a2401055106afc5f'))
+            if linked_mode and (error or not result[0]):
+                self.main.statusBar().showMessage(self.note.text(),10000)
             self.refresh_enabled()
             if self.tuner_pending:
                 self.tuner_pending=False
@@ -368,4 +374,4 @@ class ControlWindow(QDialog):
         self.job=BackgroundJob(self,work,done)
     def hideEvent(self,event):
         self.main.store.data['ui']['control_window']=save_window(self)
-        self.pending=self.target=self.feature_pending=self.mode_pending=None; self.tuner_pending=False; super().hideEvent(event)
+        self.pending=self.target=self.feature_pending=self.mode_pending=None; self.linked_mode=False; self.tuner_pending=False; super().hideEvent(event)

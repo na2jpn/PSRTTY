@@ -2,6 +2,7 @@
 import queue
 import threading
 from PySide6.QtCore import QObject, QTimer
+from ..diagnostics import event
 
 
 class BackgroundJob(QObject):
@@ -17,6 +18,7 @@ class BackgroundJob(QObject):
             try:
                 results.put((work(), None))
             except Exception as exc:
+                event('app','Background operation '+str(getattr(work,'__qualname__',type(work).__name__)),error=exc)
                 results.put((None, exc))
         self.thread = threading.Thread(target=run, daemon=True)
         self.thread.start()

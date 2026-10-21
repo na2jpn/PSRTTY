@@ -4,6 +4,7 @@ The DLL is an external, replaceable file beside the one-file PSRTTY executable.
 Never silently fall back to raw CAT when Hamlib cannot open or verify a rig.
 """
 from __future__ import annotations
+from .diagnostics import trace, event
 from .i18n import tr
 
 import ctypes
@@ -161,6 +162,7 @@ class HamlibController(CIVController):
         if token<=0 or self.lib.rig_set_conf(self.handle,token,str(value).encode('ascii'))!=0:
             raise RuntimeError(tr('ui.3b63f1d8c2e309c9').format(name=name))
 
+    @trace('radio')
     def connect(self,port='AUTO',baud='AUTO',timeout=8.0):
         with self._lock:
             self.disconnect();self.cancel.clear()
@@ -185,6 +187,7 @@ class HamlibController(CIVController):
                 self.disconnect();self.status.message=str(exc)
             return self.status
 
+    @trace('radio')
     def disconnect(self):
         with self._lock:
             from .fsk import release_connection
@@ -209,6 +212,7 @@ class HamlibController(CIVController):
             self.status.frequency_hz=hz
             return hz
 
+    @trace('radio')
     def set_frequency(self,hz):
         with self._lock:
             if not self.handle or self.cancel.is_set() or type(hz) is not int or not 30_000<=hz<=500_000_000:return False
@@ -230,6 +234,7 @@ class HamlibController(CIVController):
             if on and not ok:self.lib.rig_set_ptt(self.handle,VFO,0)
             return ok
 
+    @trace('radio')
     def set_fsk_mode(self, mode='RTTY', cancel_event=None):
         """Verify FSK mode with bounded read retries and at most one mode write.
 
@@ -311,6 +316,7 @@ class HamlibController(CIVController):
                 if aborted():return False
                 return fail('exception',stage=stage,error=str(exc))
 
+    @trace('radio')
     def set_data_mode(self,mode='LSB-D'):
         if mode not in ('LSB-D','USB-D'):return False
         with self._lock:
@@ -351,6 +357,7 @@ class HamlibController(CIVController):
                 if token and self.lib.rig_parse_mode(token.encode('ascii'))==actual.value:return mode
             return None
 
+    @trace('radio')
     def set_operating_mode(self,mode):
         if mode in ('RTTY','RTTY-R'):return self.set_fsk_mode(mode)
         if mode not in self.operating_modes():return False
@@ -361,6 +368,9 @@ class HamlibController(CIVController):
             value=self.lib.rig_parse_mode(token.encode('ascii'))
             if not value or self.lib.rig_set_mode(self.handle,VFO,value,-1)!=0:return False
             return self.read_operating_mode()==mode
+
+    def set_linked_mode(self,mode):
+        return self.set_operating_mode(mode)
 
     def _control_ready(self):
         return bool(self.handle and self.lib and self.status.connected and not self.cancel.is_set())

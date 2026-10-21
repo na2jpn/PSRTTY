@@ -5,6 +5,7 @@ The running (trusted) executable is copied as the update helper. It validates
 SHA256 detects corruption; it is not a publisher signature.
 """
 from __future__ import annotations
+from .diagnostics import trace, event
 import hashlib
 import json
 import os
@@ -85,6 +86,9 @@ def sha256(path: Path) -> str:
 
 def create_manifest(root: Path, version: str):
     version_key(version)
+    if version_key(version)>=version_key('1.28'):
+        unexpected=[p.name for p in root.iterdir() if p.is_file() and p.name!='psrtty.exe']
+        if unexpected:raise ValueError('Distribution root must contain only psrtty.exe and folders: '+', '.join(unexpected))
     if version_key(version) >= version_key('1.01'):
         files = [name for name in release_files(root) if name != VERSIONUP]
         instructions = dict(format=1, version=version, install=files)
@@ -106,6 +110,7 @@ def _safe_name(name: str):
         raise ValueError("危険なZIPパスです")
 
 
+@trace('update')
 def inspect_zip(path: Path, current_version: str, installed_root: Path | None = None) -> dict:
     version_key(current_version)
     if path.stat().st_size > MAX_BYTES:
@@ -168,6 +173,8 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
                 raise ValueError('1.11以降の配布には5言語のlanguageファイルが必要です')
             if comparison >= version_key('1.12') and not {f'language/{code}.json' for code in ('ja','en','ru','zh','ko','id','th','es')} <= files.keys():
                 raise ValueError('1.12以降の配布には8言語のlanguageファイルが必要です')
+            if comparison>=version_key('1.28') and any('/' not in name and name!='psrtty.exe' for name in files):
+                raise ValueError('Distribution root must contain only psrtty.exe and folders')
             expected = {prefix + MANIFEST} | {prefix + name for name in files}
             permitted_dirs = {prefix, prefix + "config/", prefix + "logdata/", prefix + "var/",
                               prefix + 'lib/', prefix + 'lib/hamlib/', prefix + 'docs/', prefix + 'language/'}
@@ -208,7 +215,14 @@ def inspect_zip(path: Path, current_version: str, installed_root: Path | None = 
         raise ValueError(f"更新ZIPを検証できません: {exc}") from exc
 
 
+@trace('update')
 def prepare_update(path: Path, root: Path, current_version: str) -> Path:
+    from .update_storage import storage_lock
+    with storage_lock(root,timeout=60):
+        return _prepare_update(path,root,current_version)
+
+
+def _prepare_update(path: Path, root: Path, current_version: str) -> Path:
     for path_part in (root / "var", root / "var" / "updates", root / "var" / "backups"):
         if path_part.is_symlink() or (hasattr(path_part, "is_junction") and path_part.is_junction()):
             raise ValueError("更新作業フォルダーにリンクは使用できません")
@@ -218,7 +232,8 @@ def prepare_update(path: Path, root: Path, current_version: str) -> Path:
         snapshot = stage / "release.zip"
         shutil.copy2(path, snapshot)
         info = inspect_zip(snapshot, current_version, root)
-        (stage / "request.json").write_text(json.dumps(dict(root=str(root.resolve()), current_version=current_version, version=info["version"])), encoding="utf-8")
+        from .update_storage import owner_marker
+        (stage / "request.json").write_text(json.dumps(dict(root=str(root.resolve()), current_version=current_version, version=info["version"], owner=owner_marker())), encoding="utf-8")
         return stage
     except Exception:
         shutil.rmtree(stage)
@@ -252,6 +267,7 @@ def migrate_settings(root: Path, old_version: str, new_version: str):
     return
 
 
+@trace('update')
 def apply_update(stage: Path, root: Path, current_version: str) -> Path:
     root = root.resolve()
     info = inspect_zip(stage / "release.zip", current_version, root)
@@ -289,7 +305,8 @@ def apply_update(stage: Path, root: Path, current_version: str) -> Path:
         source = root / name
         if source.exists():
             def ignore(directory, names):
-                return [x for x in names if Path(directory) == root / "var" and x in ("updates", "backups", "psrtty.lock")]
+                if Path(directory)==root/'logdata':return [x for x in names if x=='backups']
+                return [x for x in names if Path(directory) == root / "var" and x in ("updates", "backups", "psrtty.lock", "update-storage.lock")]
             # The release's versionup.json is itself inside var/ and may have
             # been copied above as a managed file.
             shutil.copytree(source, backup / name, ignore=ignore, symlinks=True,
@@ -368,6 +385,7 @@ def wait_for_parent(pid: int, timeout_ms=60000):
         api.CloseHandle(handle)
 
 
+@trace('update')
 def restart_application(root: Path):
     """Run the installed EXE only, after releasing the installation lock."""
     env = os.environ.copy()
@@ -400,6 +418,7 @@ def confirm_restart(root: Path, process, timeout=45):
     raise TimeoutError('再起動の画面表示を確認できませんでした。起動済みか確認してください。')
 
 
+@trace('update')
 def report_startup(root: Path):
     token = os.environ.pop('PSRTTY_RESTART_TOKEN', '')
     if not re.fullmatch(r'[0-9a-f]{32}', token): return
@@ -411,6 +430,26 @@ def report_startup(root: Path):
 
 
 def helper_main(args):
+    from .update_storage import storage_lock
+    stage,root=Path(args[0]).resolve(),Path(args[1]).resolve()
+    try:
+        if stage.parent!=root/'var'/'updates':raise ValueError('Invalid updater stage')
+        # Keep cleanup away until restart confirmation and helper exit.
+        with storage_lock(root,timeout=60):
+            return _helper_main(args)
+    except Exception as exc:
+        event('update','Update helper could not run',error=exc)
+        if stage.parent==root/'var'/'updates':
+            try:(stage/'helper-error.txt').write_text(str(exc),encoding='utf-8')
+            except OSError:pass
+        if sys.platform=='win32':
+            import ctypes
+            from .i18n import tr
+            ctypes.windll.user32.MessageBoxW(None,tr(str(exc)),tr('PSRTTY 更新'),0x10)
+        return 1
+
+
+def _helper_main(args):
     import ctypes
     from PySide6.QtCore import QLockFile
     stage, root, pid = Path(args[0]).resolve(), Path(args[1]).resolve(), int(args[2])

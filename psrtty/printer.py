@@ -1,4 +1,5 @@
 """Bounded, opt-in USB serial print spool. No Qt or radio calls in the worker."""
+from .diagnostics import trace, event
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -71,12 +72,14 @@ class PrinterSpool:
             return dict(enabled=self.enabled, waiting=len(self.jobs)+int(self.active),
                         problem=self.problem, detail=self.detail, skipped=self.skipped, sent=self.sent)
 
+    @trace('printer')
     def configure(self, settings):
         with self.condition:
             if self.enabled or self.active or self.jobs: return False
             self.settings=normalize_settings(settings); self.generation+=1
             self.problem=''; self.detail=''; self.condition.notify_all(); return True
 
+    @trace('printer')
     def enable(self, value):
         with self.condition:
             if self.closing:return False
@@ -95,7 +98,9 @@ class PrinterSpool:
             self.jobs.clear();self.queued_bytes=0;self.generation+=1
             self.condition.notify_all()
 
+    @trace('printer')
     def pause(self, reason, detail=''):
+        event('printer','Paused '+str(reason)+' '+str(detail))
         with self.condition:
             self.enabled=False;self.problem=reason;self.detail=detail;self.generation+=1
             self.condition.notify_all()
@@ -120,6 +125,7 @@ class PrinterSpool:
             self.jobs.append((PrintJob(direction,text,when,zone),size,test));self.queued_bytes+=size
             self.condition.notify_all();return True
 
+    @trace('printer')
     def stop(self):
         with self.condition:
             self.closing=True;self.enabled=False;self.jobs.clear();self.queued_bytes=0
@@ -137,6 +143,7 @@ class PrinterSpool:
                 self.condition.wait(min(remaining,.1))
         return False
 
+    @trace('printer')
     def _open(self, settings):
         factory=self.serial_factory
         if factory is None:

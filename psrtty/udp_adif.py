@@ -1,4 +1,5 @@
 """One raw ADIF datagram per saved QSO; no automatic retry or receipt claim."""
+from .diagnostics import trace, event
 from ipaddress import ip_address
 import socket
 from .adif import adif_record
@@ -22,6 +23,7 @@ def payload(qso):
     if len(data)>65507:raise UdpError('udp.too_large')
     return data
 
+@trace('integration')
 def send_qso(qso,options):
     options=options_checked(options)
     if not options['enabled']:return None
@@ -31,4 +33,5 @@ def send_qso(qso,options):
     with socket.socket(family,socket.SOCK_DGRAM) as sock:
         sock.settimeout(.5)
         if sock.sendto(data,target)!=len(data):raise OSError('Incomplete UDP datagram')
+    event('integration','ADIF UDP datagram sent bytes='+str(len(data))+' target='+str(target))
     return f'[{host}]:{port}' if family==socket.AF_INET6 else f'{host}:{port}'

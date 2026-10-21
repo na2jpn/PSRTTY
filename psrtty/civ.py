@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .diagnostics import trace, event
 from .i18n import tr
 
 import threading
@@ -103,6 +104,7 @@ class CIVController:
                 buf = buf[-128:]
         return b""
 
+    @trace('radio')
     def connect(self, port: str = "AUTO", baud: str | int = "AUTO", timeout: float = 8.0) -> CIVStatus:
         self._connect_deadline = time.monotonic() + timeout
         try:
@@ -150,6 +152,7 @@ class CIVController:
         self.status = CIVStatus(False, message=tr('ui.449e04d36873e83e'))
         return self.status
 
+    @trace('radio')
     def disconnect(self) -> None:
         with self._lock:
             from .fsk import release_connection
@@ -330,6 +333,7 @@ class CIVController:
                 return bool(raw[6])
             return None
 
+    @trace('radio')
     def set_frequency(self, hz):
         with self._lock:
             if not self._control_ready() or type(hz) is not int or not 100000 <= hz < 15000000000:
@@ -394,6 +398,7 @@ class CIVController:
                 return False
 
 
+    @trace('radio')
     def set_fsk_mode(self, mode='RTTY'):
         from .fsk_models import modes_for
         if mode not in modes_for(self.model):return False
@@ -421,6 +426,7 @@ class CIVController:
                 return len(raw)>=7 and raw[5]==(0x04 if mode=='RTTY' else 0x08)
             except Exception:return False
 
+    @trace('radio')
     def set_data_mode(self, mode: str = "LSB-D") -> bool:
         """Select SSB and DATA ON using the model-specific command; FIL1."""
         if mode not in ("LSB-D", "USB-D"):
@@ -440,6 +446,7 @@ class CIVController:
             except Exception:
                 return False
 
+    @trace('radio')
     def set_usb_mod_input(self):
         from .radio_support import USB_MOD_INPUT
         spec=USB_MOD_INPUT.get(self.model)
@@ -466,6 +473,43 @@ class CIVController:
                 return read_input()==spec[2] and not self.cancel.is_set()
             except Exception:return False
 
+    @trace('radio')
+    def set_linked_mode(self,mode):
+        """Tune linkage: omit the filter selector, and verify the resulting mode.
+
+        CI-V 26 permits optional DATA/filter fields. For older radios that
+        reject 26, the 1A DATA command requires echoing the radio-selected
+        destination filter, rather than imposing FIL1 or another preset.
+        """
+        if mode in ('RTTY','RTTY-R'):return self.set_fsk_mode(mode)
+        if mode not in self.operating_modes():return False
+        with self._lock:
+            if not self._control_ready() or self.read_transmitting() is not False:return False
+            if self.read_operating_mode()==mode:return True
+            try:
+                side=0x00 if mode.startswith('LSB') else 0x01
+                data=0x01 if mode.endswith('-D') else 0x00
+                self.ser.reset_input_buffer();self.ser.write(self._frame(0x26,0x00,side,data))
+                raw=self._read_response(timeout=.5)
+                if len(raw)>=6 and raw[4]==0xFB:
+                    return self.read_operating_mode()==mode
+                # A legacy DATA command cannot omit its mandatory filter field.
+                self.ser.reset_input_buffer();self.ser.write(self._frame(0x06,side))
+                raw=self._read_response(timeout=.5)
+                if len(raw)<6 or raw[4]!=0xFB:return False
+                selected=0
+                if data:
+                    self.ser.reset_input_buffer();self.ser.write(self._frame(0x04))
+                    raw=self._read_response(0x04)
+                    if len(raw)<8 or raw[5]!=side or raw[6] not in (1,2,3):return False
+                    selected=raw[6]
+                sub=0x04 if self.model=='IC-7200' else 0x06
+                self.ser.reset_input_buffer();self.ser.write(self._frame(0x1A,sub,data,selected))
+                raw=self._read_response(timeout=.5)
+                return len(raw)>=6 and raw[4]==0xFB and self.read_operating_mode()==mode
+            except Exception as exc:
+                event('radio','Mode linkage failed',error=exc);return False
+
     def operating_modes(self):
         return ('LSB-D', 'USB-D', 'LSB', 'USB')
 
@@ -488,6 +532,7 @@ class CIVController:
             except Exception:
                 return None
 
+    @trace('radio')
     def set_operating_mode(self, mode):
         if mode in ('RTTY','RTTY-R'):return self.set_fsk_mode(mode)
         if mode not in self.operating_modes():return False
@@ -518,6 +563,7 @@ def radio_address(settings: dict) -> int:
     return addr
 
 
+@trace('radio')
 def connect_configured(controller, settings, advanced, fsk=None, external=None):
     """Shared by main connection and test. Failure leaves no usable session."""
     try:

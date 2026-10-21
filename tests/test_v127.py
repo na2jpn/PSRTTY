@@ -42,6 +42,7 @@ class Protocol127Tests(unittest.TestCase):
             (root/'club_db_meta.json').write_text(json.dumps({'checked_at':'2026-10-19','sha256':hashlib.sha256(csv.read_bytes()).hexdigest()}))
             rows,date,bad=load_clubs(root)
             self.assertEqual(rows,[('0123','テストクラブ'),('0456','第二')]);self.assertEqual(date,'2026-10-19');self.assertTrue(bad)
+            csv=root/'config'/'club_db.csv'
             csv.write_text('number,name\n9999,変更\n',encoding='utf-8')
             self.assertEqual(load_clubs(root)[1],'')
             csv.write_bytes(b'\xff\xfe\xff');self.assertEqual(load_clubs(root),([], '', True))

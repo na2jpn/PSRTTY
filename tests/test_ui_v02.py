@@ -24,6 +24,12 @@ class UITests(unittest.TestCase):
         self.dialog_guard=DialogGuard()
         self.dialog_guard.start()
         self.addCleanup(self.dialog_guard.stop)
+        # Run after later per-test close cleanups, while Qt is still alive.
+        def destroy_widgets():
+            from PySide6.QtCore import QCoreApplication, QEvent
+            for widget in self.app.topLevelWidgets():widget.deleteLater()
+            QCoreApplication.sendPostedEvents(None,QEvent.DeferredDelete)
+        self.addCleanup(destroy_widgets)
         self.tmp=tempfile.TemporaryDirectory(); root=Path(self.tmp.name)
         self.paths={'root':root, **{name:root/name for name in ('config','logdata','var')}}
         for p in self.paths.values(): p.mkdir(exist_ok=True)

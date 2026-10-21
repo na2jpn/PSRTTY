@@ -1,3 +1,12 @@
+# PSRTTY 1.28 正本 — 2026-10-22
+
+FIX1・更新保存領域整理・ログバックアップ保持数整理を統合済み。README_128_CANONICAL.txt、およびdocs/TEST_RESULTS_128_CANONICAL.txtを参照。
+
+# PSRTTY Ver1.28 — 2026-10-22
+
+1.27正本の全変更を含むフルソースです。build-windows.ps1で検証・ビルドし、release/PSRTTY_1.28.zipを生成します。
+最新の説明は docs/IMPLEMENTATION_128.md を参照。以下は以前の版の記録です。
+
 # Ver1.27 FIX2 — 2026-10-20
 
 FIX1適用済みを基準とした差分。HAMLOG連携設定に599形式指定の設定例画像とRTTY=5*9を確認する赤字の案内を追加しました。説明は8言語対応です。適用はAPPLY_127_FIX2.txtを参照。

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from .diagnostics import trace, event
 
 import threading
 import time
@@ -58,12 +59,14 @@ class AudioEngine:
     def devices(kind):
         return [(row['choice'], row['label']) for row in enumerate_devices(sd, kind)]
 
+    @trace('decode')
     def configure_decoder(self, baud: float, mark: float, space: float, invert: bool) -> None:
         with self._decode_lock:
             self.decoder.configure(baud, mark, space, invert)
             self.scope_frame = None
             self.tuning_frame = None
 
+    @trace('decode')
     def set_decode_enabled(self, enabled):
         with self._decode_lock:
             self.decode_enabled = bool(enabled)
@@ -87,6 +90,7 @@ class AudioEngine:
         from .secondary_audio import normalize_settings
         self.secondary_settings = normalize_settings(settings)
 
+    @trace('audio')
     def start_input(self, device: str | int | None = None) -> tuple[bool, str]:
         if device == 'UNSET':
             self.stop_input()
@@ -116,6 +120,7 @@ class AudioEngine:
             self.stream = None
             return False, f"Audio入力を開始できません: {e}"
 
+    @trace('audio')
     def stop_input(self) -> None:
         if self.stream is not None:
             try:
@@ -273,6 +278,7 @@ class AudioEngine:
                             secondary.done.wait(0.15)
                         secondary.close(drain=success and secondary.done.is_set())
                     self._tx_active = False
+                    event('tx', 'AFSK completed success='+str(success)+' '+message)
                     if on_finished:
                         on_finished(success, message)
 

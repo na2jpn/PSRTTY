@@ -5,6 +5,7 @@ A successful delivery means Z-Server contains the record, not that a particular
 zLog window is open. Its contest and time basis must be configured by the user.
 """
 from __future__ import annotations
+from .diagnostics import trace, event
 import csv
 import io
 import json
@@ -199,6 +200,7 @@ class ZServerLink:
         with self.lock: return self.state, self.detail, len(self.entries), self.confirmed
 
     def _status(self, state, detail=''):
+        event('integration','Z-Server '+str(state)+' '+str(detail))
         with self.lock: self.state, self.detail = state, str(detail)
 
     def _save(self):
@@ -223,6 +225,7 @@ class ZServerLink:
                 raise LinkError('zlink.pending_settings')
         return checked
 
+    @trace('integration')
     def configure(self, options):
         checked = self.check_options(options)
         with self.lock:
@@ -237,6 +240,7 @@ class ZServerLink:
             self._disconnect(); self._status('zlink.disabled')
         self.wake.set()
 
+    @trace('integration')
     def enqueue(self, qso):
         with self.lock:
             if not self.options['enabled']: return
@@ -340,6 +344,7 @@ class ZServerLink:
             except OSError: pass
             sock.close()
 
+    @trace('integration')
     def close(self):
         self.cancelled.set(); self.wake.set(); self._disconnect()
         if self.thread and self.thread is not threading.current_thread(): self.thread.join(.8)

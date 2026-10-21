@@ -184,4 +184,7 @@ class SkimmerWorker:
                 except queue.Empty:continue
                 with self.lock:self.engine.feed(*item)
                 self.samples+=len(item[0])
-        except Exception as e:self.error=str(e);self.stop_event.set()
+        except Exception as e:
+            from .diagnostics import event
+            event('ry_skimmer','DSP worker failed',error=e)
+            self.error=str(e);self.stop_event.set()

@@ -1,4 +1,5 @@
 """Cancellable read-only feeds. GUI consumes a bounded mailbox, never sockets."""
+from .diagnostics import trace, event
 import json
 import queue
 import re
@@ -121,9 +122,11 @@ class RadarFeeds:
         self.sockets = set(); self.lock = threading.Lock(); self.threads = []
 
     def emit(self, kind, *args):
+        if kind in ('status','rotation'):event('ry_radar',str((kind,*args)))
         try: self.events.put_nowait((kind, *args))
         except queue.Full: pass
 
+    @trace('ry_radar')
     def start(self):
         if self.threads: return
         jobs = [self._cycle]
@@ -134,6 +137,7 @@ class RadarFeeds:
             t = threading.Thread(target=job, daemon=True, name='PSRTTY-Radar')
             self.threads.append(t); t.start()
 
+    @trace('ry_radar')
     def stop(self):
         self.stop_event.set()
         with self.lock:

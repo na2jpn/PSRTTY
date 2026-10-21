@@ -1,5 +1,7 @@
 """Receive-only IQ inputs. ExtIO runs outside the GUI process (32/64-bit)."""
 import ctypes as C
+from collections import deque
+from .diagnostics import event
 import os
 from pathlib import Path
 import struct
@@ -25,17 +27,34 @@ class ExtIOInput:
         self.path=Path(path).resolve(); self.center=int(center)
         self.on_samples=on_samples; self.on_error=on_error
         self.process=None; self.stopped=threading.Event(); self.thread=None
+        self.stderr_thread=None;self.stderr_tail=deque(maxlen=24)
 
     def start(self):
         if self.stopped.is_set():return
+        event('ry_skimmer','ExtIO DLL validation '+str(self.path))
         bits=pe_bits(self.path)
+        event('ry_skimmer','ExtIO DLL architecture '+str(bits)+' bit')
         bridge=app_root()/f'lib/iq/psrtty-extio{bits}.exe'
-        if not bridge.is_file(): raise FileNotFoundError(str(bridge))
+        if not bridge.is_file(): raise FileNotFoundError('ExtIO bridge missing: '+str(bridge))
+        event('ry_skimmer','Bridge process startup '+str(bridge))
         self.process=subprocess.Popen([str(bridge),str(self.path),str(self.center)],
             stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,
             creationflags=getattr(subprocess,'CREATE_NO_WINDOW',0),cwd=self.path.parent)
+        self.stderr_thread=threading.Thread(target=self._stderr,daemon=True,name='PSRTTY-ExtIO-stderr');self.stderr_thread.start()
+        event('ry_skimmer','Bridge process created pid='+str(self.process.pid)+'; waiting for hardware / IQ')
         self.thread=threading.Thread(target=self._read,daemon=True,name='PSRTTY-ExtIO');self.thread.start()
         if self.stopped.is_set():self.stop()
+
+    def _stderr(self):
+        try:
+            while True:
+                raw=self.process.stderr.readline(4096)
+                if not raw:break
+                line=raw.decode('utf-8','replace').strip()
+                if line:
+                    self.stderr_tail.append(line);event('ry_skimmer','ExtIO '+line)
+        except (OSError,ValueError) as exc:
+            if not self.stopped.is_set():event('ry_skimmer','ExtIO stderr failed',error=exc)
 
     def _read_exact(self, n):
         result=bytearray()
@@ -53,21 +72,31 @@ class ExtIOInput:
                 if magic!=b'RYIQ' or not 0<count<=1_048_576 or not 6000<=rate<=8_000_000 or not np.isfinite(center):
                     raise ValueError('ExtIO packet')
                 data=np.frombuffer(self._read_exact(count*8),dtype='<f4').reshape(-1,2)
+                if expected is None:event('ry_skimmer','ExtIO IQ receive started rate='+str(rate)+' center='+str(center))
                 self.on_samples(data[:,0]+1j*data[:,1],rate,center,expected is not None and expected!=position)
                 expected=position+count
         except Exception as exc:
             if not self.stopped.is_set():
-                try:
-                    self.process.wait(timeout=.3)
+                try:self.process.wait(timeout=.3)
+                except subprocess.TimeoutExpired:pass
+                if self.stderr_thread:self.stderr_thread.join(timeout=.3)
+                detail='\n'.join(self.stderr_tail)
+                # Also support direct reader use without a launched stderr thread.
+                if self.stderr_thread is None and self.process.poll() is not None:
                     detail=self.process.stderr.read(8192).decode('utf-8','replace')
-                except subprocess.TimeoutExpired: detail=''
-                self.on_error(detail or str(exc))
+                message=(detail+'\n' if detail else '')+str(exc)+' (exit='+str(self.process.poll())+')'
+                event('ry_skimmer','ExtIO IQ input failed',error=exc)
+                self.on_error(message)
 
     def stop(self):
         self.stopped.set()
         if self.process and self.process.poll() is None:
             try: self.process.stdin.close();self.process.wait(timeout=.3)
-            except (OSError,subprocess.TimeoutExpired): self.process.kill()
+            except (OSError,subprocess.TimeoutExpired):
+                self.process.kill()
+                try:self.process.wait(timeout=.3)
+                except subprocess.TimeoutExpired:pass
+        event('ry_skimmer','ExtIO stopped')
 
 
 class RTLInput:
@@ -81,6 +110,7 @@ class RTLInput:
     def _library(self):
         path=str(Path(self.path).resolve())
         if os.name=='nt': self._dll_dir=os.add_dll_directory(str(Path(path).parent))
+        event('ry_skimmer','RTL-SDR DLL load '+path)
         lib=C.CDLL(path)
         signatures={'rtlsdr_get_device_count':(C.c_uint,[]),
             'rtlsdr_get_device_usb_strings':(C.c_int,[C.c_uint,C.c_char_p,C.c_char_p,C.c_char_p]),
@@ -108,6 +138,7 @@ class RTLInput:
 
     def start(self):
         if self.stopped.is_set():return
+        event('ry_skimmer','RTL-SDR device open serial='+str(self.serial))
         rows=self.devices();found=[r for r in rows if r[1]==self.serial]
         if len(found)!=1:raise ValueError('RTL-SDR: serial / device')
         if self.lib.rtlsdr_open(C.byref(self.handle),found[0][0])<0:raise OSError('rtlsdr_open')
@@ -119,6 +150,7 @@ class RTLInput:
             if self.lib.rtlsdr_reset_buffer(self.handle)<0:raise OSError('reset_buffer')
         except Exception:
             self.lib.rtlsdr_close(self.handle);self.handle=C.c_void_p();raise
+        event('ry_skimmer','RTL-SDR IQ input configured rate='+str(self.rate)+' center='+str(self.center))
         self.callback=C.CFUNCTYPE(None,C.POINTER(C.c_ubyte),C.c_uint,C.c_void_p)(self._callback)
         self.thread=threading.Thread(target=self._run,daemon=True,name='PSRTTY-RTL');self.thread.start()
         if self.stopped.is_set():self.stop()
@@ -135,7 +167,10 @@ class RTLInput:
         try:
             if self.stopped.is_set():return
             result=self.lib.rtlsdr_read_async(self.handle,self.callback,None,0,16384)
-            if not self.stopped.is_set():self.on_error('RTL-SDR: '+str(result))
+            if not self.stopped.is_set():self.on_error('RTL-SDR read_async: '+str(result))
+        except Exception as exc:
+            event('ry_skimmer','RTL-SDR read failed',error=exc)
+            if not self.stopped.is_set():self.on_error(str(exc))
         finally:
             with self.lifecycle:
                 self.lib.rtlsdr_close(self.handle);self.handle=C.c_void_p()

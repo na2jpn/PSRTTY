@@ -2,6 +2,7 @@
 // Interface: HDSDR LC_ExtIO_Types.h, 2016-11-23. No vendor code is included.
 using System;
 using System.IO;
+using System.ComponentModel;
 using System.Text;
 using System.Threading;
 using System.Collections.Concurrent;
@@ -97,22 +98,28 @@ class ExtIOBridge {
             if(args.Length==1&&args[0]=="--self-test")return SelfTest();
             if(args.Length!=2)throw new Exception("ExtIO DLL, center Hz");
             string path=Path.GetFullPath(args[0]);center=int.Parse(args[1]);
+            Console.Error.WriteLine("[phase] DLL load: "+path);
             SetDllDirectory(Path.GetDirectoryName(path));lib=LoadLibrary(path);
-            if(lib==IntPtr.Zero)throw new Exception("LoadLibrary: "+Marshal.GetLastWin32Error());
+            if(lib==IntPtr.Zero) {int code=Marshal.GetLastWin32Error();throw new Win32Exception(code,"LoadLibrary ("+code+"): "+new Win32Exception(code).Message+"; DLL or dependent driver/runtime");}
             Init init=Fn<Init>("InitHW");Open open=Fn<Open>("OpenHW");
             stop=Fn<VoidFn>("StopHW");close=Fn<VoidFn>("CloseHW");
             getRate=Fn<GetInt>("GetHWSR");getLO=Fn<GetInt>("GetHWLO");
             var name=new StringBuilder(256);var model=new StringBuilder(256);
+            Console.Error.WriteLine("[phase] InitHW");
             if(!init(name,model,ref sampleType))throw new Exception("InitHW");
             if(Array.IndexOf(new int[]{3,5,6,7,9,10,11},sampleType)<0)throw new Exception("ExtIO IQ sample type: "+sampleType);
             callback=Receive;Fn<SetCallback>("SetCallback")(callback);
+            Console.Error.WriteLine("[phase] OpenHW");
             if(!open())throw new Exception("OpenHW");opened=true;
+            Console.Error.WriteLine("[phase] Hardware open: "+name+" / "+model+" type="+sampleType);
             VoidFn gui=Fn<VoidFn>("ShowGUI",false);if(gui!=null)gui();
             rate=getRate();
+            Console.Error.WriteLine("[phase] StartHW center="+center);
             int count=Fn<Start>("StartHW")(center);started=true;
             if(count<=0)throw new Exception("StartHW: "+count);
             rate=getRate();int lo=getLO();if(lo>0)center=lo;
             if(rate<6000||rate>8000000)throw new Exception("ExtIO sample rate: "+rate);
+            Console.Error.WriteLine("[phase] IQ receive start rate="+rate+" block="+count+" center="+center);
             var writer=new Thread(()=> {
                 try {using(var output=new BinaryWriter(Console.OpenStandardOutput())) {
                     foreach(Packet p in packets.GetConsumingEnumerable()) {
@@ -127,7 +134,7 @@ class ExtIOBridge {
                 Thread.Sleep(10);
             }
             return 0;
-        } catch(Exception e) {Console.Error.WriteLine(e.Message);return 1;}
+        } catch(Exception e) {Console.Error.WriteLine("[error] "+e.ToString());return 1;}
         finally {quit=true;if(started&&stop!=null)stop();if(opened&&close!=null)close();GC.KeepAlive(callback);}
     }
 }

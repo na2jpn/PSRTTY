@@ -1,5 +1,6 @@
 """Shared normal/test/live keying, preserving pre-key profiles."""
 from .i18n import tr
+from .diagnostics import trace
 
 def keying_callbacks(controller, mode, sequencer, ready):
     external = mode == '外部接続'
@@ -8,12 +9,14 @@ def keying_callbacks(controller, mode, sequencer, ready):
     if not external and sequencer.config.get('enabled') and sequencer.config.get('role') == 'ptt':
         raise ValueError(tr('ui.53874a42d9a74e7a'))
     ptt = {'CI-V': controller.set_ptt, 'CAT': controller.set_ptt, 'RTS': controller.set_rts, 'DTR': controller.set_dtr}.get(mode)
+    @trace('tx')
     def on():
         if not ready() or not sequencer.before_ptt(): return False
         if external:
             controller.external_transmitting = True
             return True
         return bool(ptt and ptt(True))
+    @trace('tx')
     def off():
         try:
             return True if external else bool(ptt and ptt(False))

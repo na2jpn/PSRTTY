@@ -16,6 +16,9 @@ from .ui.main_window import MainWindow
 
 def run() -> int:
     from .app_identity import configure_app_identity, application_icon
+    from .diagnostics import configure as configure_diagnostics, install_exception_hooks, event
+    configure_diagnostics();install_exception_hooks()
+    event('app','PSRTTY '+__version__+' starting')
     configure_app_identity()
     app = QApplication(sys.argv)
     # Load saved display preference before any startup error can be shown.
@@ -54,7 +57,15 @@ def run() -> int:
             retire_compatibility_terms(paths["root"])
         except OSError as exc:
             QMessageBox.warning(None, tr("旧版ファイルの整理"), tr(f"互換用ファイルを削除できませんでした。データは残しています。\n{exc}"))
+    # Migrate on startup even when the Cabrillo club picker is never opened.
+    from .club_database import migrate_clubs
+    migration_error=None
+    try:migrate_clubs(paths['root'])
+    except OSError as exc:
+        migration_error=exc;event('settings','Startup club migration failed; original retained',error=exc)
     win = MainWindow(reset_window="--reset-window" in sys.argv)
+    if migration_error is not None:
+        win.statusBar().showMessage(tr('ry.error').format(error=migration_error),10000)
     activation=ActivationServer(paths["root"],win)
     win.show()
     def started():
@@ -63,8 +74,23 @@ def run() -> int:
             report_startup(paths['root'])
         except OSError as exc:
             win.statusBar().showMessage(tr(f'再起動確認の記録に失敗: {exc}'), 10000)
+    def maintain():
+        if win.closing:return
+        from .ui.background import BackgroundJob
+        from .update_storage import maintain_storage, StorageBusy
+        def completed(result,error):
+            if isinstance(error,StorageBusy):
+                if not win.closing:QTimer.singleShot(10000,win,maintain)
+            elif error:
+                event('update','Storage retention failed; originals retained',error=error)
+                win.statusBar().showMessage(tr('storage.error').format(error=error),15000)
+            elif result:
+                win.statusBar().showMessage(tr('storage.done'),6000)
+        win.storage_cleanup_job=BackgroundJob(win,lambda:maintain_storage(paths['root']),completed)
     QTimer.singleShot(0, win, started)
+    if getattr(sys,'frozen',False):QTimer.singleShot(3000,win,maintain)
     result=app.exec()
     activation.server.close()
     lock.unlock()
+    event('app','PSRTTY exiting result='+str(result))
     return result

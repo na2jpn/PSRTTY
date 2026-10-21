@@ -12,6 +12,7 @@ from pathlib import Path
 
 from .timebase import UTC, in_zone
 from .paths import ensure_runtime_dirs
+from .log_retention import log_storage_locked, prune_after_success
 
 
 @dataclass
@@ -196,6 +197,7 @@ class ADIFLog:
             out.sort(key=lambda q:q.when_utc or datetime.min.replace(tzinfo=timezone.utc))
         return out[-limit:] if limit is not None else out
 
+    @log_storage_locked
     def modify(self, original: QSORecord, replacement: QSORecord | None) -> Path:
         """Update one record; preserve all other bytes/unknown fields and back up first."""
         from PySide6.QtCore import QLockFile
@@ -249,6 +251,7 @@ class ADIFLog:
                 os.replace(temp,path)
             finally:
                 if temp and temp.exists(): temp.unlink()
+            prune_after_success(self.log_dir)
             return backup
         finally: lock.unlock()
 
@@ -290,6 +293,7 @@ class ADIFLog:
                 if before is None:target.unlink()
                 else:write_atomic(target,before)
                 raise
+            prune_after_success(self.log_dir)
             return backup
         finally:lock.unlock()
 

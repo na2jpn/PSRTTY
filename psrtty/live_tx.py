@@ -1,5 +1,6 @@
 """Cancellable streaming ITA2 with an editable, age-gated pending tail."""
 from __future__ import annotations
+from .diagnostics import event
 import threading
 import time
 import queue
@@ -230,6 +231,7 @@ def start_live(engine, sd, session, output_device, advanced, amplitude, ptt_on, 
                 try:primary.close()
                 except Exception as exc:success=False;message=str(exc)
             engine._tx_active=False
+            event('tx','Direct AFSK completed success='+str(success)+' '+message)
             finished(success,message)
     engine._tx_thread=threading.Thread(target=worker,daemon=True);engine._tx_thread.start()
     return True,tr('ui.18e846a7e87b6ef5')

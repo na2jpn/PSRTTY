@@ -76,12 +76,8 @@ def _record(problem):
     if problem in _seen:return
     _seen.add(problem);_issues.append(problem)
     logging.getLogger('psrtty.language').warning('%s: %s: %s',*problem)
-    try:
-        path=app_root()/'var'/'language.log';path.parent.mkdir(parents=True,exist_ok=True)
-        if path.exists() and path.stat().st_size>1024*1024:
-            path.replace(path.with_suffix('.log.1'))
-        with path.open('a',encoding='utf-8') as f:f.write(' | '.join(problem)+'\n')
-    except OSError:pass  # reporting failure must not prevent startup
+    from .diagnostics import event
+    event('settings','Language '+ ' | '.join(problem))
 
 def configure(language, directory=None):
     global LANGUAGE, REQUESTED_LANGUAGE, _strings, _issues, _seen

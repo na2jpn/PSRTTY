@@ -22,18 +22,14 @@ from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files
 
 
 def package_release(root: Path):
-    if version_key(__version__) >= version_key('1.02') and (root / 'docs' / 'DISTRIBUTION_TERMS.txt').is_file():
-        # The already-distributed 1.01 EXE expects this exact root path.
-        # The new EXE removes this identical copy on first launch.
-        shutil.copy2(root / 'docs' / 'DISTRIBUTION_TERMS.txt', root / 'DISTRIBUTION_TERMS.txt')
+    # Historical package fixtures retain 1.01 compatibility; 1.28 has no root text.
+    if version_key('1.02') <= version_key(__version__) < version_key('1.28') and (root/'docs/DISTRIBUTION_TERMS.txt').is_file():
+        shutil.copy2(root/'docs/DISTRIBUTION_TERMS.txt',root/'DISTRIBUTION_TERMS.txt')
     if version_key(__version__) >= version_key('1.11'):
         source = SOURCE_ROOT / "language"
         if not (root / "language").exists():
             shutil.copytree(source, root / "language")
         validate_all(root / "language")
-    if version_key(__version__) >= version_key('1.27'):
-        for name in ('club_db.csv', 'club_db_meta.json'):
-            if not (root / name).exists(): shutil.copy2(SOURCE_ROOT / name, root / name)
     create_manifest(root, __version__)
     archive = Path(str(root) + '.zip')
     with zipfile.ZipFile(archive, 'w', zipfile.ZIP_DEFLATED) as z:
