@@ -1,3 +1,9 @@
+# PSRTTY Ver1.29 — 2026-10-23
+
+README_129_FULL.txt と docs/TEST_RESULTS_129.txt を参照。1.28の保存数整理を含むフルソース。
+
+以下は1.28時点までの記録。
+
 # PSRTTY 1.28 正本 — 2026-10-22
 
 FIX1・更新保存領域整理・ログバックアップ保持数整理を統合済み。README_128_CANONICAL.txt、およびdocs/TEST_RESULTS_128_CANONICAL.txtを参照。

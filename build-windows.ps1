@@ -6,9 +6,9 @@ function Invoke-Python {
     if ($LASTEXITCODE -ne 0) { throw "Python command failed (exit $LASTEXITCODE): $args" }
 }
 
-Write-Host "=== PSRTTY 1.28 Windows build ===" -ForegroundColor Cyan
+Write-Host "=== PSRTTY 1.29 Windows build ===" -ForegroundColor Cyan
 Invoke-Python --version
-Invoke-Python -c "from psrtty import __version__; assert __version__ == '1.28', '1.28 の実装が完了していません'"
+Invoke-Python -c "from psrtty import __version__; assert __version__ == '1.29', '1.29 の実装が完了していません'"
 Invoke-Python -m pip install -r requirements.txt
 & .\build-iq-bridge.ps1
 if ($LASTEXITCODE -ne 0) { throw 'ExtIO bridge build failed' }
@@ -21,7 +21,9 @@ Invoke-Python validate_languages.py --generate
 Invoke-Python -m unittest discover -v
 Remove-Item -Recurse -Force build, dist -ErrorAction SilentlyContinue
 Invoke-Python -m PyInstaller --noconfirm psrtty.spec
+# Execute the actual EXE before packaging; missing runtime dependencies stop here.
+Invoke-Python tools\check_frozen_skimmer.py dist\psrtty.exe
 # Stage outside release. Never remove existing unpacked releases/user data.
 Invoke-Python package_release.py --build dist\psrtty.exe release
 Write-Host "Build complete:" -ForegroundColor Green
-Write-Host "ZIP: $(Join-Path $PSScriptRoot 'release\PSRTTY_1.28.zip')"
+Write-Host "ZIP: $(Join-Path $PSScriptRoot 'release\PSRTTY_1.29.zip')"

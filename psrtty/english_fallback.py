@@ -1518,7 +1518,12 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-22  Ver1.28\n'
+ 'history.body': '2026-10-23  Ver1.29\n'
+                 '• Fix RY Skimmer startup failure caused by missing SciPy modules. Bundle the related NumPy '
+                 'compatibility modules.\n'
+                 '• Test synthetic IQ decoding in the built Windows executable before creating the release ZIP.\n'
+                 '\n'
+                 '2026-10-22  Ver1.28\n'
                  '• Keep 3 log ZIP snapshots and 3 pre-edit backups per monthly ADIF, including existing copies. Live '
                  'QSO logs and transcripts remain.\n'
                  '• Revised RY Skimmer startup: close saved input settings and bring the skimmer forward. Distinguish '

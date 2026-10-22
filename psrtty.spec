@@ -2,10 +2,13 @@
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from PySide6.QtCore import QLibraryInfo
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(SPECPATH)))
+from build_support.scipy_bundle import scipy_hidden_imports
 qt_lang_dir=Path(QLibraryInfo.path(QLibraryInfo.TranslationsPath))
 qt_languages=[(str(qt_lang_dir/('qtbase_'+x+'.qm')),'assets/qt-translations') for x in ('ja','ru','zh_CN','ko','id','th','es') if (qt_lang_dir/('qtbase_'+x+'.qm')).is_file()]
 
-hidden = collect_submodules('sounddevice') + collect_submodules('serial')
+hidden = collect_submodules('sounddevice') + collect_submodules('serial') + scipy_hidden_imports()
 import sys
 if sys.platform == 'win32':
     hidden += collect_submodules('pycaw') + collect_submodules('comtypes')
