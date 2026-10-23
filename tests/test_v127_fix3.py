@@ -135,10 +135,10 @@ class IQTests(unittest.TestCase):
         e.add_channel(14093085);e.feed(np.zeros(1),48000,7070000);self.assertFalse(e.channels)
 
     def test_worker_backpressure_marks_discontinuity(self):
-        w=SkimmerWorker()
+        w=SkimmerWorker(buffer_seconds=80/48000)
         for _ in range(9):w.offer(np.zeros(10),48000,1e7)
         self.assertEqual(w.dropped,1)
-        for _ in range(8):w.queue.get_nowait()
+        for _ in range(8):w._take(0)
         w.offer(np.zeros(10),48000,1e7);self.assertTrue(w.queue.get_nowait()[3])
 
     def test_mark_to_dial_offsets(self):
@@ -153,7 +153,7 @@ class IQTests(unittest.TestCase):
         for pos in (0,2,6):frames.append(struct.pack('<4sIIdq',b'RYIQ',2,48000,14090000,pos)+np.array([1,2,3,4],dtype='<f4').tobytes())
         out=[];src=ExtIOInput('test.dll',14090000,lambda *a:out.append(a),lambda e:None)
         src.process=Mock(stdout=io.BytesIO(b''.join(frames)),stderr=io.BytesIO())
-        src._read();self.assertEqual([a[3] for a in out],[False,False,True])
+        src._read();self.assertEqual([a[3] for a in out],[False,False,2])
         np.testing.assert_equal(out[0][0],np.array([1+2j,3+4j]))
 
     def test_rtl_uses_usb_serial_and_complex_iq_not_audio_port(self):

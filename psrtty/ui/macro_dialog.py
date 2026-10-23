@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (
     QTableWidgetItem, QVBoxLayout, QComboBox, QPushButton, QHBoxLayout, QLineEdit, QCheckBox,
 )
 
-from ..macros import TEMPLATES, TEMPLATE_HELP, NORMAL_TEMPLATE_NAME, TEMPLATE_NAME, CQWW_TEMPLATE_NAME
+from ..macros import TEMPLATES, TEMPLATE_HELP, NORMAL_TEMPLATE_NAME, TEMPLATE_NAME, JARL_ONE_NAME, LEGACY_JARL_NAME, CQWW_TEMPLATE_NAME
 
 class MacroDialog(QDialog):
     def __init__(self, store, parent=None):
@@ -28,6 +28,7 @@ class MacroDialog(QDialog):
         for key in TEMPLATES:
             self.template.addItem(tr(key), key)
         self.applied_template = store.data.get("macro_template", NORMAL_TEMPLATE_NAME)
+        if self.applied_template==LEGACY_JARL_NAME:self.applied_template=TEMPLATE_NAME
         if self.applied_template in TEMPLATES:
             self.template.setCurrentIndex(self.template.findData(self.applied_template))
         apply = QPushButton(tr('ui.edf99ff4e1cb3cdc')); apply.clicked.connect(self._apply_template); row.addWidget(apply)
@@ -88,7 +89,7 @@ class MacroDialog(QDialog):
     def _apply_template(self):
         self.applied_template = self.template.currentData()
         self.macros = TEMPLATES[self.template.currentData()]()
-        self.sent.setText({CQWW_TEMPLATE_NAME: "25", TEMPLATE_NAME: "01",
+        self.sent.setText({CQWW_TEMPLATE_NAME: "25", TEMPLATE_NAME: "01", JARL_ONE_NAME:"01",
                            NORMAL_TEMPLATE_NAME: ""}.get(self.applied_template, ""))
         self.sent_fixed.setChecked(True)
         self.table.horizontalHeader().setSectionResizeMode(3, QHeaderView.ResizeToContents)

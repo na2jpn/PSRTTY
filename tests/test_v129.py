@@ -72,7 +72,7 @@ raise SystemExit(main(sys.argv[1]))
         for frozen,ok,exitcode in [(False,True,0),(True,False,0),(True,True,1)]:
             def run(args,**kw):
                 self.assertNotEqual(Path(kw['cwd']),ROOT)
-                Path(args[-1]).write_text(json.dumps({'ok':ok,'frozen':frozen,'version':'1.29','calls':['JA1ABC','JA2XYZ']}),encoding='utf-8')
+                Path(args[-1]).write_text(json.dumps({'ok':ok,'frozen':frozen,'version':'1.30','calls':['JA1ABC','JA2XYZ']}),encoding='utf-8')
                 return subprocess.CompletedProcess(args,exitcode,stdout=b'',stderr=b'')
             with patch('tools.check_frozen_skimmer.subprocess.run',side_effect=run):
                 with self.assertRaises(RuntimeError):check(ROOT/'psrtty.py')

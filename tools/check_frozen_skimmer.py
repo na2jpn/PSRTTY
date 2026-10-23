@@ -22,6 +22,11 @@ def check(executable, timeout=120):
             raise RuntimeError('Frozen skimmer test failed: ' + json.dumps(report, ensure_ascii=False))
         if report.get('version') != __version__ or report.get('calls') != ['JA1ABC', 'JA2XYZ']:
             raise RuntimeError('Unexpected frozen skimmer test report: ' + repr(report))
+        high=report.get('high_rate',{})
+        if ('async_1920000_512' not in report.get('checks',[]) or high.get('rate')!=1920000
+                or high.get('block')!=512 or high.get('lost_samples')!=0
+                or high.get('processed')!=high.get('samples') or not high.get('spectra')):
+            raise RuntimeError('Frozen high-rate IQ stream test missing or failed: '+repr(high))
         return report
 
 

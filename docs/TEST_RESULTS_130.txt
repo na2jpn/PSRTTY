@@ -1,0 +1,90 @@
+PSRTTY 1.30 verification — 2026-10-23
+
+Environment: Linux x86_64, Python 3.12.14, Qt/PySide6 6.12.0,
+NumPy 2.3.5, SciPy 1.17.0, PyInstaller 6.22.3; Qt offscreen.
+
+1. Whole regression suite: 1118 tests in 303.152 seconds, OK (skipped=1).
+   The skip is the existing platform-dependent test, not an ignored failure.
+   Two further UI cases were added after discovery: defer an ICOM center change
+   during TX until RX, and remove previous-band spots on IQ-center changes.
+   Final UI/template/build-gate subset: 10 tests in 2.412 seconds, OK.
+   The final source contains 1120 tests in total.
+
+2. High-rate async test, part of the whole suite:
+   1,920,000 complex samples/s, 512 samples per producer call.
+   34,449,920 samples (17.942667 s), 2 simultaneous synthetic RTTY stations.
+   All supplied samples processed; no lost samples; spectrum updates present;
+   JA1ABC and JA2XYZ plus reports 599 001 decoded successfully.
+   This tests a paced producer, bounded queues and a background DSP worker,
+   rather than feeding the engine synchronously at a lower sample rate.
+
+3. FIR state/phase: compare mixed small blocks and FFT-convolution blocks
+   against a reference lfilter at decimation factors 16, 20 and 40.
+   Existing arbitrary-block FIR tests also pass.
+   Sample-gap resets, overflow accounting, rate/center boundaries, recovery,
+   actual-center warnings, ON/OFF persistence and all eight languages checked.
+
+4. Native ExtIO bridge: both x86 and x64 PE files rebuilt from the shipped
+   tools/ExtIOBridge.cs with Mono C# compiler 6.8.0.105, .NET 4 references.
+   Both run --self-test successfully under Mono. It checks 7 sample formats,
+   IQ swap, a half-second queue, exact overflow counts, non-contiguous/center
+   boundaries and actual batched binary frame contents/totals.
+   Windows build-windows.ps1 rebuilds both with the Windows .NET compiler.
+
+5. Actual Linux frozen application built from psrtty.spec. It was invoked
+   through tools/check_frozen_skimmer.py from a separate empty working folder.
+   Source tree imports cannot satisfy missing modules in that executable.
+   Frozen report follows. Its short 3-second high-rate check is a stream /
+   spectrum test; the top-level calls come from the separate full decode test.
+   High-rate full-call decoding is checked in item 2 above.
+
+{
+  "version": "1.30",
+  "frozen": true,
+  "ok": true,
+  "numpy": "2.3.5",
+  "scipy": "1.17.0",
+  "calls": [
+    "JA1ABC",
+    "JA2XYZ"
+  ],
+  "checks": [
+    "streaming_fir",
+    "two_signal_iq_decode",
+    "async_1920000_512"
+  ],
+  "high_rate": {
+    "rate": 1920000,
+    "block": 512,
+    "seconds": 3.0,
+    "samples": 5760000,
+    "processed": 5760000,
+    "lost_samples": 0,
+    "spectra": 6,
+    "max_queue_ms": 10.4,
+    "wall_seconds": 3.01,
+    "calls": []
+  }
+}
+
+6. validate_languages.py --generate: 8 catalogues, 1431 entries each, OK.
+   compileall: psrtty, tests, tools, build_support, OK.
+   GUI previews inspected at 1050 and 600 px width; toolbar wraps as needed.
+
+Limits:
+- No Windows execution, physical IC-7610/7760 or manufacturer ExtIO DLL was
+  available here. Real USB driver / radio behavior remains to be verified.
+- No real transmission, CAT/PTT operation or audio hardware was used.
+- Tests cannot guarantee every PC can sustain every IQ rate/channel count.
+  Overload remains visible and is logged instead of hiding lost samples.
+- Device-internal loss without DLL notification is not measurable by PSRTTY.
+
+Windows reproduction:
+  .\build-windows.ps1
+  python -m unittest discover -v
+  # Actual EXE check is already a required build step before packaging.
+  python tools\check_frozen_skimmer.py dist\psrtty.exe
+
+Runtime ZIP root remains psrtty.exe and directories only.
+User configs, QSO logs, diagnostics, Linux test binary, and web assets are
+excluded from the full-source deliverable.

@@ -7,6 +7,7 @@ from pathlib import Path
 import struct
 import subprocess
 import threading
+import time
 import numpy as np
 from .paths import app_root
 
@@ -28,6 +29,7 @@ class ExtIOInput:
         self.on_samples=on_samples; self.on_error=on_error
         self.process=None; self.stopped=threading.Event(); self.thread=None
         self.stderr_thread=None;self.stderr_tail=deque(maxlen=24)
+        self.control_lock=threading.Lock();self.pending_center=None;self.actual_center=None;self.rate=0
 
     def start(self):
         if self.stopped.is_set():return
@@ -43,6 +45,7 @@ class ExtIOInput:
         self.stderr_thread=threading.Thread(target=self._stderr,daemon=True,name='PSRTTY-ExtIO-stderr');self.stderr_thread.start()
         event('ry_skimmer','Bridge process created pid='+str(self.process.pid)+'; waiting for hardware / IQ')
         self.thread=threading.Thread(target=self._read,daemon=True,name='PSRTTY-ExtIO');self.thread.start()
+        if self.pending_center is not None:self.set_center(self.pending_center)
         if self.stopped.is_set():self.stop()
 
     def _stderr(self):
@@ -73,7 +76,11 @@ class ExtIOInput:
                     raise ValueError('ExtIO packet')
                 data=np.frombuffer(self._read_exact(count*8),dtype='<f4').reshape(-1,2)
                 if expected is None:event('ry_skimmer','ExtIO IQ receive started rate='+str(rate)+' center='+str(center))
-                self.on_samples(data[:,0]+1j*data[:,1],rate,center,expected is not None and expected!=position)
+                self.actual_center=center;self.rate=rate
+                missing=max(0,position-expected) if expected is not None else 0
+                # Negative/unknown jumps still reset the decoder, with no invented loss count.
+                gap=missing or (expected is not None and expected!=position)
+                self.on_samples(data[:,0]+1j*data[:,1],rate,center,gap)
                 expected=position+count
         except Exception as exc:
             if not self.stopped.is_set():
@@ -87,6 +94,15 @@ class ExtIOInput:
                 message=(detail+'\n' if detail else '')+str(exc)+' (exit='+str(self.process.poll())+')'
                 event('ry_skimmer','ExtIO IQ input failed',error=exc)
                 self.on_error(message)
+
+    def set_center(self,hz):
+        hz=int(hz)
+        if not 0<hz<2**31:raise ValueError('ExtIO center range')
+        with self.control_lock:
+            self.pending_center=hz
+            if not self.stopped.is_set() and self.process is not None and self.process.poll() is None:
+                self.process.stdin.write(('CENTER '+str(hz)+'\n').encode('ascii'));self.process.stdin.flush()
+                event('ry_skimmer','IQ center requested '+str(hz))
 
     def stop(self):
         self.stopped.set()
@@ -105,7 +121,7 @@ class RTLInput:
         self.on_samples=on_samples;self.on_error=on_error;self.direct=direct
         self.handle=C.c_void_p();self.lib=None;self.thread=None;self.stopped=threading.Event()
         self.lifecycle=threading.Lock()
-        self.rate=240000
+        self.rate=240000;self.pending_center=None;self.control_thread=None;self.actual_center=None;self._retuned=False
 
     def _library(self):
         path=str(Path(self.path).resolve())
@@ -118,6 +134,7 @@ class RTLInput:
             'rtlsdr_close':(C.c_int,[C.c_void_p]),
             'rtlsdr_set_sample_rate':(C.c_int,[C.c_void_p,C.c_uint]),
             'rtlsdr_set_center_freq':(C.c_int,[C.c_void_p,C.c_uint]),
+            'rtlsdr_get_center_freq':(C.c_uint,[C.c_void_p]),
             'rtlsdr_set_tuner_gain_mode':(C.c_int,[C.c_void_p,C.c_int]),
             'rtlsdr_set_direct_sampling':(C.c_int,[C.c_void_p,C.c_int]),
             'rtlsdr_reset_buffer':(C.c_int,[C.c_void_p]),
@@ -151,6 +168,8 @@ class RTLInput:
         except Exception:
             self.lib.rtlsdr_close(self.handle);self.handle=C.c_void_p();raise
         event('ry_skimmer','RTL-SDR IQ input configured rate='+str(self.rate)+' center='+str(self.center))
+        self.actual_center=self.center
+        self.control_thread=threading.Thread(target=self._control,daemon=True,name='PSRTTY-RTL-control');self.control_thread.start()
         self.callback=C.CFUNCTYPE(None,C.POINTER(C.c_ubyte),C.c_uint,C.c_void_p)(self._callback)
         self.thread=threading.Thread(target=self._run,daemon=True,name='PSRTTY-RTL');self.thread.start()
         if self.stopped.is_set():self.stop()
@@ -161,7 +180,27 @@ class RTLInput:
         a=np.ctypeslib.as_array(buf,shape=(n,)).astype(np.float32)
         if n%2:return
         a=(a.reshape(-1,2)-127.5)/128.
-        self.on_samples(a[:,0]+1j*a[:,1],self.rate,self.center)
+        with self.lifecycle:
+            center=self.center;gap=self._retuned;self._retuned=False
+        if gap:self.on_samples(a[:,0]+1j*a[:,1],self.rate,center,True)
+        else:self.on_samples(a[:,0]+1j*a[:,1],self.rate,center)
+
+    def set_center(self,hz):
+        with self.lifecycle:self.pending_center=int(hz)
+
+    def _control(self):
+        while not self.stopped.wait(.05):
+            try:
+                with self.lifecycle:
+                    hz=self.pending_center;self.pending_center=None
+                    if hz is None or not self.handle:continue
+                    if self.lib.rtlsdr_set_center_freq(self.handle,hz)<0:raise OSError('rtlsdr_set_center_freq')
+                    actual=int(self.lib.rtlsdr_get_center_freq(self.handle))
+                    if actual<=0:raise OSError('rtlsdr_get_center_freq')
+                    self.center=actual;self.actual_center=actual;self._retuned=True
+                    event('ry_skimmer','RTL-SDR center requested='+str(hz)+' actual='+str(actual))
+            except Exception as exc:
+                if not self.stopped.is_set():self.on_error(str(exc))
 
     def _run(self):
         try:
@@ -172,6 +211,8 @@ class RTLInput:
             event('ry_skimmer','RTL-SDR read failed',error=exc)
             if not self.stopped.is_set():self.on_error(str(exc))
         finally:
+            self.stopped.set()
+            if self.control_thread:self.control_thread.join(timeout=.5)
             with self.lifecycle:
                 self.lib.rtlsdr_close(self.handle);self.handle=C.c_void_p()
 

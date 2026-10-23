@@ -1518,7 +1518,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-23  Ver1.29\n'
+ 'history.body': '2026-10-23  Ver1.30\n'
+                 '・Batched small IQ blocks, bounded buffers by signal duration, and improved high-rate skimmer '
+                 'processing.\n'
+                 '・Added saved main-frequency following and actual IQ-center readback for the scale.\n'
+                 '・Added an IQ-health graph, queue/loss metrics and periodic diagnostics.\n'
+                 '・Added JARL Contest 1 and renamed the existing template JARL Contest 2.\n'
+                 '\n'
+                 '2026-10-23  Ver1.29\n'
                  '• Fix RY Skimmer startup failure caused by missing SciPy modules. Bundle the related NumPy '
                  'compatibility modules.\n'
                  '• Test synthetic IQ decoding in the built Windows executable before creating the release ZIP.\n'
@@ -2782,4 +2789,22 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'storage.done': 'Storage cleaned (updates: 1 / pre-update: 2 / log ZIPs: 3 / edit backups per month: 3).',
  'storage.error': 'Could not clean update storage. Original saved data is retained: {error}',
  'backup.retention': 'Keep the latest 3 ZIP snapshots and 3 pre-edit backups per monthly ADIF. Older copies are '
-                     'removed automatically.'}
+                     'removed automatically.',
+ 'ry.frequency_link': 'Follow main frequency',
+ 'ry.frequency_help': 'ON: tune IQ to the main radio. OFF: use the input center. The scale always uses the actual IQ '
+                      'center.',
+ 'ry.center_mismatch': 'IQ center differs: requested {wanted:.6f} / actual {actual:.6f} MHz. Check the input settings.',
+ 'ry.health_title': 'IQ health',
+ 'ry.decoded_text': 'Decoded text',
+ 'ry.health_wait': 'Waiting for IQ',
+ 'ry.health_processed': 'Processed',
+ 'ry.health_pending': 'Pending',
+ 'ry.health_lost': 'Lost',
+ 'ry.health_absent': 'No IQ',
+ 'ry.health_metrics': 'Input {rate:.2f} MS/s / Queue {queue:.0f} ms / Lost in last 10 s {loss:.1f}%',
+ 'ry.health_graph': 'IQ processing over 10 seconds. Cyan: processed; orange: pending; red: lost; gray: no IQ. Not RF '
+                    'strength.',
+ 'ry.health_ago': '10 s ago',
+ 'ry.health_now': 'Now',
+ 'JARLコンテスト 1': 'JARL Contest 1',
+ 'JARLコンテスト 2': 'JARL Contest 2'}

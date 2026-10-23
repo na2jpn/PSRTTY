@@ -1,6 +1,6 @@
-# PSRTTY Ver1.29 — 2026-10-23
+# PSRTTY Ver1.30 — 2026-10-23
 
-README_129_FULL.txt と docs/TEST_RESULTS_129.txt を参照。1.28の保存数整理を含むフルソース。
+README_130_FULL.txt と docs/TEST_RESULTS_130.txt、docs/IMPLEMENTATION_130.md を参照。1.29までの全変更を含むフルソース。
 
 以下は1.28時点までの記録。
 

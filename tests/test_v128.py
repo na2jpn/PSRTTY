@@ -160,7 +160,9 @@ class UI128Tests(unittest.TestCase):
         self.assertFalse(s.first_iq);self.assertIn(i18n.tr('ry.wait_iq'),s.status.text());s.last_data=time.monotonic()-16;s.refresh()
         self.assertIsNone(s.input);self.assertTrue(s.failure);self.assertIn('#c62828',s.status.styleSheet())
     def test_first_samples_required_for_receiving(self):
-        s=self.skimmer();s.worker=Mock(samples=4096,error=None,dropped=0);s.worker.engine.channels=[];s.refresh()
+        s=self.skimmer();s.worker=Mock(samples=4096,error=None,dropped=0);s.worker.engine.channels=[]
+        s.worker.snapshot.return_value=dict(center=14090000,rate=48000,input_sps=48000,queue_ms=0,loss_percent=0,interval=.25,incoming=.25,processed_time=.25,lost_time=0)
+        s.refresh()
         self.assertTrue(s.first_iq);self.assertIn(i18n.tr('ry.receiving'),s.status.text());s.worker=None
     def test_mode_queue_follows_profile_and_can_be_off(self):
         from psrtty.ui.control_window import ControlWindow
@@ -174,7 +176,7 @@ class UI128Tests(unittest.TestCase):
         from psrtty.ui.ry_windows import RadarWindow
         for code in i18n.LANGUAGES:
             i18n.configure(code);r=RadarWindow(self.window);self.assertNotIn('ry.',r.mode_link.text());self.assertTrue(r.mode_link.toolTip());r.close()
-            self.assertTrue(i18n.tr('history.body').startswith('2026-10-23  Ver1.29'))
+            self.assertTrue(i18n.tr('history.body').startswith('2026-10-23  Ver1.30'))
         i18n.configure('ja')
 
 del _Fixture

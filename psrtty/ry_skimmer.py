@@ -1,11 +1,13 @@
 """Streaming IQ channelization and independent RTTY decoders (receive only)."""
 from dataclasses import dataclass, field
+from collections import deque
 import queue
 import threading
 import time
 import re
 import numpy as np
 from scipy.signal import firwin, upfirdn
+from scipy.fft import fft, ifft, next_fast_len
 from .decoder import RTTYDecoder
 from .parser import CALL_RE
 
@@ -21,6 +23,7 @@ class FIRDecimator:
     def __init__(self, factor):
         self.factor=max(1,int(factor));self.total=0
         self.taps=firwin(32*self.factor+1, .8/self.factor) if self.factor>1 else np.array([1.])
+        self.fft_size=0;self.fft_taps=None
         self.history_len=((len(self.taps)-1+self.factor-1)//self.factor+1)*self.factor
         self.history=np.zeros(self.history_len,dtype=np.complex64)
 
@@ -30,6 +33,15 @@ class FIRDecimator:
         phase=(-self.total)%self.factor;self.total+=len(data)
         full=np.concatenate((self.history,data));self.history=full[-self.history_len:]
         count=len(range(phase,len(data),self.factor))
+        if self.factor>=16 and len(data)>=4096:
+            # FFT convolution avoids hundreds of multiplies for every output
+            # sample at wideband input rates. Keep phase/history identical to
+            # the small-block polyphase path; switching paths is safe.
+            n=next_fast_len(len(full)+len(self.taps)-1)
+            if n!=self.fft_size:
+                self.fft_size=n;self.fft_taps=fft(self.taps.astype(np.float32),n)
+            filtered=ifft(fft(full,n)*self.fft_taps)
+            return filtered[self.history_len+phase:self.history_len+len(data):self.factor].astype(np.complex64)
         filtered=upfirdn(self.taps,full[phase:],down=self.factor)
         return filtered[self.history_len//self.factor:self.history_len//self.factor+count].astype(np.complex64)
 
@@ -156,34 +168,100 @@ class SkimmerEngine:
 
 
 class SkimmerWorker:
-    def __init__(self,**options):
-        self.engine=SkimmerEngine(**options);self.queue=queue.Queue(maxsize=8)
+    """Bound input by signal duration, batch tiny callbacks before DSP.
+
+    Producer never waits for the decoder. Dropped samples are accounted for,
+    and discontinuities stay on the first subsequent accepted block.
+    """
+    def __init__(self, buffer_seconds=.5, batch_seconds=.02, **options):
+        self.engine=SkimmerEngine(**options);self.queue=queue.Queue()
+        self.buffer_seconds=buffer_seconds;self.batch_seconds=batch_seconds
         self.stop_event=threading.Event();self.thread=None;self.dropped=0;self._gap=False
-        self.lock=threading.Lock();self.samples=0;self.error=None
+        self.lock=threading.Lock();self.stats_lock=threading.Lock()
+        self.samples=0;self.received=0;self.lost_samples=0;self.queued_seconds=0.
+        self.input_seconds=0.;self.processed_seconds=0.;self.lost_seconds=0.;self.source_lost_seconds=0.
+        self.rate=0;self.center=0;self.last_arrival=0.;self.error=None
+        self.history=deque();self.started=time.monotonic();self.last_snapshot=None
 
     def start(self):
         self.thread=threading.Thread(target=self._run,daemon=True,name='PSRTTY-Skimmer');self.thread.start()
 
     def offer(self,iq,rate,center,gap=False):
         if self.stop_event.is_set():return
-        if gap:self.dropped+=1
-        try:self.queue.put_nowait((np.asarray(iq,dtype=np.complex64).copy(),rate,center,gap or self._gap));self._gap=False
-        except queue.Full:self.dropped+=1;self._gap=True
+        data=np.asarray(iq,dtype=np.complex64)
+        if not len(data):return
+        if not 6000<=rate<=8e6 or not np.isfinite(center):raise ValueError('IQ rate/center')
+        duration=len(data)/rate
+        # ExtIO supplies an exact sample-position difference. A boolean source
+        # discontinuity has unknown length and is counted as an event only.
+        missing=int(gap) if not isinstance(gap,(bool,np.bool_)) else 0
+        with self.stats_lock:
+            self.rate=rate;self.center=center;self.last_arrival=time.monotonic()
+            self.received+=len(data);self.input_seconds+=duration
+            if gap:
+                self.dropped+=1;self.lost_samples+=max(0,missing);self.lost_seconds+=max(0,missing)/rate;self.source_lost_seconds+=max(0,missing)/rate
+            if self.queued_seconds+duration>self.buffer_seconds or self.queue.qsize()>=4096:
+                self.dropped+=1;self.lost_samples+=len(data);self.lost_seconds+=duration;self._gap=True
+                return
+            self.queued_seconds+=duration
+            self.queue.put_nowait((data.copy(),rate,center,bool(gap) or self._gap))
+            self._gap=False
+
+    def snapshot(self):
+        """Thread-safe counters and a rolling ten-second loss fraction."""
+        now=time.monotonic()
+        with self.stats_lock:
+            row=(now,self.received,self.samples,self.input_seconds,self.processed_seconds,self.lost_seconds,self.source_lost_seconds)
+            if not self.history:self.history.append((self.started,0,0,0.,0.,0.,0.))
+            baseline=self.last_snapshot or self.history[0]
+            elapsed=max(.001,now-baseline[0])
+            received=max(0,row[3]-baseline[3]);processed=max(0,row[4]-baseline[4]);lost=max(0,row[5]-baseline[5])
+            # queue loss is already part of input_seconds; source-position loss
+            # is not. Loss is bounded for display, never discarded in counters.
+            self.history.append(row)
+            while len(self.history)>2 and self.history[1][0]<now-10:self.history.popleft()
+            first=self.history[0];total_in=row[3]-first[3];total_lost=row[5]-first[5]
+            # Exact denominator is accepted+source loss+local loss, represented
+            # separately below by the accounted signal duration.
+            accounted=total_in+row[6]-first[6]
+            recent_loss=min(100.,100*total_lost/max(accounted,1e-12)) if total_lost else 0.
+            self.last_snapshot=row
+            return dict(rate=self.rate,center=self.center,received=self.received,processed=self.samples,
+                lost_samples=self.lost_samples,dropped=self.dropped,queue_ms=1000*self.queued_seconds,
+                input_sps=max(0,(row[1]-baseline[1])/elapsed),loss_percent=recent_loss,
+                incoming=received,processed_time=processed,lost_time=lost,interval=elapsed,
+                idle=now-self.last_arrival if self.last_arrival else now-self.started,
+                elapsed=now-self.started)
 
     def manual(self,hz):
         with self.lock:self.engine.add_channel(hz)
 
     def stop(self):
         self.stop_event.set()
-        if self.thread:self.thread.join(timeout=.3)
+        if self.thread:self.thread.join(timeout=1.)
+
+    def _take(self, timeout=.1):
+        item=self.queue.get(timeout=timeout)
+        with self.stats_lock:self.queued_seconds=max(0.,self.queued_seconds-len(item[0])/item[1])
+        return item
 
     def _run(self):
+        pending=None
         try:
             while not self.stop_event.is_set():
-                try:item=self.queue.get(timeout=.1)
+                try:item=pending if pending is not None else self._take()
                 except queue.Empty:continue
-                with self.lock:self.engine.feed(*item)
-                self.samples+=len(item[0])
+                pending=None;parts=[item[0]];rate,center,gap=item[1:];size=len(item[0])
+                deadline=time.monotonic()+.01
+                while size<rate*self.batch_seconds and not self.stop_event.is_set():
+                    try:other=self._take(timeout=max(.0001,deadline-time.monotonic()))
+                    except queue.Empty:break
+                    if other[1:3]!=(rate,center) or other[3]:pending=other;break
+                    parts.append(other[0]);size+=len(other[0])
+                    if time.monotonic()>=deadline:break
+                data=parts[0] if len(parts)==1 else np.concatenate(parts)
+                with self.lock:self.engine.feed(data,rate,center,gap)
+                with self.stats_lock:self.samples+=size;self.processed_seconds+=size/rate
         except Exception as e:
             from .diagnostics import event
             event('ry_skimmer','DSP worker failed',error=e)

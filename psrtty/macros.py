@@ -9,7 +9,9 @@ def expand_macro(template: str, values: dict[str, str]) -> str:
     return "\n".join(line for raw in result.splitlines() if (line := " ".join(raw.split())))
 
 
-TEMPLATE_NAME = "JARL World Wide RTTYコンテスト"
+TEMPLATE_NAME = "JARLコンテスト 2"
+JARL_ONE_NAME = "JARLコンテスト 1"
+LEGACY_JARL_NAME = "JARL World Wide RTTYコンテスト"
 
 
 def jarl_ww_template() -> list[dict[str, str]]:
@@ -26,6 +28,17 @@ def jarl_ww_template() -> list[dict[str, str]]:
         ("FREE", ""),
     ]
     return [dict(key=f"F{i+1}", name=name, text=text, completes_qso=(i == 3)) for i, (name, text) in enumerate(rows)]
+
+
+def jarl_contest_one_template():
+    rows=[('CQ','CQ TEST {MYCALL} {MYCALL} K'),
+          ('CALL','{MYCALL} {MYCALL} {MYCALL}'),
+          ('EXCHANGE','{HISCALL} 599 {SENT}-{SENT} {SENT} {HISCALL}'),
+          ('TU 73','TU QRZ DE {MYCALL} CQ'),
+          ('AGN','AGN AGN'),('NR?','NR NR?'),
+          ('RPT','{HISCALL} 599-{SENT}-{SENT}'),
+          ('QRZ','QRZ DE {MYCALL}'),('FREE','')]
+    return [dict(key=f'F{i+1}',name=name,text=text,completes_qso=(i==3)) for i,(name,text) in enumerate(rows)]
 
 
 NORMAL_TEMPLATE_NAME = "通常交信（英文RTTY）"
@@ -67,7 +80,7 @@ def short_qso_template():
     return rows
 
 
-TEMPLATES = {NORMAL_TEMPLATE_NAME: normal_qso_template, SHORT_TEMPLATE_NAME: short_qso_template, TEMPLATE_NAME: jarl_ww_template,
+TEMPLATES = {NORMAL_TEMPLATE_NAME: normal_qso_template, SHORT_TEMPLATE_NAME: short_qso_template, JARL_ONE_NAME:jarl_contest_one_template, TEMPLATE_NAME: jarl_ww_template,
              CQWW_TEMPLATE_NAME: cqww_rtty_template}
 
 TEMPLATE_HELP = {
@@ -90,3 +103,5 @@ TEMPLATE_HELP[SHORT_TEMPLATE_NAME] = TEMPLATE_HELP[NORMAL_TEMPLATE_NAME]
 def completes_qso(text: str) -> bool:
     import re
     return bool(re.search(r"(?<![A-Z0-9])TU\s+73(?![A-Z0-9])", text.upper()))
+
+TEMPLATE_HELP[JARL_ONE_NAME] = TEMPLATE_HELP[TEMPLATE_NAME]
