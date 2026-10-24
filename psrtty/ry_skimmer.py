@@ -98,12 +98,12 @@ class SkimmerEngine:
     def __init__(self,on_text=lambda *a:None,on_spectrum=lambda *a:None,span=20000,limit=12,mark_high=True,ja_only=False):
         self.on_text=on_text;self.on_spectrum=on_spectrum;self.span=span;self.limit=limit;self.mark_high=mark_high
         self.ja_only=ja_only
-        self.channels=[];self.identity=None;self.total=0;self.last_scan=0;self.psd=None;self.fft_buffer=np.empty(0,dtype=np.complex64)
+        self.monitor_center=None;self.coverage=True;self.mixer_phase=0.;self.channels=[];self.identity=None;self.total=0;self.last_scan=0;self.psd=None;self.fft_buffer=np.empty(0,dtype=np.complex64)
 
     def reset(self,rate,center):
         if not 6000<=rate<=8e6 or not np.isfinite(center):raise ValueError('IQ rate/center')
         self.identity=(rate,center);self.front=FIRDecimator(max(1,int(rate//96000)))
-        self.rate=rate/self.front.factor;self.center=center;self.channels=[];self.total=0;self.last_scan=0;self.psd=None
+        self.rate=rate/self.front.factor;self.center=self.monitor_center if self.monitor_center is not None else center;self.mixer_phase=0.;self.channels=[];self.total=0;self.last_scan=0;self.psd=None
         self.fft_buffer=np.empty(0,dtype=np.complex64)
 
     def allowed(self,mark):
@@ -117,6 +117,14 @@ class SkimmerEngine:
 
     def feed(self,iq,rate,center,gap=False):
         if self.identity!=(rate,center) or gap:self.reset(rate,center)
+        target=self.monitor_center if self.monitor_center is not None else center
+        self.coverage=abs(target-center)+min(self.span/2,rate*.4)<=rate*.4
+        if not self.coverage:return
+        delta=center-target
+        if delta:
+            omega=2*np.pi*delta/rate
+            iq=np.asarray(iq,dtype=np.complex64)*np.exp(1j*(self.mixer_phase+omega*np.arange(len(iq))))
+            self.mixer_phase=(self.mixer_phase+omega*len(iq))%(2*np.pi)
         data=self.front.feed(iq)
         if not len(data):return
         self.total+=len(data);self.fft_buffer=np.concatenate((self.fft_buffer,data))
@@ -131,7 +139,7 @@ class SkimmerEngine:
                 self.last_scan=self.total
                 db=10*np.log10(self.psd+1e-18)
                 mask=np.abs(freqs)<=min(self.span/2,self.rate*.4)
-                self.on_spectrum(freqs[mask]+center,db[mask],center,min(self.span,self.rate*.8))
+                self.on_spectrum(freqs[mask]+self.center,db[mask],self.center,min(self.span,self.rate*.8))
                 self._scan(freqs,db)
         self.channels=[c for c in self.channels if self.allowed(self.center+c.offset+(85 if self.mark_high else -85))]
         for channel in tuple(self.channels):channel.feed(data)
@@ -157,6 +165,12 @@ class SkimmerEngine:
             self.channels.append(c)
         self.channels=[c for c in self.channels if now-c.seen<8]
 
+    def set_monitor_center(self,hz):
+        hz=None if hz is None else float(hz)
+        if self.monitor_center==hz:return
+        self.monitor_center=hz
+        if self.identity:self.reset(*self.identity)
+
     def add_channel(self,hz):
         """Manual RF mark selection for weak signals missing automatic detection."""
         if not self.identity or not self.allowed(hz):return
@@ -180,7 +194,7 @@ class SkimmerWorker:
         self.lock=threading.Lock();self.stats_lock=threading.Lock()
         self.samples=0;self.received=0;self.lost_samples=0;self.queued_seconds=0.
         self.input_seconds=0.;self.processed_seconds=0.;self.lost_seconds=0.;self.source_lost_seconds=0.
-        self.rate=0;self.center=0;self.last_arrival=0.;self.error=None
+        self.measured_sps=0.;self.rate_ratio=0.;self.rate_warning=False;self.last_rate_warning=False;self.rate_epoch=None;self.rate_start_count=0;self.rate_start_time=0.;self.rate=0;self.center=0;self.last_arrival=0.;self.error=None
         self.history=deque();self.started=time.monotonic();self.last_snapshot=None
 
     def start(self):
@@ -196,7 +210,11 @@ class SkimmerWorker:
         # discontinuity has unknown length and is counted as an event only.
         missing=int(gap) if not isinstance(gap,(bool,np.bool_)) else 0
         with self.stats_lock:
-            self.rate=rate;self.center=center;self.last_arrival=time.monotonic()
+            now=time.monotonic()
+            if self.rate_epoch!=rate:
+                self.rate_epoch=rate;self.rate_start_time=now;self.rate_start_count=self.received
+                self.measured_sps=0.;self.rate_ratio=0.;self.rate_warning=False
+            self.rate=rate;self.center=center;self.last_arrival=now
             self.received+=len(data);self.input_seconds+=duration
             if gap:
                 self.dropped+=1;self.lost_samples+=max(0,missing);self.lost_seconds+=max(0,missing)/rate;self.source_lost_seconds+=max(0,missing)/rate
@@ -225,13 +243,26 @@ class SkimmerWorker:
             # separately below by the accounted signal duration.
             accounted=total_in+row[6]-first[6]
             recent_loss=min(100.,100*total_lost/max(accounted,1e-12)) if total_lost else 0.
+            window=now-self.rate_start_time
+            if self.rate and window>=5 and now-self.last_arrival<1:
+                self.measured_sps=(self.received-self.rate_start_count)/window
+                self.rate_ratio=self.measured_sps/self.rate;self.rate_warning=not .8<=self.rate_ratio<=1.2
+                if window>=15:
+                    self.rate_start_time=now;self.rate_start_count=self.received
+            if self.rate_warning!=self.last_rate_warning:
+                from .diagnostics import event
+                event('ry_skimmer','IQ sample clock '+repr(dict(declared_rate=self.rate,measured_complex_sps=round(self.measured_sps,1),ratio=round(self.rate_ratio,4),mismatch=self.rate_warning)))
+                self.last_rate_warning=self.rate_warning
             self.last_snapshot=row
-            return dict(rate=self.rate,center=self.center,received=self.received,processed=self.samples,
+            return dict(rate=self.rate,measured_sps=self.measured_sps,rate_ratio=self.rate_ratio,rate_warning=self.rate_warning,center=self.center,received=self.received,processed=self.samples,
                 lost_samples=self.lost_samples,dropped=self.dropped,queue_ms=1000*self.queued_seconds,
                 input_sps=max(0,(row[1]-baseline[1])/elapsed),loss_percent=recent_loss,
                 incoming=received,processed_time=processed,lost_time=lost,interval=elapsed,
                 idle=now-self.last_arrival if self.last_arrival else now-self.started,
                 elapsed=now-self.started)
+
+    def set_monitor_center(self,hz):
+        with self.lock:self.engine.set_monitor_center(hz)
 
     def manual(self,hz):
         with self.lock:self.engine.add_channel(hz)

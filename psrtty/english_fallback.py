@@ -1518,7 +1518,14 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-23  Ver1.30\n'
+ 'history.body': '2026-10-24  Ver1.31\n'
+                 '・Added larger −/+ IQ-center controls with 1 kHz steps.\n'
+                 '・Separated the monitor center from the input IQ center; OFF keeps the monitor fixed.\n'
+                 '・Reduced unnecessary retuning during frequency following.\n'
+                 '・Added reported/measured IQ-rate and out-of-band diagnostics.\n'
+                 '・Consolidated version-specific documents by topic.\n'
+                 '\n'
+                 '2026-10-23  Ver1.30\n'
                  '・Batched small IQ blocks, bounded buffers by signal duration, and improved high-rate skimmer '
                  'processing.\n'
                  '・Added saved main-frequency following and actual IQ-center readback for the scale.\n'
@@ -2791,8 +2798,8 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'backup.retention': 'Keep the latest 3 ZIP snapshots and 3 pre-edit backups per monthly ADIF. Older copies are '
                      'removed automatically.',
  'ry.frequency_link': 'Follow main frequency',
- 'ry.frequency_help': 'ON: tune IQ to the main radio. OFF: use the input center. The scale always uses the actual IQ '
-                      'center.',
+ 'ry.frequency_help': 'ON: monitor follows the main frequency. OFF: monitor stays at the input center. Offsets within '
+                      'the incoming IQ band are corrected digitally.',
  'ry.center_mismatch': 'IQ center differs: requested {wanted:.6f} / actual {actual:.6f} MHz. Check the input settings.',
  'ry.health_title': 'IQ health',
  'ry.decoded_text': 'Decoded text',
@@ -2807,4 +2814,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'ry.health_ago': '10 s ago',
  'ry.health_now': 'Now',
  'JARLコンテスト 1': 'JARL Contest 1',
- 'JARLコンテスト 2': 'JARL Contest 2'}
+ 'JARLコンテスト 2': 'JARL Contest 2',
+ 'ry.center_step': '1 kHz per click. Hold to repeat.',
+ 'ry.outside_iq': 'Monitor range is outside the incoming IQ band. Check the center or input settings.',
+ 'ry.rate_mismatch': 'IQ rate mismatch: DLL {declared:.2f} / measured {measured:.2f} MS/s. Check diagnostics.'}

@@ -6,7 +6,7 @@ from PySide6.QtCore import Qt, QTimer, Signal, QRectF, QUrl
 from PySide6.QtGui import QColor, QPainter, QPen, QPixmap, QDesktopServices
 from PySide6.QtWidgets import (QDialog,QWidget,QVBoxLayout,QHBoxLayout,QGridLayout,
     QLabel,QPushButton,QCheckBox,QScrollArea,QSplitter,QComboBox,QLineEdit,
-    QDoubleSpinBox,QFormLayout,QFileDialog,QStackedWidget,QPlainTextEdit,QTabWidget)
+    QDoubleSpinBox,QAbstractSpinBox,QFormLayout,QFileDialog,QStackedWidget,QPlainTextEdit,QTabWidget)
 from ..i18n import tr
 from ..diagnostics import event
 from ..paths import resource_path, app_root
@@ -302,7 +302,14 @@ class SkimmerSetup(QDialog):
         self.direct=QComboBox()
         for text,value in [('ry.tuner',0),('ry.direct_i',1),('ry.direct_q',2)]:self.direct.addItem(tr(text),value)
         form.addRow(tr('ry.hf_input'),self.direct)
-        self.center=QDoubleSpinBox();self.center.setDecimals(6);self.center.setRange(.1,1300);self.center.setSuffix(' MHz');form.addRow(tr('ry.center'),self.center)
+        self.center=QDoubleSpinBox();self.center.setDecimals(6);self.center.setRange(.1,1300);self.center.setSuffix(' MHz');self.center.setSingleStep(.001);self.center.setStyleSheet('QDoubleSpinBox::up-button, QDoubleSpinBox::down-button { width:0px; border:0px; }')
+        self.center.setMinimumWidth(160)
+        center_row=QHBoxLayout();center_row.addWidget(self.center,1)
+        self.center_minus=QPushButton('−');self.center_plus=QPushButton('+')
+        for button,step in ((self.center_minus,-1),(self.center_plus,1)):
+            button.setFixedSize(40,30);button.setAutoRepeat(True);button.setToolTip(tr('ry.center_step'))
+            button.clicked.connect(lambda checked=False,n=step:self.center.stepBy(n));center_row.addWidget(button)
+        form.addRow(tr('ry.center'),center_row)
         self.span=QComboBox()
         for width in (10,20,40):self.span.addItem(f'{width} kHz',width*1000)
         form.addRow(tr('ry.span'),self.span)
@@ -419,7 +426,7 @@ class SkimmerWindow(RYWindow):
         self.ja_only=self.ja_checkbox('ry_skimmer_ja_only');row.addWidget(self.ja_only);row.addWidget(self.mode_checkbox())
         self.follow=QCheckBox(tr('ry.frequency_link'));self.follow.setChecked(True)
         self.follow.setToolTip(tr('ry.frequency_help'));self.follow.toggled.connect(self.follow_changed);row.addWidget(self.follow)
-        self.deferred_center=None;self.last_requested=None;self.request_time=0.;self.last_warning=None;self.next_diagnostic=0.
+        self.link_candidate=None;self.link_since=0.;self.last_monitor=None;self.deferred_center=None;self.last_requested=None;self.request_time=0.;self.last_warning=None;self.next_diagnostic=0.
         self.frequency_note=QLabel();self.frequency_note.setWordWrap(True);self.frequency_note.setStyleSheet('color:#c62828;')
         row.addStretch();self.root.addLayout(row);self.root.addWidget(self.explanation)
         reference=QLabel(tr('ry.mark_reference'));reference.setWordWrap(True);self.root.addWidget(reference);self.root.addWidget(self.frequency_note)
@@ -480,7 +487,7 @@ class SkimmerWindow(RYWindow):
         o=dict(self.options);center=round(o['center']*1e6)
         if self.follow.isChecked() and self.main._connected() and self.main.current_freq_hz:
             center=int(self.main.current_freq_hz)
-        self.deferred_center=None;self.last_requested=center;self.request_time=time.monotonic();self.last_warning=None;self.next_diagnostic=0.
+        self.deferred_center=None;self.last_requested=None;self.link_candidate=None;self.request_time=time.monotonic();self.last_warning=None;self.next_diagnostic=0.
         self.display_center=None;self.frequency_note.clear();self.health.reset();self.rows={};self.canvas.set_rows([]);self.canvas.spectrum=None
         while not self.spectrum_queue.empty():self.spectrum_queue.get_nowait()
         self.generation+=1;generation=self.generation
@@ -488,7 +495,7 @@ class SkimmerWindow(RYWindow):
         self.worker=SkimmerWorker(on_text=lambda *args:self.post('text',*args) if generation==self.generation else None,
             on_spectrum=lambda *args:self.spectrum(*args) if generation==self.generation else None,
             span=o['span'],mark_high=not o['reverse'],ja_only=self.ja_only.isChecked())
-        self.worker.start();worker=self.worker
+        self.worker.set_monitor_center(center);self.last_monitor=center;self.worker.start();worker=self.worker
         error=lambda text:self.post('error',text) if generation==self.generation else None
         if o['method']=='extio':source=ExtIOInput(o['dll'],center,worker.offer,error)
         else:source=RTLInput(o['dll'],o['serial'],center,worker.offer,error,o['direct'])
@@ -554,7 +561,7 @@ class SkimmerWindow(RYWindow):
             stats=self.worker.snapshot();self.health.feed(stats)
             if time.monotonic()>=self.next_diagnostic:
                 from ..diagnostics import event as record_event
-                record_event('ry_skimmer', 'IQ stream '+repr({k:round(v,3) if isinstance(v,float) else v for k,v in stats.items() if k in ('rate','center','received','processed','lost_samples','dropped','queue_ms','input_sps','loss_percent','idle')}))
+                record_event('ry_skimmer', 'IQ stream '+repr({k:round(v,3) if isinstance(v,float) else v for k,v in stats.items() if k in ('rate','center','received','processed','lost_samples','dropped','queue_ms','input_sps','loss_percent','idle','measured_sps','rate_ratio','rate_warning')}))
                 self.next_diagnostic=time.monotonic()+10
             self.show_frequency_state(stats)
             if self.worker.error:self.post('error',self.worker.error);return
@@ -575,6 +582,7 @@ class SkimmerWindow(RYWindow):
         if not self.options:return
         old=self.options.get('follow',self.options.get('method')=='extio')
         self.options['follow']=checked
+        event('ry_skimmer','Frequency follow '+str(checked))
         ui=self.main.store.data['ui'];saved=ui.setdefault('ry_skimmer_inputs',{}).setdefault(self.options['method'],dict(self.options))
         old_saved=dict(saved);saved['follow']=checked
         try:self.main.store.save()
@@ -582,9 +590,8 @@ class SkimmerWindow(RYWindow):
             saved.clear();saved.update(old_saved);self.options['follow']=old
             self.load_follow();event('settings','IQ frequency linkage save failed',error=exc);return
         self.last_requested=None;self.frequency_note.clear()
-        if not checked and self.input:
-            self.request_center(round(self.options['center']*1e6))
-        else:self.follow_frequency()
+        self.link_candidate=None;self.link_since=time.monotonic()
+        self.follow_frequency()
 
     def request_center(self,hz):
         if self.input is None:return
@@ -596,23 +603,40 @@ class SkimmerWindow(RYWindow):
         self.last_requested=hz;self.request_time=time.monotonic();self.last_warning=None
 
     def follow_frequency(self):
-        if not self.input:return
-        if self.deferred_center is not None:
-            self.request_center(self.deferred_center)
-        if not self.follow.isChecked() or not self.main._connected():return
-        # Never retune ICOM IQ while the radio is transmitting.
-        if (self.options or {}).get('method')=='extio' and (self.main.active_tx_id is not None or self.main.audio._tx_active):return
-        hz=self.main.current_freq_hz
-        if hz and int(hz)!=self.last_requested:self.request_center(int(hz))
+        if not self.options:return
+        fixed=round(self.options.get('center',14.09)*1e6)
+        linked=self.follow.isChecked() and self.main._connected() and self.main.current_freq_hz
+        hz=int(self.main.current_freq_hz) if linked else fixed
+        # The map is digitally selected from the real incoming IQ band. Following
+        # a radio must not repeatedly command that same radio back to old CAT data.
+        if self.worker and hz!=self.last_monitor:
+            self.worker.set_monitor_center(hz);self.last_monitor=hz
+        if not self.input or not linked:return
+        actual=getattr(self.input,'actual_center',None);rate=getattr(self.input,'rate',0)
+        if not isinstance(actual,(int,float)) or not isinstance(rate,(int,float)) or not actual or not rate:return
+        if abs(hz-actual)+self.options.get('span',20000)/2<=rate*.35:
+            self.link_candidate=None;self.deferred_center=None;return
+        if hz!=self.link_candidate:
+            self.link_candidate=hz;self.link_since=time.monotonic();return
+        if time.monotonic()-self.link_since<.6 or (self.last_requested==hz and time.monotonic()-self.request_time<3):return
+        self.request_center(hz)
 
     def show_frequency_state(self,stats):
-        actual=stats['center']
-        if actual and self.last_requested and abs(actual-self.last_requested)>2 and time.monotonic()-self.request_time>2:
-            self.frequency_note.setText(tr('ry.center_mismatch').format(wanted=self.last_requested/1e6,actual=actual/1e6))
-            warning=(self.last_requested,actual)
-            if self.last_warning!=warning:
-                event('ry_skimmer','IQ center mismatch requested='+str(self.last_requested)+' actual='+str(actual));self.last_warning=warning
-        else:self.frequency_note.clear()
+        actual=stats['center'];rate=stats.get('rate',0)
+        target=self.last_monitor
+        outside=bool(actual and rate and target and abs(actual-target)+min(self.options.get('span',20000)/2,rate*.4)>rate*.4) if self.options else False
+        if outside:
+            self.frequency_note.setText(tr('ry.outside_iq'))
+            self.canvas.spectrum=None;self.rows={};self.canvas.set_rows([]);self.canvas.range=(target-self.options.get('span',20000)/2,target+self.options.get('span',20000)/2)
+            self.canvas.band=band_for(target) or round(target/1e6,3);self.canvas.message=tr('ry.outside_iq');self.canvas.update()
+        else:
+            self.canvas.message=''
+            self.frequency_note.setText(tr('ry.rate_mismatch').format(declared=rate/1e6,measured=stats.get('measured_sps',0)/1e6) if stats.get('rate_warning') else '')
+            self.canvas.update()
+        warning=(outside,stats.get('rate_warning',False))
+        if warning!=self.last_warning:
+            event('ry_skimmer','IQ coverage '+repr(dict(monitor=target,actual=actual,rate=rate,outside=outside,rate_warning=warning[1])))
+            self.last_warning=warning
 
     def resizeEvent(self,event):
         super().resizeEvent(event)

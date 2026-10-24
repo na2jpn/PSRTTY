@@ -1,4 +1,4 @@
-"""Read-only meter calibration points from Hamlib Icom backends (see docs/METERS_115.md)."""
+"""Read-only meter calibration points from Hamlib Icom backends (see docs/RADIOS.md)."""
 import math
 
 ICOM_TABLES = {'IC-7100': {'swr': [(0, 1.0), (48, 1.5), (80, 2.0), (120, 3.0), (240, 6.0)],

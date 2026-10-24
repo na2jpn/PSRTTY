@@ -108,12 +108,12 @@ class UI130Tests(unittest.TestCase):
         for method,checked in [('extio',True),('rtl',False)]:
             s.options=dict(method=method,center=14.09);s.load_follow()
             self.assertEqual(s.follow.isChecked(),checked)
-        s.input=Mock();s.follow.setChecked(True)
+        s.worker=Mock();s.input=Mock(actual_center=21090000,rate=1920000);s.follow.setChecked(True)
         with patch.object(w,'_connected',return_value=True):
             w.current_freq_hz=21090000;s.last_requested=None;s.follow_frequency()
-            s.input.set_center.assert_called_with(21090000)
+            s.worker.set_monitor_center.assert_called_with(21090000);s.input.set_center.assert_not_called()
             s.input.set_center.reset_mock();s.follow_frequency();s.input.set_center.assert_not_called()
-            s.follow.setChecked(False);s.input.set_center.assert_called_once_with(14090000)
+            s.follow.setChecked(False);s.worker.set_monitor_center.assert_called_with(14090000);s.input.set_center.assert_not_called()
         self.assertFalse(w.store.data['ui']['ry_skimmer_inputs']['rtl']['follow'])
         s.input=None
 
@@ -124,15 +124,11 @@ class UI130Tests(unittest.TestCase):
             w.current_freq_hz=21090000;w.active_tx_id=1;s.follow_frequency();w.active_tx_id=None
         s.input.set_center.assert_not_called();s.input=None
 
-    def test_readback_mismatch_is_visible_and_never_relabels_canvas(self):
-        s=self.skimmer();s.last_requested=21090000;s.request_time=time.monotonic()-3
-        s.canvas.range=(21224800,21244800)
-        with patch('psrtty.ui.ry_windows.event') as record:
-            s.show_frequency_state({'center':21234800});s.show_frequency_state({'center':21234800})
-            self.assertEqual(record.call_count,1)
-        self.assertIn('21.234800',s.frequency_note.text());self.assertIn('21.090000',s.frequency_note.text())
-        self.assertEqual(s.canvas.range,(21224800,21244800))
-        s.show_frequency_state({'center':21090000});self.assertFalse(s.frequency_note.text())
+    def test_iq_center_may_differ_within_band_without_false_warning(self):
+        s=self.skimmer();s.options=dict(method='extio',center=21.09,span=20000);s.last_monitor=21090000
+        s.canvas.range=(21080000,21100000)
+        s.show_frequency_state({'center':21234800,'rate':1920000})
+        self.assertFalse(s.frequency_note.text());self.assertEqual(s.canvas.range,(21080000,21100000))
 
     def test_localized_graph_and_adjacent_controls_wrap_at_small_width(self):
         for code in i18n.LANGUAGES:
@@ -144,12 +140,12 @@ class UI130Tests(unittest.TestCase):
             s.health.grab();s.close()
         i18n.configure('ja')
 
-    def test_off_selection_during_tx_defers_icom_tune_until_rx(self):
-        s=self.skimmer();s.options=dict(method='extio',center=14.09);s.input=Mock()
+    def test_off_selection_never_retunes_icom_even_after_tx(self):
+        s=self.skimmer();s.options=dict(method='extio',center=14.09);s.input=Mock();s.worker=Mock()
         self.window.active_tx_id=1;s.follow.setChecked(False)
-        s.input.set_center.assert_not_called();self.assertEqual(s.deferred_center,14090000)
         self.window.active_tx_id=None;s.follow_frequency()
-        s.input.set_center.assert_called_once_with(14090000);s.input=None
+        s.input.set_center.assert_not_called();s.worker.set_monitor_center.assert_called_with(14090000)
+        s.input=None;s.worker=None
 
     def test_new_center_removes_old_band_spots(self):
         from psrtty.ry_spots import Spot

@@ -1,6 +1,0 @@
-PSRTTY 1.16 FIX3
-Full suite: 668 tests, OK (skipped=1).
-Added behavior tests: 7, OK.
-8 language catalogues: 1163 entries each, OK.
-Live receive card and FT-891 settings rendered and inspected.
-FT-891 hardware and Windows EXE not tested.

@@ -1,3 +1,0 @@
-# PSRTTY 1.10 画面確認用
-
-公開日未定。基準: PSRTTY_1.09_CANONICAL_FULL_SOURCE.zip。版表記1.10。

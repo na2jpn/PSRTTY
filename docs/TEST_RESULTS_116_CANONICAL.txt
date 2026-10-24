@@ -1,9 +1,0 @@
-PSRTTY 1.16 canonical source, 2026-10-13
-Includes initial 1.16 plus FIX1-FIX6.
-Runtime source, tests and catalogues exactly match the delivered FIX6 state.
-Prior full suite (FIX5): 683 tests, OK (skipped=1), 141.210 s.
-Final history/language tests after FIX6: 3 tests, OK.
-Canonical catalogue validation: 8 languages, 1171 entries each, OK.
-Full ZIP: CRC, exact source contents and all SHA256 verified.
-User settings, profiles, logs, runtime files and build outputs excluded.
-Windows EXE build and radio hardware were not tested in this environment.

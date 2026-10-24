@@ -21,6 +21,17 @@ class ExtIOBridge {
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int GetInt();
     [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate int Callback(int count,int status,float offset,IntPtr data);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate void SetCallback(Callback callback);
+    [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int GetSrate(int index,out double value);
+    static GetInt getSrateIndex;static GetSrate getSrate;static int reportedRate,extendedRate;
+    static long callbackCalls;static int lastCallbackCount;
+    static int ReadRate() {
+        reportedRate=getRate();extendedRate=0;
+        if(getSrateIndex!=null&&getSrate!=null) {
+            int index=getSrateIndex();double value;
+            if(index>=0&&getSrate(index,out value)==0&&value>=6000&&value<=8000000)extendedRate=(int)Math.Round(value);
+        }
+        return extendedRate>0?extendedRate:reportedRate;
+    }
     static IntPtr lib; static volatile bool quit; static int change;
     static int sampleType; static volatile int rate; static volatile int center; static volatile bool swap;
     static Callback callback; static GetInt getRate,getLO; static Start setLO; static long position;
@@ -48,6 +59,7 @@ class ExtIOBridge {
             return 0;
         }
         if(quit||count<=0||count>1048576||ptr==IntPtr.Zero)return 0;
+        Interlocked.Increment(ref callbackCalls);lastCallbackCount=count;
         long samplePosition=Interlocked.Add(ref position,count)-count;
         if(tuning||Interlocked.CompareExchange(ref change,0,0)!=0) {Interlocked.Add(ref droppedSamples,count);return 0;}
         try {
@@ -129,6 +141,13 @@ class ExtIOBridge {
         public override long Seek(long o,SeekOrigin origin){throw new NotSupportedException();}public override void SetLength(long n){throw new NotSupportedException();}
     }
     static int SelfTest() {
+        getRate=delegate {return 1920000;};
+        getSrateIndex=delegate {return 0;};
+        getSrate=delegate(int index,out double value) {value=3840000;return 0;};
+        if(ReadRate()!=3840000||reportedRate!=1920000)throw new Exception("Extended sample rate readback");
+        getSrateIndex=delegate {return -1;};
+        if(ReadRate()!=1920000)throw new Exception("Legacy sample rate fallback");
+        getSrateIndex=null;getSrate=null;
         int[] types={3,5,6,7,9,10,11};
         byte[][] values={new byte[]{0,128,0,64},new byte[]{0,0,128,0,0,64},
             new byte[]{0,0,128,255,0,0,64,0},new byte[]{0,0,128,191,0,0,0,63},
@@ -192,6 +211,7 @@ class ExtIOBridge {
             Init init=Fn<Init>("InitHW");Open open=Fn<Open>("OpenHW");
             stop=Fn<VoidFn>("StopHW");close=Fn<VoidFn>("CloseHW");
             getRate=Fn<GetInt>("GetHWSR");getLO=Fn<GetInt>("GetHWLO");setLO=Fn<Start>("SetHWLO",false);
+            getSrateIndex=Fn<GetInt>("ExtIoGetActualSrateIdx",false);getSrate=Fn<GetSrate>("ExtIoGetSrates",false);
             var name=new StringBuilder(256);var model=new StringBuilder(256);
             Console.Error.WriteLine("[phase] InitHW");
             if(!init(name,model,ref sampleType))throw new Exception("InitHW");
@@ -201,16 +221,16 @@ class ExtIOBridge {
             if(!open())throw new Exception("OpenHW");opened=true;
             Console.Error.WriteLine("[phase] Hardware open: "+name+" / "+model+" type="+sampleType);
             VoidFn gui=Fn<VoidFn>("ShowGUI",false);if(gui!=null)gui();
-            rate=getRate();int wanted=center;
-            if(setLO!=null)Tune(wanted);
+            rate=ReadRate();int wanted=center;
+            // Start at the source's real LO. The host selects the monitor
+            // digitally; opening a receiver must not overwrite a radio VFO.
+            int initialLO=getLO();if(initialLO>0)wanted=initialLO;
             tuning=true;
             Console.Error.WriteLine("[phase] StartHW center="+wanted);
             int count=Fn<Start>("StartHW")(wanted);started=true;
             if(count<=0)throw new Exception("StartHW: "+count);
-            rate=getRate();int lo=getLO();if(lo>0)center=lo;tuning=false;
+            rate=ReadRate();int lo=getLO();if(lo>0)center=lo;tuning=false;
             if(rate<6000||rate>8000000)throw new Exception("ExtIO sample rate: "+rate);
-            // Some drivers only apply LO commands after streaming has started.
-            if(setLO!=null)Tune(wanted);
             Console.Error.WriteLine("[phase] IQ receive start rate="+rate+" block="+count+" center="+center);
             var writer=new Thread(()=> {try {WritePackets(Console.OpenStandardOutput());}catch(Exception e){Console.Error.WriteLine("[error] IQ pipe: "+e.Message);quit=true;}});
             writer.IsBackground=true;writer.Start();
@@ -219,17 +239,20 @@ class ExtIOBridge {
                     int hz;if(line.StartsWith("CENTER ")&&int.TryParse(line.Substring(7),out hz)&&hz>0)Interlocked.Exchange(ref requestedCenter,hz);
                 }}catch{}quit=true;
             });input.IsBackground=true;input.Start();
-            var poll=System.Diagnostics.Stopwatch.StartNew();var stats=System.Diagnostics.Stopwatch.StartNew();
+            var poll=System.Diagnostics.Stopwatch.StartNew();var stats=System.Diagnostics.Stopwatch.StartNew();long clockPosition=Interlocked.Read(ref position);
             while(!quit) {
                 Application.DoEvents();
                 int target=Interlocked.Exchange(ref requestedCenter,0);if(target>0)Tune(target);
                 if(Interlocked.Exchange(ref change,0)!=0||poll.ElapsedMilliseconds>=500) {
-                    int sr=getRate(),actual=getLO();
+                    int sr=ReadRate(),actual=getLO();
                     if(sr<6000||sr>8000000||actual<=0)throw new Exception("Invalid ExtIO rate/center: "+sr+" / "+actual);
                     if(sr!=rate||actual!=center)Console.Error.WriteLine("[state] rate="+sr+" center="+actual);
                     rate=sr;center=actual;poll.Restart();
                 }
                 if(stats.ElapsedMilliseconds>=10000) {
+                    long clockNow=Interlocked.Read(ref position);double seconds=stats.Elapsed.TotalSeconds;
+                    Console.Error.WriteLine("[clock] seconds="+seconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture)+" complex_samples="+(clockNow-clockPosition)+" measured_complex_sps="+((clockNow-clockPosition)/seconds).ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" GetHWSR="+reportedRate+" extended_rate="+extendedRate+" effective_rate="+rate+" callback_calls="+Interlocked.Read(ref callbackCalls)+" last_count="+lastCallbackCount+" sample_type="+sampleType);
+                    clockPosition=clockNow;
                     Console.Error.WriteLine("[stream] callback_samples="+Interlocked.Read(ref position)+" dropped_samples="+Interlocked.Read(ref droppedSamples)+" queue_samples="+Interlocked.Read(ref queuedSamples));stats.Restart();
                 }
                 Thread.Sleep(10);

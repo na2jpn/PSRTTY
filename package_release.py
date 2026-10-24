@@ -63,7 +63,7 @@ def build_distribution(executable: Path, output: Path):
             (root / source).mkdir(parents=True)
             for item in source.iterdir():
                 if item.is_file(): shutil.copy2(item, root / source / item.name)
-        for pattern in ('INTEGRATION_107_*.html', 'ZLOG_SAMPLE*.adi', 'ZLOG_SAMPLES_README.txt'):
+        for pattern in ('INTEGRATION_*.html', 'ZLOG_SAMPLE*.adi'):
             for item in Path('docs').glob(pattern):
                 (root / 'docs').mkdir(exist_ok=True)
                 shutil.copy2(item, root / 'docs' / item.name)

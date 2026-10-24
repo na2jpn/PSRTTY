@@ -1,4 +1,4 @@
-"""FSK capabilities, independent of CAT/audio support. See docs/FSK_ICOM_118_FIX3.md."""
+"""FSK capabilities, independent of CAT/audio support. See docs/RADIOS.md."""
 # USB signal routing is configured manually in the radio, never guessed from COM numbers.
 USB_KEYING = frozenset(('IC-705','IC-7300','IC-7300MK2','IC-905',
     'IC-9700','IC-7610','IC-7760','IC-7851'))
