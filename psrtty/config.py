@@ -74,6 +74,7 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "version": __version__,
     "schema_version": 1,
     "zlog": {"enabled": False, "host": "127.0.0.1", "port": 23, "pc_name": "PSRTTY", "operator": "", "tx": 15, "time_basis": "UTC", "decimal": "."},
+    "zlog_max": {"enabled": False, "host": "127.0.0.1", "port": 23, "pc_name": "PSRTTY-MAX", "operator": "", "tx": 15, "time_basis": "UTC", "decimal": "."},
     "udp_adif": {"enabled": False, "host": "127.0.0.1", "port": 2236},
     "hamlog": {"enabled": False, "auto_save": False},
     "backup": {"on_exit": True, "every_enabled": False, "every_count": 30, "pending_qsos": 0},
@@ -259,9 +260,11 @@ class ConfigStore:
         hamlog = self.data.get('hamlog')
         if not isinstance(hamlog, dict): hamlog = {}
         self.data['hamlog'] = {key: hamlog.get(key) is True for key in ('enabled', 'auto_save')}
-        from .zserver_link import options_checked, DEFAULT_OPTIONS
+        from .zserver_link import options_checked, DEFAULT_OPTIONS, MAX_OPTIONS
         try:self.data['zlog']=options_checked(self.data.get('zlog',{}))
         except Exception:self.data['zlog']=deepcopy(DEFAULT_OPTIONS)
+        try:self.data['zlog_max']=options_checked(dict(MAX_OPTIONS,**self.data.get('zlog_max',{})))
+        except Exception:self.data['zlog_max']=deepcopy(MAX_OPTIONS)
         self.data['printer'] = normalize_settings(self.data.get('printer'))
         ui = self.data['ui']
         try:ui['direct_idle_seconds']=int(ui.get('direct_idle_seconds',2))

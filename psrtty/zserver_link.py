@@ -22,6 +22,15 @@ from pathlib import Path
 
 DEFAULT_OPTIONS = {'enabled': False, 'host': '127.0.0.1', 'port': 23,
                    'pc_name': 'PSRTTY', 'operator': '', 'tx': 15, 'time_basis': 'UTC', 'decimal': '.'}
+MAX_OPTIONS = dict(DEFAULT_OPTIONS, pc_name='PSRTTY-MAX')
+
+
+def same_endpoint(first, second):
+    """Avoid two integrations inserting the same QSO into one local server."""
+    def host(options):
+        value = str(options.get('host', '')).strip().casefold().rstrip('.')
+        return 'localhost' if value in ('localhost', '127.0.0.1', '::1', '[::1]') else value
+    return host(first) == host(second) and first.get('port') == second.get('port')
 BANDS = ('160m', '80m', '40m', '30m', '20m', '17m', '15m', '12m',
          '10m', '6m', '2m', '70cm', '23cm', '13cm', '6cm', '3cm')
 
@@ -142,12 +151,12 @@ class ZConnection:
                 raise LinkError('zlink.normal_tcp')
         raise InterruptedError()
 
-    def ids(self):
+    def ids(self, timeout=5):
         self.send('GETQSOIDS')
-        found = {}; deadline = time.monotonic() + 5
+        found = {}; deadline = time.monotonic() + timeout
         while True:
             line = self.line(deadline)
-            if line == '#ZLOG# ENDQSOIDS': return found
+            if line.rstrip(' ') == '#ZLOG# ENDQSOIDS': return found
             if line.startswith('#ZLOG# QSOIDS '):
                 for value in line[14:].split():
                     try: number = int(value)
@@ -159,7 +168,7 @@ class ZConnection:
         result = None; deadline = time.monotonic() + 5
         while True:
             line = self.line(deadline)
-            if line == '#ZLOG# RENEW': return result
+            if line.rstrip(' ') == '#ZLOG# RENEW': return result
             if line.startswith('#ZLOG# PUTLOGEX '): result = line[16:]
 
     def drain(self):
@@ -173,9 +182,11 @@ class ZConnection:
 
 
 class ZServerLink:
-    def __init__(self, path):
+    def __init__(self, path, *, name='Z-Server', defaults=None, approval_wait=5):
         self.path = Path(path); self.lock = threading.RLock()
-        self.options = dict(DEFAULT_OPTIONS); self.entries = []
+        self.name = name; self.defaults = dict(defaults or DEFAULT_OPTIONS)
+        self.approval_wait = approval_wait
+        self.options = dict(self.defaults); self.entries = []
         self.state = 'zlink.disabled'; self.detail = ''; self.load_error = None
         self.cancelled = threading.Event(); self.wake = threading.Event()
         self.thread = None; self.sock = None; self.generation = 0; self.confirmed = 0
@@ -200,7 +211,7 @@ class ZServerLink:
         with self.lock: return self.state, self.detail, len(self.entries), self.confirmed
 
     def _status(self, state, detail=''):
-        event('integration','Z-Server '+str(state)+' '+str(detail))
+        event('integration',self.name+' '+str(state)+' '+str(detail))
         with self.lock: self.state, self.detail = state, str(detail)
 
     def _save(self):
@@ -219,7 +230,7 @@ class ZServerLink:
         return {key: options[key] for key in ('host', 'port', 'pc_name', 'operator', 'tx', 'time_basis', 'decimal')}
 
     def check_options(self, options):
-        checked = options_checked(options)
+        checked = options_checked(dict(self.defaults, **options)) if isinstance(options, dict) else options_checked(options)
         with self.lock:
             if self.entries and any(e['target'] != self.target(checked) for e in self.entries):
                 raise LinkError('zlink.pending_settings')
@@ -229,12 +240,15 @@ class ZServerLink:
     def configure(self, options):
         checked = self.check_options(options)
         with self.lock:
-            if checked != self.options: self.generation += 1
+            changed = checked != self.options
+            if changed: self.generation += 1
             self.options = checked
         if self.load_error: return
+        # Interrupt an approval/read wait when settings change or the link is disabled.
+        if changed: self._disconnect()
         if checked['enabled'] and (self.thread is None or not self.thread.is_alive()):
             self.cancelled.clear()
-            self.thread = threading.Thread(target=self._worker, name='PSRTTY-ZLink', daemon=True)
+            self.thread = threading.Thread(target=self._worker, name='PSRTTY-'+self.name, daemon=True)
             self.thread.start()
         if not checked['enabled']:
             self._disconnect(); self._status('zlink.disabled')
@@ -311,12 +325,20 @@ class ZServerLink:
                     if connection is None or generation != connected_generation:
                         self._disconnect(); connection = None; self._status('zlink.connecting')
                         sock = socket.create_connection((options['host'], options['port']), timeout=3)
-                        self.sock = sock
+                        with self.lock:
+                            if self.cancelled.is_set() or generation != self.generation or not self.options['enabled']:
+                                sock.close();continue
+                            self.sock = sock
                         connection = ZConnection(sock, self.cancelled)
                         connection.send('PCNAME ' + options['pc_name'])
                         connection.send('OPERATOR ' + options['operator'])
                         # Do not advertise a second active radio on the same band.
-                        connection.ids(); connected_generation = generation; last_check = time.monotonic()
+                        if self.approval_wait > 5:self._status('zmax.waiting')
+                        try:connection.ids(timeout=self.approval_wait)
+                        except TimeoutError:
+                            if self.approval_wait > 5:raise LinkError('zmax.approval_timeout') from None
+                            raise
+                        connected_generation = generation; last_check = time.monotonic()
                         self._status('zlink.connected')
                     with self.lock:
                         if not self.options['enabled'] or generation != self.generation:continue
@@ -331,7 +353,9 @@ class ZServerLink:
                 except InterruptedError: break
                 except Exception as exc:
                     self._disconnect(); connection = None
-                    with self.lock:enabled=self.options['enabled']
+                    with self.lock:
+                        if generation != self.generation:continue
+                        enabled=self.options['enabled']
                     self._status((exc.key if isinstance(exc, LinkError) else 'zlink.error') if enabled else 'zlink.disabled',
                                  (exc.detail if isinstance(exc, LinkError) else str(exc)) if enabled else '')
                     self.wake.wait(5); self.wake.clear()

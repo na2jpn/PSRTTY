@@ -1461,7 +1461,21 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'is missing at logging, a dialog shows the other station and asks for MHz (e.g. 7.045, 14.085, '
                  '50.303). The value sets FREQ for this QSO and determines BAND from the supported band table. HAMLOG, '
                  'ADIF UDP and other links use the same value after logging. Cancel does not log or transfer. This '
-                 'also applies to TU73 automatic logging.</p>',
+                 'also applies to TU73 automatic logging.</p>\n'
+                 '<h3>zLog MAX / Z-Link</h3><p>Send newly logged PSRTTY QSOs directly to the Z-Link server built into '
+                 'zLog MAX. This is a one-way link. Settings and pending QSOs are separate from the Reiwa '
+                 'link.</p><p>Choose the settings for your server.<br>• MAX built-in server: use this screen.<br>• '
+                 'External Z-Server: even when using zLog MAX, open Integration → zLog Reiwa integration settings and '
+                 'enter the same Z-Server host and port as MAX.</p><p>For the MAX built-in server: Start the Z-Link '
+                 'server in zLog MAX using plain TCP (TLS off). On the same PC use 127.0.0.1; on another PC use the '
+                 'server IP. Match the port. If connection approval appears, allow PSRTTY-MAX (or your chosen client '
+                 'name) in zLog MAX.</p><p>Check the contest, station CALL, exchanges and UTC/JST in MAX. Open '
+                 'Integration → zLog MAX link settings, enable the link and select Save &amp; connect / retry. New '
+                 'QSOs are sent after PSRTTY ADIF saving succeeds. The outbox is var/zlog-max-outbox.json. Do not '
+                 'import the same QSO again via ADIF.</p><p>Unconfirmed QSOs are saved and retried after comparing IDs '
+                 'and contents on reconnection. Confirmation is server readback only: also check the zLog MAX log. Old '
+                 'logs and QSOs recorded while the link was OFF are not sent automatically. TLS/login and two-way '
+                 'edit/delete synchronization are not supported.</p>',
  'guide.9.title': 'Direct TX',
  'guide.9.body': '<h2>1TX and direct TX</h2><p>Main 1TX sends one line and stops. Direct TX accepts two lines. TX '
                  'while typing defaults ON, with a 0.5-second correction delay. Pending text is blue-gray; sent text '
@@ -1518,7 +1532,17 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
                'their own terms.</p>\n'
                '<h3>Third-party libraries</h3>',
- 'history.body': '2026-10-24  Ver1.31\n'
+ 'history.body': '2026-11-04  Ver1.33\n'
+                 '・Added plain TCP integration with the Z-Link server built into zLog MAX.\n'
+                 '・Separated settings and pending QSOs from Reiwa; added approval waiting and record readback.\n'
+                 '・Added MAX link settings and setup guidance in all eight languages.\n'
+                 '\n'
+                 '2026-11-02  Ver1.32\n'
+                 '• Read ExtIO buffers using the I/Q pair count returned by StartHW, addressing doubled input counts '
+                 'with IC-7610.\n'
+                 '• Added block-count diagnostics and stops for unsupported blocks or persistent rate mismatches.\n'
+                 '\n'
+                 '2026-10-24  Ver1.31\n'
                  '・Added larger −/+ IQ-center controls with 1 kHz steps.\n'
                  '・Separated the monitor center from the input IQ center; OFF keeps the monitor fixed.\n'
                  '・Reduced unnecessary retuning during frequency following.\n'
@@ -2817,4 +2841,32 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
  'JARLコンテスト 2': 'JARL Contest 2',
  'ry.center_step': '1 kHz per click. Hold to repeat.',
  'ry.outside_iq': 'Monitor range is outside the incoming IQ band. Check the center or input settings.',
- 'ry.rate_mismatch': 'IQ rate mismatch: DLL {declared:.2f} / measured {measured:.2f} MS/s. Check diagnostics.'}
+ 'ry.rate_mismatch': 'IQ rate mismatch: DLL {declared:.2f} / measured {measured:.2f} MS/s. Check diagnostics.',
+ 'ry.rate_stopped': 'IQ reception stopped after a persistent sample-rate mismatch. Check the diagnostic log.',
+ 'ry.block_stopped': 'IQ reception stopped: the DLL block length could not be interpreted. Check the diagnostic log.',
+ 'zmax.title': 'zLog MAX link settings',
+ 'zmax.trial': 'Trial support is in progress. Please send feedback.',
+ 'zmax.notice': 'Send newly logged PSRTTY QSOs directly to the Z-Link server built into zLog MAX. This is a one-way '
+                'link. Settings and pending QSOs are separate from the Reiwa link.',
+ 'zmax.setup': 'Choose the settings for your server.\n'
+               '• MAX built-in server: use this screen.\n'
+               '• External Z-Server: even when using zLog MAX, open Integration → zLog Reiwa integration settings and '
+               'enter the same Z-Server host and port as MAX.\n'
+               '\n'
+               'For the MAX built-in server: Start the Z-Link server in zLog MAX using plain TCP (TLS off). On the '
+               'same PC use 127.0.0.1; on another PC use the server IP. Match the port. If connection approval '
+               'appears, allow PSRTTY-MAX (or your chosen client name) in zLog MAX.',
+ 'zmax.enabled': 'Send new QSOs to zLog MAX',
+ 'zmax.queue_note': 'Unconfirmed QSOs are saved and retried after comparing IDs and contents on reconnection. '
+                    'Confirmation is server readback only: also check the zLog MAX log. Old logs and QSOs recorded '
+                    'while the link was OFF are not sent automatically. TLS/login and two-way edit/delete '
+                    'synchronization are not supported.',
+ 'zmax.waiting': 'Waiting for the MAX server response / connection approval (up to 60 seconds). Check client approval '
+                 'in zLog MAX.',
+ 'zmax.approval_timeout': 'No zLog MAX response within 60 seconds. Check client approval and the plain TCP server '
+                          'settings in MAX. Pending QSOs are kept and reconnection will be retried.',
+ 'zmax.duplicate_target': 'Enabling both Reiwa and MAX for the same server would duplicate QSOs. Disable one link or '
+                          'use separate servers.',
+ 'zmax.record_error': 'PSRTTY ADIF is saved, but this QSO could not be added to the zLog MAX outbox.\n'
+                      '{error}\n'
+                      'Transfer this QSO separately, for example by ADIF export.'}

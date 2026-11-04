@@ -122,3 +122,12 @@ https://www.jarl.org/Japanese/1_Tanoshimo/1-1_Contest/rtty_rule.html
 ## zLogサンプル
 
 ZLOG_SAMPLE_*.adiはADIF出力例です。現在のリアルタイム連携はZ-Server経由です。両方で同一QSOを登録すると重複するため、用途を区別してください。
+
+## Z-Link転送待ち
+
+令和版：var/zserver-outbox.json。MAX：var/zlog-max-outbox.json。schema=1のJSON、UTF-8。
+各項目はfields（31個の文字列）、target（接続先・端末・時刻基準など）、attempted（送信試行済）を持ちます。
+原子的な置換とfsyncで保存。送信前にattemptedを保存し、読戻し確認後に待ちから除去します。
+再起動時も同じIDと内容を照合し、登録済みの不確かな交信を無条件に再送しません。
+ファイル破損時は上書きせず転送を停止します。両ファイルを相互にコピーしないでください。
+MAXの設定キーはzlog_max、令和版はzlog。従来設定・待ちをMAXへ自動転用しません。

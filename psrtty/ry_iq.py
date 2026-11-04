@@ -92,6 +92,9 @@ class ExtIOInput:
                 if self.stderr_thread is None and self.process.poll() is not None:
                     detail=self.process.stderr.read(8192).decode('utf-8','replace')
                 message=(detail+'\n' if detail else '')+str(exc)+' (exit='+str(self.process.poll())+')'
+                from .i18n import tr
+                if 'IQ_RATE_MISMATCH' in detail:message=tr('ry.rate_stopped')+'\n'+message
+                elif 'IQ_BLOCK_MISMATCH' in detail:message=tr('ry.block_stopped')+'\n'+message
                 event('ry_skimmer','ExtIO IQ input failed',error=exc)
                 self.on_error(message)
 

@@ -23,7 +23,21 @@ class ExtIOBridge {
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate void SetCallback(Callback callback);
     [UnmanagedFunctionPointer(CallingConvention.StdCall)] delegate int GetSrate(int index,out double value);
     static GetInt getSrateIndex;static GetSrate getSrate;static int reportedRate,extendedRate;
-    static long callbackCalls;static int lastCallbackCount;
+    static long callbackCalls,rawCallbackCount;static int lastCallbackCount;
+    static volatile int blockPairs;static int loggedCallbackCount=-1,badClockWindows;static string fatalError;
+    static void Fail(string message) {
+        if(Interlocked.CompareExchange(ref fatalError,message,null)==null)Console.Error.WriteLine("[error] "+message);
+        quit=true;
+    }
+    static bool CheckClock(double seconds,long pairs,int windowRate) {
+        if(windowRate!=rate||seconds<5) {badClockWindows=0;return false;}
+        double ratio=pairs/seconds/rate;
+        badClockWindows=(ratio<.8||ratio>1.2)?badClockWindows+1:0;
+        if(badClockWindows>=3) {
+            Fail("IQ_RATE_MISMATCH declared="+rate+" measured_complex_sps="+(pairs/seconds).ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" block_pairs="+blockPairs+" raw_count="+lastCallbackCount+"; stopped after 3 consecutive clock windows");return true;
+        }
+        return false;
+    }
     static int ReadRate() {
         reportedRate=getRate();extendedRate=0;
         if(getSrateIndex!=null&&getSrate!=null) {
@@ -52,14 +66,24 @@ class ExtIOBridge {
         if(p==IntPtr.Zero) {if(required)throw new Exception("ExtIO export: "+name);return null;}
         return Marshal.GetDelegateForFunctionPointer(p,typeof(T)) as T;
     }
-    static int Receive(int count,int status,float offset,IntPtr ptr) {
-        if(count<0) {
+    static int Receive(int reportedCount,int status,float offset,IntPtr ptr) {
+        if(reportedCount<0) {
             if(status==100||status==101||status==104)Interlocked.Exchange(ref change,1);
             if(status==116)swap=true; if(status==117)swap=false;
             return 0;
         }
-        if(quit||count<=0||count>1048576||ptr==IntPtr.Zero)return 0;
-        Interlocked.Increment(ref callbackCalls);lastCallbackCount=count;
+        if(quit||reportedCount<=0||ptr==IntPtr.Zero)return 0;
+        Interlocked.Increment(ref callbackCalls);lastCallbackCount=reportedCount;
+        Interlocked.Add(ref rawCallbackCount,reportedCount);
+        // StartHW defines I/Q PAIRS per callback. Some legacy DLLs report
+        // scalar I+Q count in cnt. Never use that value as a memory length.
+        // Callbacks can arrive before StartHW returns: discard without reading.
+        int count=blockPairs;if(count<=0)return 0;
+        if(reportedCount!=count&&reportedCount!=count*2) {
+            Fail("IQ_BLOCK_MISMATCH block_pairs="+count+" raw_count="+reportedCount+"; buffer not read");return 0;
+        }
+        if(Interlocked.Exchange(ref loggedCallbackCount,reportedCount)!=reportedCount)
+            Console.Error.WriteLine("[contract] block_pairs="+count+" raw_count="+reportedCount+" interpretation="+(reportedCount==count?"IQ_pairs":"scalar_I_plus_Q")+" copied_pairs="+count);
         long samplePosition=Interlocked.Add(ref position,count)-count;
         if(tuning||Interlocked.CompareExchange(ref change,0,0)!=0) {Interlocked.Add(ref droppedSamples,count);return 0;}
         try {
@@ -140,6 +164,51 @@ class ExtIOBridge {
         public override int Read(byte[] b,int o,int n){throw new NotSupportedException();}
         public override long Seek(long o,SeekOrigin origin){throw new NotSupportedException();}public override void SetLength(long n){throw new NotSupportedException();}
     }
+    static void ContractTest() {
+        tuning=false;center=14090000;
+        // Regression: StartHW=512 pairs, callback cnt=1024 scalar values.
+        // Fill the adjacent region with poison to catch an over-read/over-count.
+        foreach(int pairs in new int[]{512,1024})foreach(int scalarFactor in new int[]{1,2}) {
+            blockPairs=pairs;position=0;byte[] data=new byte[pairs*8];
+            for(int j=0;j<pairs;j++) {
+                byte[] i=BitConverter.GetBytes((short)(j%1000));byte[] q=BitConverter.GetBytes((short)(-j%1000));
+                Buffer.BlockCopy(i,0,data,j*4,2);Buffer.BlockCopy(q,0,data,j*4+2,2);
+            }
+            for(int j=pairs*4;j<data.Length;j++)data[j]=0x7f;
+            sampleType=3;swap=false;rate=1920000;
+            IntPtr memory=Marshal.AllocHGlobal(data.Length);
+            try {
+                Marshal.Copy(data,0,memory,data.Length);
+                for(int j=0;j<2;j++) {
+                    Receive(pairs*scalarFactor,0,0,memory);Packet p=Take(0);
+                    if(p==null||p.Count!=pairs||p.Bytes.Length!=pairs*4||p.Position!=j*pairs)throw new Exception("ExtIO pair/scalar contract");
+                    byte[] converted=ConvertIQ(p);
+                    if(converted.Length!=pairs*8||BitConverter.ToSingle(converted,(pairs-1)*8)!=(pairs-1)%1000/32768f)
+                        throw new Exception("Adjacent poison included in IQ");
+                }
+            }finally {Marshal.FreeHGlobal(memory);}
+            // Same callback cadence must represent exactly one second at declared rate.
+            if(pairs*(1920000/pairs)!=1920000)throw new Exception("Pair sample clock");
+        }
+        blockPairs=0;long before=position;Receive(1024,0,0,new IntPtr(1));
+        if(position!=before||packets.Count!=0)throw new Exception("Read before StartHW returned");
+        blockPairs=512;Receive(-1,100,0,IntPtr.Zero);if(change!=1)throw new Exception("Status callback");change=0;
+        TextWriter previousError=Console.Error;Console.SetError(new StringWriter());
+        try {
+        Receive(768,0,0,new IntPtr(1));
+        if(!quit||fatalError==null||packets.Count!=0)throw new Exception("Unknown buffer size accepted");
+        quit=false;fatalError=null;
+        // A transient clock warning recovers; three complete bad windows stop.
+        rate=1920000;badClockWindows=0;
+        CheckClock(10,38400000,rate);CheckClock(10,19200000,rate);
+        if(badClockWindows!=0||quit)throw new Exception("Transient clock mismatch");
+        CheckClock(10,38400000,rate);CheckClock(10,38400000,rate);
+        if(quit)throw new Exception("Clock stopped too soon");
+        if(!CheckClock(10,38400000,rate)||!quit)throw new Exception("Persistent clock not stopped");
+        quit=false;fatalError=null;badClockWindows=0;
+        CheckClock(10,38400000,960000);if(badClockWindows!=0)throw new Exception("Mixed rate clock window");
+        } finally {Console.SetError(previousError);}
+    }
     static int SelfTest() {
         getRate=delegate {return 1920000;};
         getSrateIndex=delegate {return 0;};
@@ -153,12 +222,12 @@ class ExtIOBridge {
             new byte[]{0,0,128,255,0,0,64,0},new byte[]{0,0,128,191,0,0,0,63},
             new byte[]{0,255},new byte[]{128,64},new byte[]{0,0,0,128,0,0,0,64}};
         for(int i=0;i<types.Length;i++) {
-            sampleType=types[i];rate=48000;center=14090000;tuning=false;
+            sampleType=types[i];rate=48000;center=14090000;tuning=false;blockPairs=1;
             IntPtr ptr=Marshal.AllocHGlobal(values[i].Length);
             try {
                 Marshal.Copy(values[i],0,ptr,values[i].Length);
-                foreach(bool reversed in new bool[]{false,true}) {
-                    swap=reversed;Receive(1,0,0,ptr);Packet p;
+                foreach(bool reversed in new bool[]{false,true})foreach(int scalarFactor in new int[]{1,2}) {
+                    swap=reversed;Receive(scalarFactor,0,0,ptr);Packet p;
                     p=Take(0);if(p==null)throw new Exception("No IQ packet");
                     p.Bytes=ConvertIQ(p);
                     float a=BitConverter.ToSingle(p.Bytes,reversed?4:0);
@@ -170,6 +239,7 @@ class ExtIOBridge {
                 }
             } finally {Marshal.FreeHGlobal(ptr);}
         }
+        ContractTest();
         // Verify that batching never combines discontinuous positions or centers.
         var pairA=new Packet{Rate=1920000,Center=14090000,Position=0,Count=512};
         var pairB=new Packet{Rate=1920000,Center=14090000,Position=512,Count=512};
@@ -177,7 +247,7 @@ class ExtIOBridge {
         pairB.Position=1024;if(Contiguous(pairA,pairB))throw new Exception("Lost samples hidden");
         pairB.Position=512;pairB.Center=21090000;if(Contiguous(pairA,pairB))throw new Exception("Center boundary hidden");
         // 0.5 seconds of small input blocks fit; the next block is accounted.
-        rate=1920000;sampleType=3;swap=false;position=0;droppedSamples=0;
+        rate=1920000;sampleType=3;swap=false;position=0;droppedSamples=0;blockPairs=512;
         IntPtr buf=Marshal.AllocHGlobal(2048);
         try {for(int k=0;k<1876;k++)Receive(512,0,0,buf);}finally {Marshal.FreeHGlobal(buf);}
         if(queuedSamples!=960000||droppedSamples!=512)throw new Exception("Sample-duration queue limit");
@@ -197,12 +267,13 @@ class ExtIOBridge {
             }
         }
         quit=false;
-        Console.WriteLine("ExtIO queue/boundaries and sample formats OK (16/24/24-in-32/float/U8/S8/32, IQ swap)");return 0;
+        Console.WriteLine("ExtIO pair/scalar contract, startup race, clock guard, queue/boundaries and sample formats OK (16/24/24-in-32/float/U8/S8/32, IQ swap)");return 0;
     }
     [STAThread] static int Main(string[] args) {
         VoidFn stop=null,close=null;bool opened=false,started=false;
         try {
             if(args.Length==1&&args[0]=="--self-test")return SelfTest();
+            if(args.Length==1&&args[0]=="--self-test-contract") {ContractTest();Console.WriteLine("ExtIO pair/scalar contract OK");return 0;}
             if(args.Length!=2)throw new Exception("ExtIO DLL, center Hz");
             string path=Path.GetFullPath(args[0]);center=int.Parse(args[1]);
             Console.Error.WriteLine("[phase] DLL load: "+path);
@@ -228,7 +299,8 @@ class ExtIOBridge {
             tuning=true;
             Console.Error.WriteLine("[phase] StartHW center="+wanted);
             int count=Fn<Start>("StartHW")(wanted);started=true;
-            if(count<=0)throw new Exception("StartHW: "+count);
+            if(count<=0||count>1048576)throw new Exception("StartHW invalid IQ pair count: "+count);
+            blockPairs=count;
             rate=ReadRate();int lo=getLO();if(lo>0)center=lo;tuning=false;
             if(rate<6000||rate>8000000)throw new Exception("ExtIO sample rate: "+rate);
             Console.Error.WriteLine("[phase] IQ receive start rate="+rate+" block="+count+" center="+center);
@@ -239,7 +311,7 @@ class ExtIOBridge {
                     int hz;if(line.StartsWith("CENTER ")&&int.TryParse(line.Substring(7),out hz)&&hz>0)Interlocked.Exchange(ref requestedCenter,hz);
                 }}catch{}quit=true;
             });input.IsBackground=true;input.Start();
-            var poll=System.Diagnostics.Stopwatch.StartNew();var stats=System.Diagnostics.Stopwatch.StartNew();long clockPosition=Interlocked.Read(ref position);
+            var poll=System.Diagnostics.Stopwatch.StartNew();var stats=System.Diagnostics.Stopwatch.StartNew();long clockPosition=Interlocked.Read(ref position);int clockRate=rate,rateGeneration=0,clockGeneration=0;
             while(!quit) {
                 Application.DoEvents();
                 int target=Interlocked.Exchange(ref requestedCenter,0);if(target>0)Tune(target);
@@ -247,17 +319,18 @@ class ExtIOBridge {
                     int sr=ReadRate(),actual=getLO();
                     if(sr<6000||sr>8000000||actual<=0)throw new Exception("Invalid ExtIO rate/center: "+sr+" / "+actual);
                     if(sr!=rate||actual!=center)Console.Error.WriteLine("[state] rate="+sr+" center="+actual);
+                    if(sr!=rate)rateGeneration++;
                     rate=sr;center=actual;poll.Restart();
                 }
                 if(stats.ElapsedMilliseconds>=10000) {
                     long clockNow=Interlocked.Read(ref position);double seconds=stats.Elapsed.TotalSeconds;
-                    Console.Error.WriteLine("[clock] seconds="+seconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture)+" complex_samples="+(clockNow-clockPosition)+" measured_complex_sps="+((clockNow-clockPosition)/seconds).ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" GetHWSR="+reportedRate+" extended_rate="+extendedRate+" effective_rate="+rate+" callback_calls="+Interlocked.Read(ref callbackCalls)+" last_count="+lastCallbackCount+" sample_type="+sampleType);
-                    clockPosition=clockNow;
+                    Console.Error.WriteLine("[clock] seconds="+seconds.ToString("F6",System.Globalization.CultureInfo.InvariantCulture)+" complex_samples="+(clockNow-clockPosition)+" measured_complex_sps="+((clockNow-clockPosition)/seconds).ToString("F1",System.Globalization.CultureInfo.InvariantCulture)+" GetHWSR="+reportedRate+" extended_rate="+extendedRate+" effective_rate="+rate+" callback_calls="+Interlocked.Read(ref callbackCalls)+" raw_callback_count="+Interlocked.Read(ref rawCallbackCount)+" last_count="+lastCallbackCount+" block_pairs="+blockPairs+" copied_pairs="+Interlocked.Read(ref position)+" sample_type="+sampleType);
+                    CheckClock(seconds,clockNow-clockPosition,clockGeneration==rateGeneration?clockRate:0);clockPosition=clockNow;clockRate=rate;clockGeneration=rateGeneration;
                     Console.Error.WriteLine("[stream] callback_samples="+Interlocked.Read(ref position)+" dropped_samples="+Interlocked.Read(ref droppedSamples)+" queue_samples="+Interlocked.Read(ref queuedSamples));stats.Restart();
                 }
                 Thread.Sleep(10);
             }
-            return 0;
+            return fatalError==null?0:1;
         } catch(Exception e) {Console.Error.WriteLine("[error] "+e.ToString());return 1;}
         finally {quit=true;if(started&&stop!=null)stop();if(opened&&close!=null)close();GC.KeepAlive(callback);}
     }

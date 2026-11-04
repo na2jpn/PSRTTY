@@ -1,9 +1,32 @@
 # 開発・現行仕様・引き継ぎ
 
-対象：PSRTTY 1.31。バージョンの正本はpsrtty/__init__.py。8言語の表示文はlanguage/*.json、
+対象：PSRTTY 1.32。バージョンの正本はpsrtty/__init__.py。8言語の表示文はlanguage/*.json、
 埋め込み英語はvalidate_languages.py --generateで生成します。受信文・マクロ・機種ID・ログを翻訳しません。
 
 # 開発ルール
+
+## zLog MAX連携（1.33）
+
+独立メニュー「zLog MAX連携設定」を令和版の直下に置きます。通常TCPのみ。
+MAX設定画面の冒頭で、内蔵サーバーならこの画面、外部Z-ServerならMAX利用者も
+「zLog令和版連携設定」を使うよう案内します。初期設定ガイドとオフライン案内も8言語で統一します。
+設定キーはzlog_max、転送待ちはvar/zlog-max-outbox.json。令和版のzlogと
+var/zserver-outbox.jsonを移行・流用しません。新規設定はOFF、端末名PSRTTY-MAX。
+共通Z-Link実装でADIF保存後の新規QSOだけを送り、IDと内容の読戻しで登録を確認します。
+初回接続応答はMAXの端末承認を考慮し最大60秒。確認前にはPUTQSOを送りません。
+無効化・終了・接続設定変更で待機を中断します。同一host/portで両連携を有効にしません。
+
+利用者の明示指示により、MAX設定画面だけに青字で
+「現在試験対応中です、フィードバックをお願いします。」を表示します。
+**1.34で、利用者から連携成功の確認が得られた場合に削除**します。
+版番号だけで自動削除せず、確認がなければ残します。8言語を同時に更新します。
+
+根拠：nextzlog/zmax master 69b6accfffd1b21ac8ed1e3f0c4a02d55f3ca573
+（2026-11-01、2026-11-04確認）。crates/extensions/zlog-link/src の
+wire.rs（31項目・Shift-JIS）、protocol.rs（PCNAME/OPERATOR/PUTQSO/GETQSOIDS/
+GETLOGQSOID）、hub.rs（承認・ID単位の照合）、serve.rs（挿入後の読戻し順序）を参照。
+https://github.com/nextzlog/zmax/tree/69b6accfffd1b21ac8ed1e3f0c4a02d55f3ca573/crates/extensions/zlog-link
+相手側の今後の変更は追跡対象です。TLS、逆方向の編集削除、過去ログの自動送信は追加しません。
 
 サンクスへの追加・更新は、更新履歴・CHANGELOG・Gitリリースノートに記載しません。
 サンクス掲載に追加時期や版を結び付けません。Thanks画面には反映します。
@@ -39,7 +62,14 @@ IQレート：ExtIOのGetHWSRに加え、利用できる場合はExtIoGetActualS
 サンプル単位は複素I/Qペアです。入力個数を単純に半分にしたり、PCの到着タイミングだけで
 DSPのレートを倍に書き換えたりしません。5秒以上の観測で申告レートから20%以上ずれれば表示・記録。
 ネイティブログにはStopwatch実時間、複素サンプル数、各APIのレート、形式、コールバック数を残します。
-1.30の実機ログにあった約2倍の増加は、物理入力での原因確定が残っています。
+1.32ではStartHW戻り値をblockPairsとして保持し、正数コールバックのcntをコピー長に使いません。
+cnt==blockPairsはIQペア数、cnt==2*blockPairsはI+Qスカラー数として同じblockPairs組を読みます。
+それ以外の正数はバッファを読む前にIQ_BLOCK_MISMATCHで停止します。
+StartHWが戻る前のデータは読みません。負数の状態通知は従来通り処理します。
+レートを推測で書き換えず、10秒観測で20%超の不一致が3回続いた場合はIQ_RATE_MISMATCHで停止します。
+サンプルレート変更をまたぐ観測窓は判定から外します。位置・キュー・欠落数は全てIQペア単位です。
+実機ログはStartHW=512、cnt=1024であり、512組×毎秒約3750回なら1.92 MS/sと整合します。
+メーカーDLLの実バッファ長・実機復号の最終確認は報告者による確認対象です。
 
 下部のIQ受信状況は取り込み／処理の健全性であり、RF強度や復号成功率ではありません。
 欠落率0%だけで実局の復号成功とはしません。無信号、処理待ち、欠落を区別します。

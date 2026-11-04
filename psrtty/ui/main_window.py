@@ -265,6 +265,7 @@ class MainWindow(QMainWindow):
         integration = mb.addMenu(tr('ui.e73b7be6f0d5c286'))
         self._act(integration, tr('ui.2354935a4ee2b937'), self.integration.settings)
         self._act(integration, tr('ui.17cea206eaeefd06'), self._zlog_settings)
+        self._act(integration, tr('zmax.title'), self.integration.zmax_settings)
         self._act(integration, tr('udp.title'), self.integration.udp_settings)
         language = mb.addMenu(tr('language.title'))
         self.language_group = QActionGroup(self); self.language_group.setExclusive(True)

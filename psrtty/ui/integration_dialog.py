@@ -4,12 +4,13 @@ from copy import deepcopy
 from PySide6.QtCore import QObject, Qt, QTimer
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (QCheckBox, QComboBox, QDialog, QDialogButtonBox,
-    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QSpinBox)
+    QFormLayout, QHBoxLayout, QLabel, QLineEdit, QMessageBox, QPushButton, QVBoxLayout, QSpinBox,
+    QScrollArea, QWidget)
 
 from ..hamlog_link import HamlogLink, TARGET_VERSION, API_VERSION
 from ..i18n import tr
 from ..paths import resource_path
-from ..zserver_link import ZServerLink, LinkError, DEFAULT_OPTIONS
+from ..zserver_link import ZServerLink, LinkError, DEFAULT_OPTIONS, MAX_OPTIONS, same_endpoint
 from .background import BackgroundJob
 
 VERSION_NOTICE = '対応対象：Turbo HAMLOG/Win Ver{version}（公開連携API Ver{api}以降）。'
@@ -25,13 +26,26 @@ class IntegrationController(QObject):
         self.dialog = None
         self.zlog_dialog = None
         self.zlink = ZServerLink(main.paths['var'] / 'zserver-outbox.json')
+        self.zmax_dialog = None
+        self.zmax_link = ZServerLink(main.paths['var'] / 'zlog-max-outbox.json',
+                                    name='zLog MAX', defaults=MAX_OPTIONS, approval_wait=60)
         self.udp_dialog=None;self.udp_pending=0
         self.udp_status=tr('udp.idle') if main.store.data.get('udp_adif',{}).get('enabled') else tr('udp.disabled')
         self._last_zstatus = None
+        self._last_max_status = None
         self.z_timer = QTimer(self); self.z_timer.setInterval(500)
         self.z_timer.timeout.connect(self.poll_zlog); self.z_timer.start()
         try:self.zlink.configure(main.store.data.get('zlog', {}))
         except Exception as exc:self.zlink._status('zlink.error', str(exc))
+        try:
+            options = main.store.data.get('zlog_max', {})
+            other = main.store.data.get('zlog', {})
+            if options.get('enabled') and other.get('enabled') and same_endpoint(options, other):
+                raise LinkError('zmax.duplicate_target')
+            self.zmax_link.configure(options)
+        except Exception as exc:
+            self.zmax_link._status(exc.key if isinstance(exc,LinkError) else 'zlink.error',
+                                   exc.detail if isinstance(exc,LinkError) else str(exc))
 
     def settings(self):
         if self.dialog is None:
@@ -66,9 +80,16 @@ class IntegrationController(QObject):
         self.zlog_dialog.reload()
         self.zlog_dialog.show(); self.zlog_dialog.raise_(); self.zlog_dialog.activateWindow()
 
-    def zstatus_text(self):
-        state, detail, count, confirmed = self.zlink.snapshot()
+    def zmax_settings(self):
+        if self.zmax_dialog is None:self.zmax_dialog = ZLogSettingsDialog(self.main, target='zlog_max')
+        self.zmax_dialog.reload()
+        self.zmax_dialog.show();self.zmax_dialog.raise_();self.zmax_dialog.activateWindow()
+
+    def zstatus_text(self, target='zlog'):
+        link = self.zmax_link if target == 'zlog_max' else self.zlink
+        state, detail, count, confirmed = link.snapshot()
         result=tr(state) + ' — ' + tr('zlink.pending').format(count=count)
+        if target == 'zlog_max':result='zLog MAX: '+result
         if detail:result += '\n' + detail
         return result
 
@@ -78,10 +99,16 @@ class IntegrationController(QObject):
         if status != self._last_zstatus and self.main.store.data.get('zlog',{}).get('enabled'):
             self.main.statusBar().showMessage(self.zstatus_text(),8000)
         self._last_zstatus=status
+        status=self.zmax_link.snapshot()
+        if self.zmax_dialog:self.zmax_dialog.status.setText(self.zstatus_text('zlog_max'))
+        if status != self._last_max_status and self.main.store.data.get('zlog_max',{}).get('enabled'):
+            self.main.statusBar().showMessage(self.zstatus_text('zlog_max'),8000)
+        self._last_max_status=status
 
     def close(self):
-        self.z_timer.stop();self.zlink.close()
+        self.z_timer.stop();self.zlink.close();self.zmax_link.close()
         if self.zlog_dialog:self.zlog_dialog.close()
+        if self.zmax_dialog:self.zmax_dialog.close()
         if self.udp_dialog:self.udp_dialog.close()
 
     def run(self, work, done):
@@ -101,6 +128,10 @@ class IntegrationController(QObject):
         except Exception as exc:
             detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)
             QMessageBox.warning(self.main,tr('ui.17cea206eaeefd06'),tr('zlink.record_error').format(error=detail))
+        try:self.zmax_link.enqueue(deepcopy(qso))
+        except Exception as exc:
+            detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)
+            QMessageBox.warning(self.main,tr('zmax.title'),tr('zmax.record_error').format(error=detail))
         options = self.main.store.data.get('hamlog', {})
         if not options.get('enabled', False):
             return
@@ -186,15 +217,26 @@ class HamlogSettingsDialog(QDialog):
 
 
 class ZLogSettingsDialog(QDialog):
-    def __init__(self, main):
+    def __init__(self, main, target='zlog'):
         super().__init__(main)
         self.main=main;self.controller=main.integration
-        self.setWindowTitle(tr('ui.17cea206eaeefd06'));self.resize(680,640)
+        self.target=target
+        self.is_max=target=='zlog_max'
+        self.link=self.controller.zmax_link if self.is_max else self.controller.zlink
+        self.defaults=MAX_OPTIONS if self.is_max else DEFAULT_OPTIONS
+        self.title_key='zmax.title' if self.is_max else 'ui.17cea206eaeefd06'
+        self.setWindowTitle(tr(self.title_key));self.resize(700,680)
         self.setStyleSheet('QLineEdit, QComboBox, QSpinBox { min-height:22px; padding:4px; }')
-        root=QVBoxLayout(self)
-        for key in ('zlink.notice','zlink.setup'):
+        outer=QVBoxLayout(self)
+        self.scroll=QScrollArea();self.scroll.setWidgetResizable(True);self.scroll.setFrameShape(QScrollArea.NoFrame)
+        body=QWidget();root=QVBoxLayout(body);self.scroll.setWidget(body);outer.addWidget(self.scroll)
+        if self.is_max:
+            self.trial_notice=QLabel(tr('zmax.trial'));self.trial_notice.setWordWrap(True)
+            self.trial_notice.setStyleSheet('color: #1565c0;');root.addWidget(self.trial_notice)
+        prefix='zmax.' if self.is_max else 'zlink.'
+        for key in (prefix+'notice',prefix+'setup'):
             label=QLabel(tr(key));label.setWordWrap(True);root.addWidget(label)
-        self.enabled=QCheckBox(tr('zlink.enabled'));root.addWidget(self.enabled)
+        self.enabled=QCheckBox(tr(prefix+'enabled'));root.addWidget(self.enabled)
         self.host=QLineEdit();self.port=QSpinBox();self.port.setRange(1,65535)
         self.pc_name=QLineEdit();self.pc_name.setMaxLength(20)
         self.operator=QLineEdit();self.operator.setMaxLength(20)
@@ -211,23 +253,23 @@ class ZLogSettingsDialog(QDialog):
         self.status.setTextInteractionFlags(Qt.TextSelectableByMouse);root.addWidget(self.status)
         self.connect_button=QPushButton(tr('zlink.save_connect'));self.connect_button.clicked.connect(self.connect_now)
         root.addWidget(self.connect_button)
-        note=QLabel(tr('zlink.queue_note'));note.setWordWrap(True);root.addWidget(note)
+        note=QLabel(tr(prefix+'queue_note'));note.setWordWrap(True);root.addWidget(note)
         button=QPushButton(tr('ui.989d12c480a3da4d'));button.clicked.connect(main._export_adif);root.addWidget(button)
         root.addStretch()
         buttons=QDialogButtonBox(QDialogButtonBox.Save|QDialogButtonBox.Cancel)
         buttons.button(QDialogButtonBox.Save).setText(tr('ui.a3030bf8f16dc63c'))
         buttons.button(QDialogButtonBox.Cancel).setText(tr('ui.bca84ea5c65fee0e'))
-        buttons.accepted.connect(self.save);buttons.rejected.connect(self.reject);root.addWidget(buttons)
+        buttons.accepted.connect(self.save);buttons.rejected.connect(self.reject);outer.addWidget(buttons)
         self.reload()
 
     def reload(self):
-        options=dict(DEFAULT_OPTIONS,**self.main.store.data.get('zlog',{}))
+        options=dict(self.defaults,**self.main.store.data.get(self.target,{}))
         self.enabled.setChecked(options['enabled']);self.host.setText(options['host'])
         self.port.setValue(options['port']);self.pc_name.setText(options['pc_name'])
         self.operator.setText(options['operator']);self.tx.setValue(options['tx'])
         self.time_basis.setCurrentIndex(self.time_basis.findData(options['time_basis']))
         self.decimal.setCurrentIndex(self.decimal.findData(options['decimal']))
-        self.status.setText(self.controller.zstatus_text())
+        self.status.setText(self.controller.zstatus_text(self.target))
 
     def values(self):
         return {'enabled':self.enabled.isChecked(),'host':self.host.text(),'port':self.port.value(),
@@ -235,16 +277,19 @@ class ZLogSettingsDialog(QDialog):
                 'time_basis':self.time_basis.currentData(),'decimal':self.decimal.currentData()}
 
     def apply(self):
-        previous=deepcopy(self.main.store.data.get('zlog',{}))
+        previous=deepcopy(self.main.store.data.get(self.target,{}))
         try:
-            options=self.controller.zlink.check_options(self.values())
-            self.main.store.data['zlog']=options;self.main.store.save()
+            options=self.link.check_options(self.values())
+            other=self.main.store.data.get('zlog' if self.is_max else 'zlog_max',{})
+            if options['enabled'] and other.get('enabled') and same_endpoint(options,other):
+                raise LinkError('zmax.duplicate_target')
+            self.main.store.data[self.target]=options;self.main.store.save()
         except Exception as exc:
-            self.main.store.data['zlog']=previous
+            self.main.store.data[self.target]=previous
             detail=tr(exc.key) if isinstance(exc,LinkError) else str(exc)
-            QMessageBox.warning(self,tr('ui.17cea206eaeefd06'),detail);return False
-        self.controller.zlink.configure(options)
-        self.controller.zlink.wake.set();self.controller.poll_zlog();return True
+            QMessageBox.warning(self,tr(self.title_key),detail);return False
+        self.link.configure(options)
+        self.link.wake.set();self.controller.poll_zlog();return True
 
     def connect_now(self):
         self.enabled.setChecked(True);self.apply()
