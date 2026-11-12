@@ -5,7 +5,7 @@ from .. import i18n
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QPixmap, QDesktopServices
-from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QWidget, QPushButton
+from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QWidget, QPushButton, QPlainTextEdit
 
 from .. import __version__
 from ..paths import resource_path
@@ -44,6 +44,13 @@ class AboutDialog(QDialog):
         body = QWidget(); lay = QVBoxLayout(body)
         text = QLabel(about_html()); text.setWordWrap(True); text.setTextFormat(Qt.RichText); text.setOpenExternalLinks(True)
         lay.addWidget(text)
+        licensing = QHBoxLayout()
+        self.license_button=QPushButton(tr('about.license'))
+        self.license_button.clicked.connect(lambda:self._show_license('LICENSE.md'))
+        self.policy_button=QPushButton(tr('about.policy'))
+        self.policy_button.clicked.connect(lambda:self._show_license('LICENSING.md'))
+        licensing.addWidget(self.license_button);licensing.addWidget(self.policy_button)
+        lay.addLayout(licensing)
         line = QFrame(); line.setFrameShape(QFrame.HLine); line.setFrameShadow(QFrame.Sunken)
         lay.addWidget(line)
         row = QHBoxLayout()
@@ -67,6 +74,19 @@ class AboutDialog(QDialog):
         self.close_button.clicked.connect(self.reject)
         buttons.addWidget(self.close_button);root.addLayout(buttons)
         self.thanks_window=None
+
+    def _show_license(self, name):
+        text=tr('about.license_missing').format(name=name)
+        for path in (app_root()/'docs'/name,resource_path('licenses/'+name),app_root()/name):
+            try:
+                if path.is_file():
+                    text=path.read_text(encoding='utf-8-sig');break
+            except (OSError,UnicodeError):
+                pass
+        dialog=QDialog(self);dialog.setWindowTitle(name+' — PSRTTY');dialog.resize(800,650)
+        layout=QVBoxLayout(dialog);view=QPlainTextEdit(dialog);view.setReadOnly(True);view.setPlainText(text)
+        layout.addWidget(view,1);close=QPushButton(tr('ui.f6c244f98893cd95'))
+        close.clicked.connect(dialog.accept);layout.addWidget(close);dialog.exec()
 
     def _show_thanks(self):
         from .special_thanks_dialog import SpecialThanksDialog

@@ -1508,30 +1508,25 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                'time and content with <code>|</code>.</p>\n'
                '<p>Confirmed QSOs are saved in ADIF format.</p>\n'
                '<h3>From the author</h3>\n'
-               '<p>PSRTTY is privately developed and used by H.Tanaka for personal amateur-radio RTTY operation and '
-               'contests.</p>\n'
+               '<p>PSRTTY is privately developed and used by Hiroshi Tanaka for personal amateur-radio RTTY operation '
+               'and contests.</p>\n'
                "<p>The author's own ease of use takes priority. Responding to third-party requests, support, bug fixes "
                'and continued availability are not promised.</p>\n'
                '<p>You may use and improve the software within its terms, at your own discretion and responsibility. '
                'Verify decoded text, transmitted content, QSO records and submission files such as ADIF and Cabrillo '
                'yourself. Users are also responsible for necessary backups.</p>\n'
-               '<p><b>PSRTTY</b><br>Copyright (c) 2026 H.Tanaka (JH1HST)<br>Originally developed by H.Tanaka '
-               '(JH1HST)<br>AKIHABARA-GIKEN</p>\n'
-               '<h3>Redistribution</h3>\n'
-               "<p>Redistribution of unmodified versions is not permitted. Direct users to the author's distribution "
-               'source.</p>\n'
-               '<p>When distributing an improved version, identify the original PSRTTY version, what and where you '
-               "changed, the improved version's name and version, and the person responsible for distribution.</p>\n"
-               '<p>Make the complete corresponding source code and the scripts / settings required to build it '
-               'available to recipients.</p>\n'
-               '<p>Before distributing an improved version, notify the author of the improvements, distribution '
-               "location, and the distributor's own name and contact information. Individual approval from the author "
-               'is not a condition.</p>\n'
-               '<p>Retain original-author attribution. Do not imply that an improved version is an official release or '
-               'is guaranteed by the original author.</p>\n'
-               '<p>Python, PySide6/Qt, PyInstaller, NumPy, sounddevice, pyserial and other third-party libraries have '
-               'their own terms.</p>\n'
-               '<h3>Third-party libraries</h3>',
+               '<p><b>PSRTTY</b><br>Copyright (c) 2026 Hiroshi Tanaka (JH1HST)<br>Originally developed by Hiroshi '
+               'Tanaka (JH1HST)<br>PS Ham-ware / AKIHABARA-GIKEN</p>\n'
+               '<h3>License</h3><p><b>GNU GPL v3 or later (GPL-3.0-or-later)</b></p><p>Commercial and non-commercial '
+               'use, modification, redistribution and sale are permitted. When distributing, follow the GPL: preserve '
+               'copyright and license notices, mark changes and relevant dates, and provide Corresponding Source '
+               'including required build scripts.</p><p>Notification when publishing improvements is voluntary. '
+               'Notification, submission of real names or contact details, prior approval and waiting for a reply are '
+               'not conditions.</p><p>Provided without warranty, subject to the GPL and applicable law. Use the '
+               'buttons below or see docs/LICENSE.md and docs/LICENSING.md for the full license and common policy. '
+               'Third-party components retain their own licenses.</p><p><a '
+               'href="https://github.com/na2jpn/PSRTTY">Source: github.com/na2jpn/PSRTTY</a></p><h3>Third-party '
+               'libraries</h3>',
  'history.body': '2026-11-04  Ver1.33\n'
                  '・Added plain TCP integration with the Z-Link server built into zLog MAX.\n'
                  '・Separated settings and pending QSOs from Reiwa; added approval waiting and record readback.\n'
@@ -2869,4 +2864,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                           'use separate servers.',
  'zmax.record_error': 'PSRTTY ADIF is saved, but this QSO could not be added to the zLog MAX outbox.\n'
                       '{error}\n'
-                      'Transfer this QSO separately, for example by ADIF export.'}
+                      'Transfer this QSO separately, for example by ADIF export.',
+ 'about.license': 'Full license (GPL v3)',
+ 'about.policy': 'Licensing guide',
+ 'about.license_missing': 'Cannot read document: {name}. Please check the distribution files.'}

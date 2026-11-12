@@ -9,6 +9,24 @@ from psrtty import __version__
 from psrtty.i18n import LANGUAGES, ENGLISH, load_catalog
 
 SOURCE_ROOT = Path(__file__).resolve().parent
+LICENSE_DOCUMENTS = {
+    'LICENSE.md': 'docs/LICENSE.md',
+    'LICENSING.md': 'docs/LICENSING.md',
+    'docs/DISTRIBUTION_TERMS.txt': 'docs/DISTRIBUTION_TERMS.txt',
+}
+
+
+def stage_license_documents(root: Path):
+    """Use the current source notices, even when a staging folder has old terms."""
+    for source_name, destination in LICENSE_DOCUMENTS.items():
+        source=SOURCE_ROOT/source_name
+        if source.is_symlink() or not source.is_file():
+            raise FileNotFoundError('Missing license document: '+source_name)
+        target=root/destination
+        if target.resolve()==source.resolve():
+            continue
+        target.parent.mkdir(parents=True,exist_ok=True)
+        shutil.copyfile(source,target)
 
 def validate_all(directory):
     errors = []
@@ -22,6 +40,7 @@ from psrtty.updater import MANIFEST, create_manifest, inspect_zip, release_files
 
 
 def package_release(root: Path):
+    stage_license_documents(root)
     # Historical package fixtures retain 1.01 compatibility; 1.28 has no root text.
     if version_key('1.02') <= version_key(__version__) < version_key('1.28') and (root/'docs/DISTRIBUTION_TERMS.txt').is_file():
         shutil.copy2(root/'docs/DISTRIBUTION_TERMS.txt',root/'DISTRIBUTION_TERMS.txt')

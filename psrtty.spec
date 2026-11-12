@@ -18,6 +18,9 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=qt_languages+[
+           ('LICENSE.md','licenses'),
+           ('LICENSING.md','licenses'),
+           ('docs/DISTRIBUTION_TERMS.txt','licenses'),
            ('assets/psrtty.png', 'assets'),
            ('assets/psrtty.ico', 'assets'),
            ('assets/amateur_radio_100.png', 'assets'),

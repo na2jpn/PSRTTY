@@ -1,23 +1,33 @@
-PSRTTY 1.09
+PSRTTY
 
-Copyright (c) 2026 H.Tanaka (JH1HST)
-Originally developed by H.Tanaka (JH1HST)
-AKIHABARA-GIKEN
+Copyright (c) 2026 Hiroshi Tanaka (JH1HST)
+Originally developed by Hiroshi Tanaka (JH1HST)
+PS Ham-ware / AKIHABARA-GIKEN
+GitHub: https://github.com/na2jpn/PSRTTY
+Website: https://2jp.org/ps/psrtty/
 
-再配布について
+ライセンス / License: GPL-3.0-or-later
 
-無改変版の再配布は認めていません。作者の配布元を案内してください。
+PSRTTY本体はGNU General Public License version 3、または利用者の選択によりそれ以降の版で提供します。
+営利・非営利を問わず利用・改変・再配布できます。配布時は必要な著作権・ライセンス表示を保持し、改変版は改変と日付を明示し、対応するソースコードとビルドに必要なスクリプト等をGPLに従って提供してください。
+改良版の公開連絡は任意であり、通知・実名や連絡先の提出・事前承認・返答待ちは条件ではありません。
+ライセンス本文はLICENSE.md、共通方針と日英の説明はLICENSING.mdを参照してください。Windows配布版では、いずれもdocsフォルダーに同梱します。
 
-改良版を再配布する場合は、元となるPSRTTYの版、変更箇所・変更内容、改良版の名称と版、配布責任者を明示してください。
+This program is free software: you can redistribute it and/or modify it
+under the terms of the GNU General Public License as published by the
+Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
 
-また、対応する改良版のソースコード全体と、ビルドに必要なスクリプト・設定を受領者が取得できるようにしてください。
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+GNU General Public License for more details.
 
-改良版の配布前に、作者へ改良内容、配布先、配布者本人の氏名と連絡先を通知してください。作者の個別承認を条件とするものではありません。
+You should have received a copy of the GNU General Public License
+along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-元作者の表示を保持し、作者の公式版または作者が保証する版であると誤認させないでください。
-
-Python、PySide6/Qt、PyInstaller、NumPy、sounddevice、pyserialその他の第三者ライブラリには、それぞれの利用条件が適用されます。
-
+改変者・再配布者が追加した仕組みや契約の責任は、事実関係と適用法令に従って判断されます。GPLは犯罪その他の法令違反や他人の権利侵害を正当化・免責するものではありません。
+Python、PySide6/Qt、PyInstaller、NumPy、SciPy、sounddevice、pyserial、Hamlibその他の第三者ライブラリ・素材・参照データには、それぞれの利用条件が適用されます。以下の第三者ライセンス表示はそのまま保持します。
 
 Windows audio volume support: Pycaw (MIT), comtypes (MIT), psutil (BSD-3-Clause).
 https://github.com/AndreMiras/pycaw

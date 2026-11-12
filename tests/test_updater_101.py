@@ -5,7 +5,7 @@ import zipfile
 from pathlib import Path
 from unittest.mock import patch
 
-from package_release import package_release
+from package_release import package_release, LICENSE_DOCUMENTS, SOURCE_ROOT
 from psrtty.updater import (MANIFEST, VERSIONUP, HAMLIB_REQUIRED,
                             apply_update, create_manifest, inspect_zip, prepare_update)
 
@@ -21,6 +21,18 @@ def make_release(base, version, extra=False):
 
 
 class BundledUpdateTest(unittest.TestCase):
+    def test_stale_license_documents_are_replaced_before_hashing(self):
+        with tempfile.TemporaryDirectory() as td:
+            root,archive=make_release(Path(td),'1.33')
+            for destination in LICENSE_DOCUMENTS.values():
+                (root/destination).write_bytes(b'obsolete redistribution restriction')
+            archive=package_release(root)
+            info=inspect_zip(archive,'1.32')
+            with zipfile.ZipFile(archive) as z:
+                for source,destination in LICENSE_DOCUMENTS.items():
+                    self.assertIn(destination,info['files'])
+                    self.assertEqual(z.read(info['prefix']+destination),(SOURCE_ROOT/source).read_bytes())
+
     def test_manual_copy_preserves_user_data_and_future_update_adds_file(self):
         with tempfile.TemporaryDirectory() as td:
             base=Path(td);old=base/'existing';old.mkdir()
