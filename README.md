@@ -1,5 +1,11 @@
 # PSRTTY 1.33 正本フルソース
 
+## 作者・保守担当 / Author and maintainer
+
+**Hiroshi Tanaka (JH1HST)** — GitHub: [@na2jpn](https://github.com/na2jpn)
+
+Hiroshi Tanaka is the author and maintainer of PSRTTY.
+
 ## ライセンス / License
 
 Copyright (c) 2026 Hiroshi Tanaka (JH1HST)
