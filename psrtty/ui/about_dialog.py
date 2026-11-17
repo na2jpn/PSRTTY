@@ -5,11 +5,12 @@ from .. import i18n
 
 from PySide6.QtCore import Qt, QUrl
 from PySide6.QtGui import QPixmap, QDesktopServices
-from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QWidget, QPushButton, QPlainTextEdit
+from PySide6.QtWidgets import QDialog, QLabel, QScrollArea, QVBoxLayout, QHBoxLayout, QFrame, QWidget, QPushButton
 
 from .. import __version__
 from ..paths import resource_path
 from ..paths import app_root
+from .license_dialog import LicenseDialog
 
 
 def hamlib_about():
@@ -76,17 +77,7 @@ class AboutDialog(QDialog):
         self.thanks_window=None
 
     def _show_license(self, name):
-        text=tr('about.license_missing').format(name=name)
-        for path in (app_root()/'docs'/name,resource_path('licenses/'+name),app_root()/name):
-            try:
-                if path.is_file():
-                    text=path.read_text(encoding='utf-8-sig');break
-            except (OSError,UnicodeError):
-                pass
-        dialog=QDialog(self);dialog.setWindowTitle(name+' — PSRTTY');dialog.resize(800,650)
-        layout=QVBoxLayout(dialog);view=QPlainTextEdit(dialog);view.setReadOnly(True);view.setPlainText(text)
-        layout.addWidget(view,1);close=QPushButton(tr('ui.f6c244f98893cd95'))
-        close.clicked.connect(dialog.accept);layout.addWidget(close);dialog.exec()
+        LicenseDialog(self, document=name).exec()
 
     def _show_thanks(self):
         from .special_thanks_dialog import SpecialThanksDialog

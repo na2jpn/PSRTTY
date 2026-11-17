@@ -1,4 +1,10 @@
-# PSRTTY 1.33 正本フルソース
+# PSRTTY 1.34 フルソース
+
+## 作者・保守担当 / Author and maintainer
+
+**Hiroshi Tanaka (JH1HST)** — GitHub: [@na2jpn](https://github.com/na2jpn)
+
+Hiroshi Tanaka is the author and maintainer of PSRTTY.
 
 ## ライセンス / License
 
@@ -21,11 +27,17 @@ Windows配布ZIPのdocsフォルダーにもライセンスを同梱します。
 ## 操作・ビルド
 
 
-公開日・正本化日：2026-11-04。1.32までの変更に加え、zLog MAX連携、8言語の設定先説明追記、FIX1を統合済みです。
-今後の変更はこの正本を基準にします。以前の差分を追加適用する必要はありません。
+1.34準備版：2026-11-18。1.33正本とGit上の最新ライセンス・作者表示を引き継いでいます。
+以前の差分を追加適用する必要はありません。
 
 WindowsではPowerShellで `./build-windows.ps1` を実行します。依存関係導入、ExtIOブリッジ再構築、
-テスト、PyInstaller、完成EXEのIQ検査を経て `release/PSRTTY_1.33.zip` を作成します。
+テスト、PyInstaller、完成EXEのIQ検査を経て `release/PSRTTY_1.34.zip` を作成します。
+
+公開用Windows版は `./build-windows.ps1 -Sign -CertificateThumbprint <証明書の拇印40桁>` を実行します。
+署名・タイムスタンプ・検証を通過したEXEからハッシュとZIPを作成します。
+署名なしの通常ビルドは開発確認用です。証明書や秘密鍵はZIPに含めません。詳しくは[開発・ビルド](docs/DEVELOPMENT.md)。
+
+ヘルプ → ライセンスで、8言語の概要と、GPL全文・日英共通方針・第三者ライセンスをオフラインで表示します。
 
 - [更新方法](docs/UPDATE.md)
 - [開発・引き継ぎ](docs/DEVELOPMENT.md)

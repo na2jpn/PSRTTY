@@ -95,7 +95,7 @@ class Documentation131Tests(unittest.TestCase):
         root=Path(__file__).resolve().parents[1]
         self.assertTrue((root/'README.md').exists())
         for p in root.glob('*'):
-            if p.suffix.lower() in ('.txt','.md','.html'):self.assertIn(p.name,('README.md','CHANGELOG.md','requirements.txt'))
+            if p.suffix.lower() in ('.txt','.md','.html'):self.assertIn(p.name,('README.md','CHANGELOG.md','LICENSE.md','LICENSING.md','requirements.txt'))
         for name in ('DEVELOPMENT.md','TESTING.md','UPDATE.md','RADIOS.md','FORMATS.md'):
             self.assertTrue((root/'docs'/name).is_file())
         self.assertFalse((root/'docs/history').exists());self.assertFalse((root/'docs/validation').exists())

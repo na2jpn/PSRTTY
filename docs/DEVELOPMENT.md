@@ -1,9 +1,50 @@
 # 開発・現行仕様・引き継ぎ
 
-対象：PSRTTY 1.32。バージョンの正本はpsrtty/__init__.py。8言語の表示文はlanguage/*.json、
+対象：PSRTTY 1.34。バージョンの正本はpsrtty/__init__.py。8言語の表示文はlanguage/*.json、
 埋め込み英語はvalidate_languages.py --generateで生成します。受信文・マクロ・機種ID・ログを翻訳しません。
 
 # 開発ルール
+
+## ライセンスとWindows署名
+
+PSRTTY本体はGPL-3.0-or-later。LICENSE.md（GPL原文）、LICENSING.md（共通方針）を原文のまま保持します。
+Git上の作者・保守担当表示も維持します。第三者のライセンスを変更しません。
+ヘルプ → ライセンスから専用の別画面を開き、概要、GPL全文、共通方針・日英説明、
+配布案内・第三者ライセンスを表示します。「このソフトについて」の既存ボタンも同じ画面の各タブに接続します。
+概要と操作・エラー表示は8言語。原本は翻訳で置き換えずオフライン表示します。
+EXE内と配布ZIPのdocsに3文書を同梱し、パッケージ生成時には現行の原本で置き換えてからハッシュ計算します。
+古い版別のLICENSE_UPDATE_20261112.mdは本資料とUPDATE.mdへ統合し、以後増やしません。
+利用者の指示により、1.34の更新履歴はWindows実行ファイルのデジタル署名の1項目のみです。
+
+### 公開用Windowsビルド
+
+Windows SDKのSignToolを導入し、コードサイニング証明書・秘密鍵を証明書ストアから利用できる状態にします。
+トークン型の場合は証明書提供元のドライバー等が必要です。秘密鍵やパスワードをソース・配布物へ保存しません。
+
+```powershell
+./build-windows.ps1 -Sign -CertificateThumbprint <証明書の拇印40桁>
+```
+
+または環境変数PSRTTY_SIGN_CERT_THUMBPRINTを設定します。拇印は証明書のSHA-1識別子で、署名本文のハッシュはSHA-256です。
+通常はCurrentUserのMyストアを使い、LocalMachineの場合は-MachineCertificateStoreを指定します。
+SignToolがPATHにない場合はWindows SDKのx64版を検索します。-SignToolPathで明示も可能です。
+タイムスタンプはRFC 3161、既定https://timestamp.digicert.com。証明書提供元に合わせ-TimestampUrlで変更できます。
+対応する環境変数はPSRTTY_SIGNTOOLとPSRTTY_TIMESTAMP_URLです。
+
+テスト・凍結EXE自己検査後に、psrtty.exeと自作ExtIOブリッジ32/64bitをSHA-256で署名し、
+タイムスタンプ付きの埋込署名をSignTool verify /pa /all /twで検証します。
+いずれかの署名・検証が失敗した場合はパッケージ作成に進みません。検証済みEXEをコピーしてから
+更新用ハッシュ・マニフェスト・ZIPを作成し、その後にEXEを変更しません。Hamlib等の第三者DLLを再署名しません。
+前回のrelease ZIPがあっても、今回のビルド失敗時には新しいZIPとして扱わないでください。
+
+-Signも証明書の指定もない通常ビルドは、警告付きで未署名の開発用ZIPを作成します。
+このZIPを「署名追加」と記した1.34公開版として配布しないでください。
+外部の署名手段を使う場合も、dist/psrtty.exeとlib/iqの自作EXEを署名・検証した後に
+`python package_release.py --build dist/psrtty.exe release`を実行します。
+すでに作成したZIPのEXEだけを差し替えると更新用ハッシュと一致しません。
+署名はSmartScreen等の警告が必ず消えることを保証するものではありません。
+
+根拠：https://learn.microsoft.com/en-us/windows/win32/seccrypto/signtool
 
 ## zLog MAX連携（1.33）
 

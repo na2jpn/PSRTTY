@@ -36,6 +36,7 @@ from ..parser import normalize_call, parse_exchange, card_callsign
 from ..macros import CQWW_TEMPLATE_NAME
 from ..paths import ensure_runtime_dirs, resource_path
 from .about_dialog import AboutDialog
+from .license_dialog import LicenseDialog
 from .history_dialog import HistoryDialog
 from .macro_dialog import MacroDialog
 from .qso_log_dialog import QSOLogDialog
@@ -283,6 +284,7 @@ class MainWindow(QMainWindow):
         self.update_action = self._act(helpm, tr('ui.8dabb1c0eda28080'), self._upgrade_zip)
         helpm.addSeparator()
         self._act(helpm, tr('ui.3c557b21e44807da'), self._history)
+        self._act(helpm, tr('license.title'), self._license)
         self._act(helpm, tr('ui.56abe64e827e4416'), self._about)
         # Keep Python wrappers alive as well as Qt's menu-bar ownership.
         self.top_level_menus = (filem, edit, radio, view, integration, language, helpm)
@@ -1944,6 +1946,7 @@ class MainWindow(QMainWindow):
         self.qsos=self.adif.load_recent(limit=None, record_order=True)
         self._refresh_latest_qsos()
     def _about(self): AboutDialog(self).exec()
+    def _license(self): LicenseDialog(self).exec()
     def _history(self): HistoryDialog(self).exec()
 
     def _set_spectrum_width(self,v): self.store.data["advanced"]["spectrum_width_hz"]=v; self.store.save(); self.spectrum.set_width(v)

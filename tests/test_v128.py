@@ -176,7 +176,7 @@ class UI128Tests(unittest.TestCase):
         from psrtty.ui.ry_windows import RadarWindow
         for code in i18n.LANGUAGES:
             i18n.configure(code);r=RadarWindow(self.window);self.assertNotIn('ry.',r.mode_link.text());self.assertTrue(r.mode_link.toolTip());r.close()
-            self.assertTrue(i18n.tr('history.body').startswith('2026-11-04  Ver1.33'))
+            self.assertTrue(i18n.tr('history.body').startswith('2026-11-18  Ver1.34'))
         i18n.configure('ja')
 
 del _Fixture

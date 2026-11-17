@@ -1500,7 +1500,7 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                  'PSRTTY re-sends FIGS as needed. This allows receivers with USOS enabled to read numbers such as 599 '
                  '001. It applies automatically to AFSK, FSK keying and direct TX; no extra setting is required. '
                  'Receivers without USOS remain supported.</p>',
- 'about.body': '<h2>PSRTTY 1.14</h2>\n'
+ 'about.body': '<h2>PSRTTY 1.34</h2>\n'
                '<p>RTTY contest communication software built with Python / PySide6.</p>\n'
                '<p>Uses ICOM CI-V and USB Audio for RTTY reception, transmission, macros and QSO logging.</p>\n'
                '<p>Selected Yaesu and Kenwood models use Hamlib CAT control.</p>\n'
@@ -1527,7 +1527,10 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                'Third-party components retain their own licenses.</p><p><a '
                'href="https://github.com/na2jpn/PSRTTY">Source: github.com/na2jpn/PSRTTY</a></p><h3>Third-party '
                'libraries</h3>',
- 'history.body': '2026-11-04  Ver1.33\n'
+ 'history.body': '2026-11-18  Ver1.34\n'
+                 '・Added digital signatures using a code signing certificate to the Windows executables.\n'
+                 '\n'
+                 '2026-11-04  Ver1.33\n'
                  '・Added plain TCP integration with the Z-Link server built into zLog MAX.\n'
                  '・Separated settings and pending QSOs from Reiwa; added approval waiting and record readback.\n'
                  '・Added MAX link settings and setup guidance in all eight languages.\n'
@@ -2867,4 +2870,18 @@ STRINGS = {'ui.226cd94a60d1b77b': 'Manual date / time',
                       'Transfer this QSO separately, for example by ADIF export.',
  'about.license': 'Full license (GPL v3)',
  'about.policy': 'Licensing guide',
- 'about.license_missing': 'Cannot read document: {name}. Please check the distribution files.'}
+ 'about.license_missing': 'Cannot read document: {name}. Please check the distribution files.',
+ 'license.title': 'License',
+ 'license.overview': 'Overview',
+ 'license.third_party': 'Distribution / third-party licenses',
+ 'license.summary': '<h2>PSRTTY</h2><p>Copyright (c) 2026 Hiroshi Tanaka (JH1HST)<br>PS Ham-ware / '
+                    'AKIHABARA-GIKEN</p><p>PSRTTY is licensed under <b>GNU GPL v3 or later '
+                    '(GPL-3.0-or-later)</b>.</p><p>Commercial and non-commercial use, modification, redistribution and '
+                    'sale are allowed. When distributing, preserve the required notices and provide Corresponding '
+                    'Source, including build scripts, under the GPL. Identify modifications and their '
+                    'dates.</p><p>Notification of published improvements is voluntary. Neither prior approval nor '
+                    'notification is a condition of use. No warranty is provided to the extent permitted by the GPL '
+                    'and applicable law.</p><p>The other tabs contain the full GPL, the common Japanese/English '
+                    'policy, and distribution and third-party notices, available offline. Third-party components '
+                    'retain their respective licenses.</p><p><a '
+                    'href="https://github.com/na2jpn/PSRTTY">github.com/na2jpn/PSRTTY</a></p>'}
